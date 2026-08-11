@@ -1,6 +1,6 @@
 # Validated design adoption
 
-The approved design currently lives in `../design-proposition/app`. It is the visual and interaction reference for `UI-001`.
+The approved design currently lives in `../design-proposition/app`. It is the visual and interaction baseline for `UI-BASE-001` and every later system integration.
 
 ## Adopt
 
@@ -20,5 +20,16 @@ The approved design currently lives in `../design-proposition/app`. It is the vi
 
 ## Adoption rule
 
-Port components by feature after their production contracts exist. Preserve approved appearance unless accessibility, responsiveness, or truthful-state requirements demand a change. Any intentional visible change must be documented in the active spec.
+`UI-BASE-001` ports the application shell, navigation, design tokens, reusable components, non-calculated screens, and truthful unavailable states before `AIO-001` begins. Later UI features connect production calculation envelopes into that foundation system by system.
 
+Preserve the approved information architecture, visual hierarchy, spacing, typography, and interactions. Accessibility, responsiveness, and truthful-state corrections are allowed only when documented. Any other intentional visible change requires an explicit spec decision.
+
+The temporary foundation screen in `apps/desktop` is not a competing design. It exists only to prove the autonomous build and must be replaced during `UI-BASE-001`.
+
+## Required acceptance evidence
+
+- route and component inventory mapped from the approved source to the new application;
+- Playwright coverage for primary navigation and truthful empty/error states;
+- reviewed visual comparisons at fixed viewport/environment;
+- confirmation that no file under the new UI imports the legacy project, `MockEngine`, or parent data;
+- documented list of every intentional visual or interaction difference.

@@ -16,6 +16,7 @@ Complete roadmap feature `DATA-001` in this repository: deliver deterministic, v
 8. Keep research evidence in `research.md`, mappings in `data-model.md`, and requirement/test traceability in the checklist. Mark tasks complete only with evidence.
 9. At feature closure, run `pnpm verify`, then `$speckit-converge`. Implement appended tasks and repeat until converged.
 10. Mark `DATA-001` done in `ROADMAP.md` only when all tasks and gates are green.
+11. Do not begin `AIO-001` or modify the validated design. The mandatory next roadmap feature is `UI-BASE-001`.
 
 ## Mandatory stop conditions
 
@@ -38,4 +39,5 @@ Return:
 - completed requirement-to-test matrix;
 - exact verification and convergence commands with outcomes;
 - remaining known data gaps and their impact on `AIO-001`.
+- confirmation that `apps/desktop` and the validated design source were not modified by this data-only goal.
 
