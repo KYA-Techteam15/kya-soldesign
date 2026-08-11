@@ -19,13 +19,16 @@
     "test:golden": "vitest run golden",
     "test:data": "vitest run data",
     "test:integration": "vitest run integration",
+    "test:ui": "vitest run apps/desktop/test",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --grep-invert @visual",
     "test:visual": "playwright test --grep @visual",
+    "check:ui": "node tools/ui/check-production-boundaries.mjs && node tools/ui/check-i18n.mjs && node tools/ui/check-ui-copy.mjs",
     "verify:phase": "node tools/verify-phase.mjs",
     "verify": "node tools/verify.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.0",
     "@playwright/test": "1.62.1",
     "@types/node": "24.13.2",
     "@vitejs/plugin-react": "6.0.5",

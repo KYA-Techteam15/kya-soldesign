@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "method": "one warm-up import followed by one measured deterministic import of 1,000 cloned source records",
+  "records": 1000,
+  "durationMs": 175.2454,
+  "acceptedRecords": 998,
+  "quarantinedRecords": 2,
+  "requirement": "NFR-DATA-001: below 2,000 ms after warm-up",
+  "passed": true
+}

@@ -1,0 +1,37 @@
+:root {
+  color: #1a2e43;
+  background: #eaf0f6;
+  font-family: Aptos, "Segoe UI", system-ui, sans-serif;
+  font-synthesis: none;
+  --canvas: #eaf0f6;
+  --surface: #ffffff;
+  --surface-muted: #f4f7fa;
+  --border: #d9e2eb;
+  --text: #1a2e43;
+  --text-muted: #53697d;
+  --text-faint: #5f7181;
+  --orange: #e6a31a;
+  --orange-strong: #8a5700;
+  --orange-soft: #fbf2df;
+  --teal: #41a99c;
+  --teal-soft: #e1f3f0;
+  --danger: #b64542;
+  --danger-soft: #f9e6e4;
+  --shadow: 0 10px 30px rgb(20 44 70 / 8%);
+  --radius: 12px;
+  --focus: 0 0 0 3px rgb(65 169 156 / 35%);
+}
+
+[data-theme='dark'] {
+  --canvas: #132130;
+  --surface: #1c2c3d;
+  --surface-muted: #243649;
+  --border: #395068;
+  --text: #edf4fa;
+  --text-muted: #b2c1cf;
+  --text-faint: #8da1b3;
+  --orange-soft: #483819;
+  --teal-soft: #1c4947;
+  --danger-soft: #4d2a2c;
+  --shadow: 0 12px 38px rgb(0 0 0 / 25%);
+}

@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "transformationVersion": "1.0.0",
+  "reports": {
+    "pvModules": {
+      "sourceId": "reference-modules",
+      "sourceSha256": "85946df1f7bd4b61d1cde73fe9e64511b5dcc0dce08db8717831b5013176cc97",
+      "inputRecordCount": 388,
+      "acceptedRecordCount": 387,
+      "quarantinedRecordCount": 1,
+      "warningCount": 0,
+      "duplicateCanonicalIds": [],
+      "duplicateCanonicalIdentities": [],
+      "conflicts": [],
+      "transformations": [
+        "identity-v1",
+        "reference-equipment-v1"
+      ]
+    },
+    "batteries": {
+      "sourceId": "reference-batteries",
+      "sourceSha256": "ac29d1fdd3383db8e75e9b27883c67261729b52d100a407e131b84fa17041847",
+      "inputRecordCount": 366,
+      "acceptedRecordCount": 366,
+      "quarantinedRecordCount": 0,
+      "warningCount": 1,
+      "duplicateCanonicalIds": [],
+      "duplicateCanonicalIdentities": [],
+      "conflicts": [],
+      "transformations": [
+        "identity-v1",
+        "reference-equipment-v1"
+      ]
+    },
+    "inverters": {
+      "sourceId": "reference-inverters",
+      "sourceSha256": "b530f19d98a1b69af2f711db0942ddacb25a973ebdb4a2092487b5c4a2981e29",
+      "inputRecordCount": 84,
+      "acceptedRecordCount": 81,
+      "quarantinedRecordCount": 3,
+      "warningCount": 36,
+      "duplicateCanonicalIds": [],
+      "duplicateCanonicalIdentities": [],
+      "conflicts": [],
+      "transformations": [
+        "identity-v1",
+        "reference-equipment-v1"
+      ]
+    },
+    "localities": {
+      "sourceId": "reference-localities",
+      "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+      "inputRecordCount": 14,
+      "acceptedRecordCount": 14,
+      "quarantinedRecordCount": 0,
+      "warningCount": 0,
+      "duplicateCanonicalIds": [],
+      "duplicateCanonicalIdentities": [],
+      "conflicts": [],
+      "transformations": [
+        "identity-v1",
+        "reference-locality-v1"
+      ]
+    },
+    "weatherSources": {
+      "sourceId": "reference-weather-sources",
+      "sourceSha256": "31c12b1a8d9e0e194a7a49923f77c69aaf1258e94e16cece81ada5153cd7ba89",
+      "inputRecordCount": 16,
+      "acceptedRecordCount": 16,
+      "quarantinedRecordCount": 0,
+      "warningCount": 0,
+      "duplicateCanonicalIds": [],
+      "duplicateCanonicalIdentities": [
+        "weather-source|locality_46805acf18f59388f7ee2226|pvgis|kaboul pvgis-tmy",
+        "weather-source|locality_dfa41bc412f8738c82d161ad|pvgis|alger pvgis-tmy"
+      ],
+      "conflicts": [],
+      "transformations": [
+        "identity-v1",
+        "reference-weather-source-v1"
+      ]
+    },
+    "loadProfiles": {
+      "sourceId": "legacy-profiles",
+      "sourceSha256": "16de626b4eb8a685c5066213b37d59b70bb8b488d4ecce3cfce6f083ce6f0904",
+      "inputRecordCount": 2,
+      "acceptedRecordCount": 2,
+      "quarantinedRecordCount": 0,
+      "warningCount": 0,
+      "duplicateCanonicalIds": [],
+      "duplicateCanonicalIdentities": [],
+      "conflicts": [],
+      "transformations": [
+        "identity-v1",
+        "legacy-profile-normalization-v1"
+      ]
+    }
+  },
+  "totals": {
+    "inputRecords": 870,
+    "acceptedRecords": 866,
+    "quarantinedRecords": 4,
+    "warnings": 37,
+    "conflicts": 0
+  },
+  "completeness": {
+    "equipment": {
+      "areaM2": {
+        "present": 387,
+        "known": 387
+      },
+      "canBeInParallel": {
+        "present": 81,
+        "known": 81
+      },
+      "currentAtMaximumPowerA": {
+        "present": 387,
+        "known": 387
+      },
+      "cycleLife": {
+        "present": 366,
+        "known": 0
+      },
+      "efficiencyRatio": {
+        "present": 81,
+        "known": 81
+      },
+      "id": {
+        "present": 834,
+        "known": 834
+      },
+      "inverterType": {
+        "present": 81,
+        "known": 81
+      },
+      "kind": {
+        "present": 834,
+        "known": 834
+      },
+      "manufacturer": {
+        "present": 834,
+        "known": 834
+      },
+      "maxChargingCurrentA": {
+        "present": 81,
+        "known": 81
+      },
+      "maxParallelUnits": {
+        "present": 81,
+        "known": 81
+      },
+      "model": {
+        "present": 834,
+        "known": 834
+      },
+      "mpptMaxVoltageV": {
+        "present": 81,
+        "known": 81
+      },
+      "mpptMinVoltageV": {
+        "present": 81,
+        "known": 81
+      },
+      "nominalAcPowerW": {
+        "present": 81,
+        "known": 81
+      },
+      "nominalAcVoltageV": {
+        "present": 81,
+        "known": 81
+      },
+      "nominalCapacityAh": {
+        "present": 366,
+        "known": 366
+      },
+      "nominalDcVoltageV": {
+        "present": 81,
+        "known": 81
+      },
+      "nominalEnergyWh": {
+        "present": 366,
+        "known": 366
+      },
+      "nominalOperatingCellTemperatureC": {
+        "present": 387,
+        "known": 387
+      },
+      "nominalPowerW": {
+        "present": 387,
+        "known": 387
+      },
+      "nominalVoltageV": {
+        "present": 366,
+        "known": 366
+      },
+      "openCircuitVoltageV": {
+        "present": 387,
+        "known": 387
+      },
+      "provenance": {
+        "present": 834,
+        "known": 834
+      },
+      "pvArrayMaxPowerW": {
+        "present": 81,
+        "known": 81
+      },
+      "pvInputsNumber": {
+        "present": 81,
+        "known": 81
+      },
+      "pvOpenCircuitMaxVoltageV": {
+        "present": 81,
+        "known": 81
+      },
+      "roundTripEfficiencyRatio": {
+        "present": 366,
+        "known": 366
+      },
+      "shortCircuitCurrentA": {
+        "present": 387,
+        "known": 387
+      },
+      "surgePowerW": {
+        "present": 81,
+        "known": 81
+      },
+      "technology": {
+        "present": 753,
+        "known": 753
+      },
+      "temperatureCoefficientPmaxPerC": {
+        "present": 387,
+        "known": 387
+      },
+      "temperatureCoefficientVocPerC": {
+        "present": 387,
+        "known": 387
+      },
+      "usableDepthOfDischargeRatio": {
+        "present": 366,
+        "known": 366
+      },
+      "voltageAtMaximumPowerV": {
+        "present": 387,
+        "known": 387
+      }
+    },
+    "localities": {
+      "countryCode": {
+        "present": 14,
+        "known": 14
+      },
+      "elevationM": {
+        "present": 14,
+        "known": 0
+      },
+      "id": {
+        "present": 14,
+        "known": 14
+      },
+      "latitudeDeg": {
+        "present": 14,
+        "known": 14
+      },
+      "longitudeDeg": {
+        "present": 14,
+        "known": 14
+      },
+      "name": {
+        "present": 14,
+        "known": 14
+      },
+      "provenance": {
+        "present": 14,
+        "known": 14
+      },
+      "timezone": {
+        "present": 14,
+        "known": 0
+      }
+    },
+    "weatherSources": {
+      "defaultAzimuthDeg": {
+        "present": 16,
+        "known": 16
+      },
+      "defaultTiltDeg": {
+        "present": 16,
+        "known": 16
+      },
+      "id": {
+        "present": 16,
+        "known": 16
+      },
+      "localityId": {
+        "present": 16,
+        "known": 16
+      },
+      "provenance": {
+        "present": 16,
+        "known": 16
+      },
+      "provider": {
+        "present": 16,
+        "known": 16
+      },
+      "sourceName": {
+        "present": 16,
+        "known": 16
+      }
+    },
+    "loadProfiles": {
+      "displayName": {
+        "present": 2,
+        "known": 2
+      },
+      "hourlyEnergyFractions": {
+        "present": 2,
+        "known": 2
+      },
+      "id": {
+        "present": 2,
+        "known": 2
+      },
+      "provenance": {
+        "present": 2,
+        "known": 2
+      }
+    }
+  }
+}

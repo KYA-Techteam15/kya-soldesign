@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "id": "locality_2c0f010771573a1d1399f0be",
+      "name": "Prétoria",
+      "countryCode": "ZA",
+      "latitudeDeg": -25.7459,
+      "longitudeDeg": 28.1879,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "bbaed5e5-8488-4eb2-a36a-da10f1f4bd09",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_2fb9209b247d9614eaf55738",
+      "name": "Ouagadougou",
+      "countryCode": "BF",
+      "latitudeDeg": 12.3682,
+      "longitudeDeg": -1.5271,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "02a01ad6-6499-4a84-95c3-83715f1a8d28",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_332de8b724f84626a1bc6aad",
+      "name": "Plateaux Region",
+      "countryCode": "TG",
+      "latitudeDeg": 7.2,
+      "longitudeDeg": 1.3,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "2acdb553-b141-4db0-b701-4df268292940",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_3ccfd4b6c85531370d327e8a",
+      "name": "Bombouaka",
+      "countryCode": "TG",
+      "latitudeDeg": 10.703,
+      "longitudeDeg": 0.2099,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "cfbab7f2-2992-4739-aebc-e5385306f447",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_46805acf18f59388f7ee2226",
+      "name": "Kaboul",
+      "countryCode": "AF",
+      "latitudeDeg": 34.527,
+      "longitudeDeg": 69.1851,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "9c84c2d8-a173-4830-bd91-fed099e6be5c",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_5e1baa1a2ae8a395394f86b1",
+      "name": "Bissao",
+      "countryCode": "CM",
+      "latitudeDeg": 6.4198,
+      "longitudeDeg": 13.0652,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "63e67c7d-2a0a-4e9d-9197-98c2be280647",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_804628ffe2a2015537dc4a6e",
+      "name": "Zagreb",
+      "countryCode": "HR",
+      "latitudeDeg": 45.8131,
+      "longitudeDeg": 15.9773,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "67e7407a-1a1c-4cca-8ac8-a5343dc82dc5",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_88dce460b196607a2715a374",
+      "name": "Berlin",
+      "countryCode": "DE",
+      "latitudeDeg": 52.5174,
+      "longitudeDeg": 13.3951,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "7a05ff54-7e14-4dfd-ae96-ef16dfd5385d",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_8a3f585bd09be0d034d2c920",
+      "name": "Luanda",
+      "countryCode": "AO",
+      "latitudeDeg": -8.8273,
+      "longitudeDeg": 13.244,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "435740bf-51fb-4055-8993-3b7362f95498",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_921682b4c45aa4de4257c474",
+      "name": "Lom-nava",
+      "countryCode": "TG",
+      "latitudeDeg": 7.4,
+      "longitudeDeg": 1.3,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "33ce4613-729d-4a18-aa11-c65a68b3fb88",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_aee82bf43c7a5628f3cb9017",
+      "name": "Cacaveli",
+      "countryCode": "TG",
+      "latitudeDeg": 6.2149,
+      "longitudeDeg": 1.2003,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "66e2c638-1b53-4e64-9021-353185f41772",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_dd0b11c3dfdd546efa8ee942",
+      "name": "Maradi",
+      "countryCode": "NE",
+      "latitudeDeg": 13.5012,
+      "longitudeDeg": 7.1025,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "9cfcdc6f-5e83-4990-b0d8-7bed05f5370e",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_dfa41bc412f8738c82d161ad",
+      "name": "Alger",
+      "countryCode": "DZ",
+      "latitudeDeg": 36.7729,
+      "longitudeDeg": 3.0588,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "d2b5c5bb-136f-46d5-855f-42383b422ce7",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    },
+    {
+      "id": "locality_ea077f23e81eefc124901d77",
+      "name": "Tokor",
+      "countryCode": "GH",
+      "latitudeDeg": 6.12,
+      "longitudeDeg": 1.13,
+      "elevationM": null,
+      "timezone": null,
+      "provenance": {
+        "sourceId": "reference-localities",
+        "sourceRecordId": "6838ed91-bfd0-460f-b21a-659c6b8dee11",
+        "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+        "transformationVersion": "1.0.0"
+      }
+    }
+  ]
+}

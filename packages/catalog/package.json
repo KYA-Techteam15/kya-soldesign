@@ -11,9 +11,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@ksd/domain": "workspace:*",
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "fast-check": "4.9.0",
     "typescript": "7.0.2",
     "vitest": "4.1.10"
   }

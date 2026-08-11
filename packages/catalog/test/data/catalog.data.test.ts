@@ -3,8 +3,9 @@ import { batterySchema, inverterSchema } from '../../src/index.js';
 
 const provenance = {
   sourceId: 'fixture:test',
-  importedAt: '2026-08-11T00:00:00.000Z',
   sourceRecordId: 'record-1',
+  sourceSha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  transformationVersion: '1.0.0',
 };
 
 describe('catalog boundary validation', () => {
@@ -15,9 +16,12 @@ describe('catalog boundary validation', () => {
       manufacturer: 'Test',
       model: 'Reference',
       nominalVoltageV: 48,
-      nominalCapacityWh: 5_000,
-      usableDepthOfDischarge: 0.8,
+      nominalCapacityAh: 100,
+      nominalEnergyWh: 4_800,
+      usableDepthOfDischargeRatio: 0.8,
+      roundTripEfficiencyRatio: 0.9,
       cycleLife: null,
+      technology: 'Lithium-ion',
       provenance,
     });
     expect(value.cycleLife).toBeNull();
@@ -30,7 +34,7 @@ describe('catalog boundary validation', () => {
       manufacturer: 'Test',
       model: 'Invalid',
       nominalAcPowerW: 5_000,
-      dcVoltageV: 48,
+      nominalDcVoltageV: 48,
       provenance,
     })).toThrow();
   });

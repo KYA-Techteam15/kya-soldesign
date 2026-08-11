@@ -1,6 +1,6 @@
 # Validated design adoption
 
-The approved design currently lives in `../design-proposition/app`. It is the visual and interaction baseline for `UI-BASE-001` and every later system integration.
+The approved design currently lives in `../design-proposition/app` at revision `1be343f814abc6379517389c42e484806634e6bb`. Its light-theme `sober` rendering is the visual and interaction baseline for `UI-BASE-001` and every later system integration. Fresh audited captures live under `specs/002-validated-ui-foundation/reference-captures/`; the older parent `shots/` exports are not acceptance baselines.
 
 ## Adopt
 

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "transformationVersion": "1.0.0",
+  "sources": [
+    {
+      "sourceId": "legacy-profiles",
+      "sourceSha256": "16de626b4eb8a685c5066213b37d59b70bb8b488d4ecce3cfce6f083ce6f0904"
+    },
+    {
+      "sourceId": "reference-batteries",
+      "sourceSha256": "ac29d1fdd3383db8e75e9b27883c67261729b52d100a407e131b84fa17041847"
+    },
+    {
+      "sourceId": "reference-inverters",
+      "sourceSha256": "b530f19d98a1b69af2f711db0942ddacb25a973ebdb4a2092487b5c4a2981e29"
+    },
+    {
+      "sourceId": "reference-localities",
+      "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39"
+    },
+    {
+      "sourceId": "reference-modules",
+      "sourceSha256": "85946df1f7bd4b61d1cde73fe9e64511b5dcc0dce08db8717831b5013176cc97"
+    },
+    {
+      "sourceId": "reference-weather-sources",
+      "sourceSha256": "31c12b1a8d9e0e194a7a49923f77c69aaf1258e94e16cece81ada5153cd7ba89"
+    }
+  ],
+  "artifacts": [
+    {
+      "filename": "equipment.json",
+      "sha256": "d6920fc6421f2d14df9e58c96035819bff5b9c01c02aa15d7f88557456351f5e"
+    },
+    {
+      "filename": "load-profiles.json",
+      "sha256": "33d90f8d58cb6c594a1dbbc388827a20a43f5613efbc3118e6dc81f20934ba6f"
+    },
+    {
+      "filename": "localities.json",
+      "sha256": "227d47fbcf5893d7b04febd83114460e30fb5e2e425523e86eca64a1071c1508"
+    },
+    {
+      "filename": "quality-report.json",
+      "sha256": "a05b4309a8fa30384d1c260ae6ed38ef42c6a1af9dc386b0d05ea244f87b0835"
+    },
+    {
+      "filename": "quarantine.json",
+      "sha256": "6838f798f144e78573d06608c6ad3bca1e7dbdb1db77d8f239659d6d888930b9"
+    },
+    {
+      "filename": "weather-sources.json",
+      "sha256": "f143c11008b4d7718fbd8f08d63d2b42ec401fb54ec69d8ba922f325a2542079"
+    }
+  ]
+}

@@ -7,8 +7,8 @@ The product is decomposed into bounded vertical slices. IDs are immutable once r
 | ID | Sub-feature | Intent | Scope boundary | Depends on | Status | Sub-spec |
 |---|---|---|---|---|---|---|
 | FND-001 | Autonomous foundation | Establish contracts, repository boundaries, quality gates, and truthful empty UI | No production sizing formula | — | done | Foundation files in repository root |
-| DATA-001 | Canonical input data | Version load, weather, locality, and equipment schemas with provenance | No system sizing | FND-001 | planned | `specs/001-canonical-input-data/` |
-| UI-BASE-001 | Validated UI foundation | Port the approved application shell, navigation, tokens, components, and truthful empty states | No production calculation and no redesign | DATA-001 | planned | `specs/002-validated-ui-foundation/` |
+| DATA-001 | Canonical input data | Version load, weather, locality, and equipment schemas with provenance | No system sizing | FND-001 | done | `specs/001-canonical-input-data/` |
+| UI-BASE-001 | Validated UI foundation | Port the approved application shell, navigation, tokens, components, and truthful empty states | No production calculation and no redesign | DATA-001 | done | `specs/002-validated-ui-foundation/` |
 | AIO-001 | Standalone AIO core | Deliver a trustworthy standalone all-in-one calculation core against canonical contracts | No controller/inverter split topology | DATA-001, UI-BASE-001 | planned | — |
 | UI-AIO-001 | AIO design integration | Connect the real AIO calculation run to the approved workshop and dossier experience | No new formula in React and no redesign | AIO-001, UI-BASE-001 | planned | — |
 | SIM-001 | Hourly reliability | Simulate hourly energy balance, autonomy, unmet load, clipping, and storage state | No financial optimization | AIO-001 | planned | — |

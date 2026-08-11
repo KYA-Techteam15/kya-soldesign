@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "dataset": "inverters",
+      "sourceRecordId": "1245",
+      "issues": [
+        {
+          "code": "INVERTER_MPPT_RANGE_INVALID",
+          "severity": "error",
+          "message": "mpptMinVoltageV must not exceed mpptMaxVoltageV",
+          "path": "mpptMinVoltageV"
+        }
+      ],
+      "rawFingerprint": "4a73ca035732bca7890c5dbd11c215d70134a10ab71b3acdf938d5393269ae38"
+    },
+    {
+      "dataset": "inverters",
+      "sourceRecordId": "1294",
+      "issues": [
+        {
+          "code": "CATALOG_SCHEMA_INVALID",
+          "severity": "error",
+          "message": "Too small: expected number to be >0",
+          "path": "pvOpenCircuitMaxVoltageV"
+        }
+      ],
+      "rawFingerprint": "d93c2f7495e2356b5a8acc9b09c1021dfe94697a834adc4206152ab36a360980"
+    },
+    {
+      "dataset": "inverters",
+      "sourceRecordId": "1295",
+      "issues": [
+        {
+          "code": "CATALOG_SCHEMA_INVALID",
+          "severity": "error",
+          "message": "Too small: expected number to be >0",
+          "path": "pvOpenCircuitMaxVoltageV"
+        }
+      ],
+      "rawFingerprint": "667c199a8cef7c07f1836e6a83daccb25eaeabf973b99cb37a1e37b0337c80d3"
+    },
+    {
+      "dataset": "pv-modules",
+      "sourceRecordId": "1887",
+      "issues": [
+        {
+          "code": "PV_CURRENT_AT_MAXIMUM_POWER_ABOVE_SHORT_CIRCUIT",
+          "severity": "error",
+          "message": "currentAtMaximumPowerA must not exceed shortCircuitCurrentA",
+          "path": "currentAtMaximumPowerA"
+        }
+      ],
+      "rawFingerprint": "dee86312f4eeb1d6a1e050c271e5da7dfeb1d0a960128d9bb03894a1f5b5cbd3"
+    }
+  ]
+}

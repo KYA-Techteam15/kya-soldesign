@@ -1,0 +1,863 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "sourceId": "legacy-profiles",
+      "sourceSha256": "16de626b4eb8a685c5066213b37d59b70bb8b488d4ecce3cfce6f083ce6f0904",
+      "rootKind": "object",
+      "arrays": [
+        {
+          "path": "$.profiles.default.categories.office.shape",
+          "count": 24,
+          "objectCount": 0,
+          "fields": {},
+          "duplicateIds": []
+        },
+        {
+          "path": "$.profiles.default.categories.residential.shape",
+          "count": 24,
+          "objectCount": 0,
+          "fields": {},
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "legacy-root-batteries",
+      "sourceSha256": "1034c0ff00c21af2b28189c39549bd8ccb1d5ea8325426ddb5e010afc128b46a",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 366,
+          "objectCount": 366,
+          "fields": {
+            "capacity": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "code": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "datasheetLink": {
+              "present": 366,
+              "missing": 366,
+              "valueTypes": []
+            },
+            "discharge_time": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "factor_price": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "id": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "maker": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "owner": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "technology": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "voltage": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "yield": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "legacy-root-inverters",
+      "sourceSha256": "7d7a05d42f4971fb19b92691ce010a9f1917e6da3f83a62e4ab0a70f5f0b019e",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 84,
+          "objectCount": 84,
+          "fields": {
+            "battery_maximum_charging_current": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "can_be_in_parallel": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "code": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "datasheetLink": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "factor_price": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "id": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "impp_by_input": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "inverter_yield": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "maker": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "nominal_DC_Voltage": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "nominal_power": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "number_of_sub_systems": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "overload_power": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "owner": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "pv_array_maximum_power": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "pv_inputs_number": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "regulator_type": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "regulator_yield": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "type": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "vmpp_max": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "vmpp_min": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "voc_max": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "vout": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "legacy-root-modules",
+      "sourceSha256": "d00c62f0cea1585d764a8b37cc6b6a2ab4697c19c6bc0eed6649d3bd54c36129",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 388,
+          "objectCount": 388,
+          "fields": {
+            "area": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "class": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "code": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "coef_temp_isc": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "coef_temp_pmp": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "coef_temp_voc": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "datasheetLink": {
+              "present": 388,
+              "missing": 388,
+              "valueTypes": []
+            },
+            "factor_price": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "id": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "impSTC": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "iscSTC": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "maker": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "owner": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "power": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "tnoct": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "type": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "vmp": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "vocSTC": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "voltage": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "reference-batteries",
+      "sourceSha256": "ac29d1fdd3383db8e75e9b27883c67261729b52d100a407e131b84fa17041847",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 366,
+          "objectCount": 366,
+          "fields": {
+            "capacity": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "code": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "cycle_life": {
+              "present": 366,
+              "missing": 365,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "id": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "maker": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "max_dod": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "round_trip_efficiency": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "technology": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "voltage": {
+              "present": 366,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "reference-inverters",
+      "sourceSha256": "b530f19d98a1b69af2f711db0942ddacb25a973ebdb4a2092487b5c4a2981e29",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 84,
+          "objectCount": 84,
+          "fields": {
+            "can_be_in_parallel": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "code": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "efficiency": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "id": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "inverter_type": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "maker": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "max_charging_current": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "max_parallel_units": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "mppt_max_voltage": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "mppt_min_voltage": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "nominal_ac_voltage": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "nominal_dc_voltage": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "nominal_power": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "overload_power": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "pv_array_max_power": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "pv_inputs_number": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "pv_open_circuit_max_voltage": {
+              "present": 84,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "reference-localities",
+      "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 14,
+          "objectCount": 14,
+          "fields": {
+            "country_code": {
+              "present": 14,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "id": {
+              "present": 14,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "latitude": {
+              "present": 14,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "longitude": {
+              "present": 14,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "name": {
+              "present": 14,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "reference-modules",
+      "sourceSha256": "85946df1f7bd4b61d1cde73fe9e64511b5dcc0dce08db8717831b5013176cc97",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 388,
+          "objectCount": 388,
+          "fields": {
+            "area": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "code": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "coef_temp_pmp": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "coef_temp_voc": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "id": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "imp_stc": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "isc_stc": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "maker": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "module_type": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "power": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "tnoct": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "vmp": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "voc_stc": {
+              "present": 388,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    },
+    {
+      "sourceId": "reference-weather-sources",
+      "sourceSha256": "31c12b1a8d9e0e194a7a49923f77c69aaf1258e94e16cece81ada5153cd7ba89",
+      "rootKind": "array",
+      "arrays": [
+        {
+          "path": "$",
+          "count": 16,
+          "objectCount": 16,
+          "fields": {
+            "default_azimuth": {
+              "present": 16,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "default_tilt": {
+              "present": 16,
+              "missing": 0,
+              "valueTypes": [
+                "number"
+              ]
+            },
+            "id": {
+              "present": 16,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "locality_id": {
+              "present": 16,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "provider": {
+              "present": 16,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            },
+            "source_name": {
+              "present": 16,
+              "missing": 0,
+              "valueTypes": [
+                "string"
+              ]
+            }
+          },
+          "duplicateIds": []
+        }
+      ]
+    }
+  ]
+}

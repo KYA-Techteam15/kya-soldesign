@@ -13,6 +13,15 @@ export type SystemKind = z.infer<typeof systemKindSchema>;
 
 export const issueSeveritySchema = z.enum(['info', 'warning', 'error']);
 
+export const dataIssueSchema = z.object({
+  code: z.string().min(1),
+  severity: z.enum(['warning', 'error']),
+  message: z.string().min(1),
+  path: z.string().min(1).optional(),
+}).strict();
+
+export type DataIssue = z.infer<typeof dataIssueSchema>;
+
 export const calculationIssueSchema = z.object({
   code: z.string().min(1),
   severity: issueSeveritySchema,
@@ -38,4 +47,3 @@ export interface CalculationEnvelope<Output> {
   readonly issues: readonly CalculationIssue[];
   readonly trace: readonly CalculationTraceEntry[];
 }
-
