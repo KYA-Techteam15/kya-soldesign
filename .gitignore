@@ -1,0 +1,19 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+playwright-report/
+test-results/
+.vite/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+# Machine-local Spec Kit state
+.specify/feature.json
+.specify/extensions/*/local-config.yml
+
+# Tauri build output (once the desktop shell is enabled)
+apps/desktop/src-tauri/target/

@@ -1,0 +1,5 @@
+interface:
+  display_name: "KSD Calculation Test"
+  short_description: "Verifie formules, invariants et cas golden"
+  default_prompt: "Use $ksd-calculation-test to validate the calculation changes in the active phase."
+

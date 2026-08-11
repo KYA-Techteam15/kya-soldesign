@@ -1,0 +1,4 @@
+interface:
+  display_name: "KSD Phase Gate"
+  short_description: "Valide une phase avant de poursuivre"
+  default_prompt: "Use $ksd-phase-gate to verify and close the current implementation phase."

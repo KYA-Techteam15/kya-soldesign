@@ -1,0 +1,5 @@
+interface:
+  display_name: "KSD Spec Audit"
+  short_description: "Audite les specs et leurs criteres metier"
+  default_prompt: "Use $ksd-spec-audit to audit the active KYA SolDesign specification before planning."
+

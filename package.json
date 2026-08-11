@@ -1,0 +1,40 @@
+{
+  "name": "kya-sol-design-next",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.0.9",
+  "engines": {
+    "node": ">=22.14.0",
+    "pnpm": ">=11.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ksd/desktop dev",
+    "build": "pnpm -r --if-present build",
+    "lint": "oxlint --type-aware --deny-warnings apps packages tools",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "test:unit": "vitest run unit",
+    "test:property": "vitest run property",
+    "test:golden": "vitest run golden",
+    "test:data": "vitest run data",
+    "test:integration": "vitest run integration",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test --grep-invert @visual",
+    "test:visual": "playwright test --grep @visual",
+    "verify:phase": "node tools/verify-phase.mjs",
+    "verify": "node tools/verify.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "24.13.2",
+    "@vitejs/plugin-react": "6.0.5",
+    "@vitest/coverage-v8": "4.1.10",
+    "fast-check": "4.9.0",
+    "oxlint": "1.78.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "typescript": "7.0.2",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}

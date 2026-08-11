@@ -1,0 +1,5 @@
+interface:
+  display_name: "KSD UI Acceptance"
+  short_description: "Teste parcours, accessibilite et rendu UI"
+  default_prompt: "Use $ksd-ui-acceptance to verify the validated KYA SolDesign interface after UI changes."
+

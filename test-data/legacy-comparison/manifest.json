@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "description": "Legacy comparisons detect intentional differences; they are not approved golden truth.",
+  "cases": []
+}
+

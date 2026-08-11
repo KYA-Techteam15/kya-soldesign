@@ -1,0 +1,11 @@
+id: "ksd-quality-gates"
+extends: "speckit"
+priority: 10
+enabled: true
+edits:
+  - insert_after: implement
+    step:
+      id: verify-implementation
+      type: shell
+      run: "pnpm verify:phase"
+

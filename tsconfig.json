@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/domain" },
+    { "path": "./packages/catalog" },
+    { "path": "./packages/test-kit" },
+    { "path": "./packages/engine" },
+    { "path": "./packages/project-format" },
+    { "path": "./apps/desktop" }
+  ]
+}
+

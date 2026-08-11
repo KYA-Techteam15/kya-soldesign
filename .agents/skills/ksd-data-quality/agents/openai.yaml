@@ -1,0 +1,5 @@
+interface:
+  display_name: "KSD Data Quality"
+  short_description: "Controle catalogues, schemas et provenance"
+  default_prompt: "Use $ksd-data-quality to validate imported or modified KYA SolDesign data."
+
