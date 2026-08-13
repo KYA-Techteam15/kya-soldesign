@@ -1,8 +1,8 @@
-# Goal AIO-001-SPEC — Audit scientifique et spécification du cœur AIO
+# Goal AIO-001-SPEC — Audit scientifique et spécification du cœur AIO par Sol High
 
 ## Objectif
 
-Préparer intégralement la feature roadmap `AIO-001` avant toute implémentation : auditer les comportements historiques en lecture seule, établir les sources scientifiques indépendantes, définir les contrats TypeScript purs, les unités, hypothèses, contraintes, avertissements, traces et jeux de référence, puis faire converger une spec Spec Kit exécutable. Ce goal ne produit aucun calcul de production et ne modifie aucune interface.
+Sol High prépare intégralement la feature roadmap `AIO-001` avant toute implémentation : audit des comportements historiques en lecture seule, établissement des sources scientifiques indépendantes, définition des contrats TypeScript purs, unités, hypothèses, contraintes, avertissements, traces et jeux de référence, puis convergence d’une spec Spec Kit exécutable. Ce goal ne produit aucun calcul de production et ne modifie aucune interface. Terra n’intervient qu’après la convergence, sur un objectif d’implémentation séparé.
 
 ## Contrat d’exécution
 
@@ -17,7 +17,7 @@ Préparer intégralement la feature roadmap `AIO-001` avant toute implémentatio
 9. Prépare les tests avant implémentation : unitaires par formule/branche, limites, propriétés/invariants fast-check, golden cases revus, mutations de sensibilité et comparaisons legacy explicitement non normatives. Aucun attendu ne doit provenir uniquement de l’ancien code.
 10. Établis une table de décision pour chaque ambiguïté scientifique. Résous les choix mécaniques ; arrête-toi seulement lorsqu’une décision humaine modifierait une source, une hypothèse d’ingénierie, un format public ou une baseline golden.
 11. Fais passer `$speckit-converge` sur les artefacts. Implémente uniquement les corrections documentaires ajoutées et répète jusqu’à convergence verte.
-12. Ne passe pas `AIO-001` à `in-progress` ou `done`, ne modifie pas `apps/desktop`, et ne commence aucune formule de production. Prépare à la fin un goal séparé `goals/AIO-001-implementation-terra.md` qui référencera exclusivement la spec convergée.
+12. Ne passe pas `AIO-001` à `in-progress` ou `done`, ne modifie pas `apps/desktop`, et ne commence aucune formule de production. Sol High prépare à la fin un goal séparé `goals/AIO-001-implementation-terra.md` qui référencera exclusivement la spec convergée. Terra ne doit recevoir aucun travail de spécification.
 
 ## Entrées canoniques à spécifier
 
