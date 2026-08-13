@@ -7,7 +7,7 @@ export interface CalculationRequest<Input> {
 
 export interface CalculationEngine<Input, Output> {
   readonly version: string;
-  calculate(request: CalculationRequest<Input>): Promise<CalculationEnvelope<Output>>;
+  calculate(request: CalculationRequest<Input>): CalculationEnvelope<Output> | Promise<CalculationEnvelope<Output>>;
 }
 
 export class UnsupportedCalculationError extends Error {
@@ -16,4 +16,3 @@ export class UnsupportedCalculationError extends Error {
     this.name = 'UnsupportedCalculationError';
   }
 }
-

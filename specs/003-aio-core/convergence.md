@@ -1,31 +1,32 @@
 # Convergence — AIO Core
 
 **Date**: 2026-08-13  
-**Statut de spécification**: ✅ vert — artefacts cohérents et prêts pour implémentation  
-**Statut de code**: non commencé intentionnellement (contrat du goal Sol High)
+**Statut**: ⚠️ code et gates verts; convergence finale en attente du golden AIO approuvé
 
-## Passes effectuées
+## Implémentation vérifiée
 
-| Passe | Résultat | Correction documentaire |
+- Contrats AIO v1 stricts, unités canoniques, normaliseurs DATA-001 et hash stable.
+- Moteur synchrone, pur et sérialisable pour `CALC-AIO-001` à `CALC-AIO-007`.
+- Sorties partielles avec contraintes stables, warnings, provenance dédupliquée et traces formule/source/valeurs.
+- Aucun import UI, legacy ou parent; aucune sortie SIM/EQP/SAFE/FIN/DOC.
+- Les hypothèses et ressource POA absentes, invalides ou sans provenance bloquent seulement leurs dépendances; aucune valeur n'est inventée.
+
+## Audit KSD
+
+| Audit | Résultat | Preuve |
 |---|---|---|
-| Audit `ksd-spec-audit` | vert | frontières roadmap, inconnus, provenance et traces explicités |
-| Audit calcul historique | vert | 11 candidats classés; defaults, simulation/finance et formules ambiguës exclus |
-| SpecKit specify/clarify | vert | ambiguïtés mécaniques résolues sans question humaine |
-| SpecKit plan/checklist/tasks | vert | contrats, tests, tâches et gates reliés aux FR |
-| SpecKit analyze | vert | 10 FR couverts par T001–T020; aucun conflit constitutionnel ou tâche orpheline |
-| Vérification dépôt | vert | `pnpm verify`: lint, typecheck, contrôles UI, 58 tests, build et 18 tests navigateur |
+| `ksd-calculation-test` | vert hors golden approuvé | unités, frontières, propriétés, déterminisme, legacy non normatif et registre `CALC-AIO-001..007` couverts |
+| `ksd-spec-audit` | vert avec une réserve | unités, sources, inconnus, out-of-scope et contrats observables; réserve `G-*` ci-dessous |
+| `pnpm verify:phase` | vert | lint, typecheck, contrôles UI invariants, 63 tests unitaires, 8 propriétés, 5 données |
+| `pnpm verify` | vert | 85 tests totaux sous couverture, build production et 18 tests navigateur |
+| `$speckit-converge` | 1 tâche ajoutée | T021 — baseline golden AIO indépendante et revue par un humain |
+
+## Golden — décision humaine requise
+
+`test-data/golden/manifest.json` est structurellement valide mais ne contient aucun cas. La spécification exige au moins un cas AIO avec calcul manuel, sources `SRC-AIO-*`, hash, traces, identité et date du relecteur. Ajouter ou modifier ce jeu crée une baseline scientifique : la Constitution et le goal interdisent à l'agent de le faire sans approbation humaine explicite.
+
+Le hash du manifeste actuel est donc non applicable à AIO : il ne contient pas de cas AIO. Après approbation et ajout, consigner ici le SHA-256 du fichier golden et du manifeste, le relecteur et la date.
 
 ## Résultat de convergence
 
-`$speckit-converge` au sens strict examine le **code après implémentation** et ne doit donc pas être exécuté comme convergence verte dans ce goal : le lancer maintenant ajouterait, à juste titre, toutes les tâches de production, ce que `AIO-001-SPEC` interdit expressément à Sol High. La convergence demandée par ce goal est celle des artefacts de spécification; elle est verte.
-
-Terra doit exécuter le `speckit-converge` strict après `T018` et consigner le résultat dans ce fichier. Il n'y a aucun écart documentaire restant à traiter avant son implémentation.
-
-## Invariants contrôlés manuellement
-
-- Tous les résultats sont W/Wh/Ah avec unités explicites; pas de mélange kW/kWh/Wh/Ah.
-- Toute formule retenue/corrigée a une source indépendante et un test associé.
-- Aucune valeur technique inconnue n'a de défaut implicite.
-- Aucune règle SIM/EQP/SAFE/FIN/DOC n'est présente dans le pipeline AIO.
-- Le legacy est lecture seule, indexé seulement pour comparaison, sans dépendance de production.
-- Aucune UI, aucun code de calcul et aucun dossier parent n'ont été modifiés par Sol High.
+La convergence de code est complète. La convergence de feature n'est **pas** déclarée verte tant que `T014`/`T021` ne disposent pas du golden approuvé. Aucune intégration UI ne doit démarrer depuis ce goal.

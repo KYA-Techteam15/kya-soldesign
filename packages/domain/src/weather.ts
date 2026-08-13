@@ -57,6 +57,7 @@ export const weatherSeriesSchema = z.object({
 export type Locality = z.infer<typeof localitySchema>;
 export type WeatherSource = z.infer<typeof weatherSourceSchema>;
 export type WeatherSeries = z.infer<typeof weatherSeriesSchema>;
+export type Provenance = z.infer<typeof provenanceSchema>;
 
 export function validateWeatherSeries(series: WeatherSeries): readonly DataIssue[] {
   const issues: DataIssue[] = [];

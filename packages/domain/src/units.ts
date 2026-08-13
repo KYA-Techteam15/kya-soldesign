@@ -11,6 +11,10 @@ export type KilowattHours = Quantity<'kWh'>;
 export type Volts = Quantity<'V'>;
 export type Amperes = Quantity<'A'>;
 export type Hours = Quantity<'h'>;
+export type AmpereHours = Quantity<'Ah'>;
+export type Ratios = Quantity<'ratio'>;
+export type Days = Quantity<'day'>;
+export type KilowattHoursPerSquareMetrePerDay = Quantity<'kWh/m²/day'>;
 
 function quantity<Unit extends string>(value: number, unit: Unit): Quantity<Unit> {
   if (!Number.isFinite(value)) {
@@ -26,9 +30,12 @@ export const kilowattHours = (value: number): KilowattHours => quantity(value, '
 export const volts = (value: number): Volts => quantity(value, 'V');
 export const amperes = (value: number): Amperes => quantity(value, 'A');
 export const hours = (value: number): Hours => quantity(value, 'h');
+export const ampereHours = (value: number): AmpereHours => quantity(value, 'Ah');
+export const ratio = (value: number): Ratios => quantity(value, 'ratio');
+export const days = (value: number): Days => quantity(value, 'day');
+export const kilowattHoursPerSquareMetrePerDay = (value: number): KilowattHoursPerSquareMetrePerDay => quantity(value, 'kWh/m²/day');
 
 export const kilowattsToWatts = (value: Kilowatts): Watts => watts(value * 1_000);
 export const wattsToKilowatts = (value: Watts): Kilowatts => kilowatts(value / 1_000);
 export const kilowattHoursToWattHours = (value: KilowattHours): WattHours => wattHours(value * 1_000);
 export const wattHoursToKilowattHours = (value: WattHours): KilowattHours => kilowattHours(value / 1_000);
-
