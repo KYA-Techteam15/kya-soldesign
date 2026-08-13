@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { ProjectSessionProvider } from './app/ProjectSessionProvider';
 import { CatalogProvider } from './app/CatalogProvider';
+import { CalculationProvider } from './app/CalculationProvider';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/vivid.css';
@@ -16,9 +17,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <ProjectSessionProvider>
-        <CatalogProvider>
-          <App />
-        </CatalogProvider>
+        <CalculationProvider>
+          <CatalogProvider>
+            <App />
+          </CatalogProvider>
+        </CalculationProvider>
       </ProjectSessionProvider>
     </BrowserRouter>
   </StrictMode>,

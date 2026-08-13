@@ -11,8 +11,6 @@ import { useUi } from '../../store/ui';
 import { useT } from '../../i18n';
 import { sectionStates } from '../../domain/completion';
 import { useCatalog } from '../../app/CatalogProvider';
-import { engine } from '../../engine';
-import { readiness } from '../../domain/readiness';
 
 /**
  * Les 8 étapes de l'atelier. Aucun ordre n'est imposé (critère A4).
@@ -78,13 +76,6 @@ export function WorkshopLayout() {
 
   const lang = useUi((s) => s.lang);
   const states = sectionStates(project, lang);
-  /* L'encoche porte le SVI, mais seulement s'il existe : avant le
-     prédimensionnement, le moteur en fabrique un à partir de zéros. */
-  const gates = readiness(project);
-  const runs = useUi((s) => s.runs)[project.id];
-  const hasVerdict = gates.presizing.ready && Boolean(runs?.presizedOnce);
-  const v = hasVerdict ? engine.verdict(project) : null;
-
   return (
     <div className={`app ${verdictCollapsed ? 'verdict-off' : ''}`}>
       {/* Plus de bouton « Dossier client » : le dossier est la huitième étape
@@ -156,7 +147,7 @@ export function WorkshopLayout() {
       </div>
 
       {verdictCollapsed && (
-        <VerdictTab svi={v ? v.svi : null} viable={v ? v.viable : false} />
+        <VerdictTab svi={null} viable={false} />
       )}
 
       <StatusBar currency={project.currency} />

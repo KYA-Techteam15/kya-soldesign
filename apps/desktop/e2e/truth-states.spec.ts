@@ -1,20 +1,29 @@
 import { expect, test } from '@playwright/test';
 
-test('retains the complete Bombouaka reference study and its calculated outputs', async ({ page }) => {
-  await page.goto('/projet/p-2026-041/atelier/projet');
-  await expect(page.locator('input[value="District Sanitaire de Bombouaka"]')).toBeVisible();
-  await page.goto('/projet/p-2026-041/atelier/site');
-  await expect(page.locator('.pane-center')).toContainText('Bombouaka');
-  await page.goto('/projet/p-2026-041/atelier/besoins');
-  await expect(page.locator('input[value="Réfrigérateur à vaccins"]')).toBeVisible();
-  await expect(page.locator('input[value="Pompe à eau de surface"]')).toBeVisible();
-  await page.goto('/projet/p-2026-041/atelier/hypotheses');
-  await page.getByRole('button', { name: 'Lancer le prédimensionnement' }).click();
-  await expect(page.locator('.pane-center')).toContainText(/121 combinaisons/);
-  await page.goto('/projet/p-2026-041/atelier/materiel');
-  await expect(page.locator('.pane-center')).toContainText(/84 onduleurs/);
-  await page.goto('/projet/p-2026-041/atelier/chiffrage');
-  await expect(page.locator('.pane-center')).toContainText('Total TTC');
-  await page.goto('/projet/p-2026-041/atelier/dossier');
-  await expect(page.getByRole('heading', { name: 'Vue synoptique et rapports' })).toBeVisible();
+test('keeps calculated surfaces truthful when production capabilities are unavailable', async ({ page }) => {
+  await page.goto('/accueil');
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
+  await expect(page.locator('.statusbar')).toContainText('Calculs indisponibles · AIO-001');
+  await expect(page.locator('.statusbar')).toContainText('Aucun résultat simulé');
+
+  await page.locator('.nav-item').nth(2).click();
+  await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
+  await expect(page.locator('.pane-center')).toContainText('Dimensionnement indisponible');
+  await expect(page.locator('.t-classic tbody .derived').first()).toHaveText('—');
+
+  await page.locator('.nav-item').nth(3).click();
+  await expect(page.getByRole('button', { name: 'Prédimensionnement indisponible' })).toBeDisabled();
+  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par AIO-001');
+
+  await page.locator('.nav-item').nth(4).click();
+  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par EQP-001');
+
+  await page.locator('.nav-item').nth(5).click();
+  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par SAFE-001');
+
+  await page.locator('.nav-item').nth(6).click();
+  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par FIN-001');
+
+  await page.locator('.nav-item').nth(7).click();
+  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par DOC-001');
 });

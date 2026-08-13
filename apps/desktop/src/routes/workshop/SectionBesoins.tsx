@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { useUi } from '../../store/ui';
-import { engine } from '../../engine';
 import { StepHead } from '../../ui/Flow';
 import { fmt } from '../../domain/format';
-import { Prov } from '../../ui/Prov';
 import { useGridNav } from '../../ui/useGridNav';
-import type { Granularity, LoadSource, NamedProfile } from '../../domain/types';
+import type { Granularity, LoadSource, NamedProfile } from '../../app/models/projectView';
+import { useCalculationState } from '../../app/CalculationProvider';
+import { CapabilityNotice } from '../../ui/CapabilityNotice';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -37,9 +37,7 @@ export function SectionBesoins() {
   const profile = project.load.profiles.find(
     (p) => p.id === project.load.activeProfileId,
   )!;
-  const balance = engine.loadBalance(project);
-  const sizing = engine.size(project);
-  const startup = sizing.constraints.find((c) => c.id === 'startup');
+  const calculation = useCalculationState(project.id, 'sizing', project.updatedAt);
 
   const mutateProfile = (fn: (p: NamedProfile) => void) =>
     update((draft) => {
@@ -58,21 +56,12 @@ export function SectionBesoins() {
    */
   const switchMode = (next: LoadSource) => {
     if (next === profile.source) return;
-    const emptyHourly = profile.hourly.every((h) => h.realPower === 0);
     mutateProfile((p) => {
       p.source = next;
-      if (next === 'hourly' && emptyHourly) {
-        balance.hourlyKw.forEach((kw, h) => {
-          p.hourly[h].realPower = kw;
-          p.hourly[h].peakPower = Math.round(kw * 1.35 * 100) / 100;
-        });
-      }
     });
     const said: Record<LoadSource, string> = {
       equipments: 'La liste d’appareils pilote désormais le calcul.',
-      hourly: emptyHourly
-        ? 'Le profil horaire a été pré-rempli depuis la liste d’appareils, et pilote désormais le calcul.'
-        : 'Le profil horaire saisi pilote désormais le calcul.',
+      hourly: 'Le profil horaire saisi est désormais la source active.',
       meter: 'L’estimation depuis la facture pilote désormais le calcul.',
     };
     notify({ kind: 'info', title: 'Source de calcul changée', detail: said[next] });
@@ -135,15 +124,6 @@ export function SectionBesoins() {
       }),
   });
 
-  const sum = (lines: { totalPower: number; realPower: number; energy: number }[]) =>
-    lines.reduce(
-      (a, l) => ({
-        total: a.total + l.totalPower,
-        real: a.real + l.realPower,
-        energy: a.energy + l.energy,
-      }),
-      { total: 0, real: 0, energy: 0 },
-    );
   const needle = filter.trim().toLowerCase();
   const keep = (name: string) => !needle || name.toLowerCase().includes(needle);
   const visibleClassic = profile.classic
@@ -152,9 +132,6 @@ export function SectionBesoins() {
   const visibleInductive = profile.inductive
     .map((e, i) => ({ e, i }))
     .filter(({ e }) => keep(e.name));
-
-  const ct = sum(balance.classic);
-  const it = sum(balance.inductive);
 
   return (
     <div className="sheet">
@@ -236,7 +213,6 @@ export function SectionBesoins() {
                 </thead>
                 <tbody>
                   {visibleClassic.map(({ e, i }) => {
-                    const line = balance.classic[i];
                     return (
                       <tr key={e.id}>
                         <td className="name">
@@ -259,9 +235,9 @@ export function SectionBesoins() {
                           <input className="cell-in" data-r={i} data-c={4} aria-label="Heures d'usage" value={fmt(e.opHours, e.opHours % 1 ? 1 : 0)}
                             onChange={(ev) => mutateProfile((p) => { p.classic[i].opHours = num(ev.target.value); })} />
                         </td>
-                        <td className="derived num">{fmt(line.totalPower)}</td>
-                        <td className="derived num">{fmt(line.realPower)}</td>
-                        <td className="derived num">{fmt(line.energy)}</td>
+                        <td className="derived num">—</td>
+                        <td className="derived num">—</td>
+                        <td className="derived num">—</td>
                         <td>
                           <button className="rowdel" title="Supprimer la ligne"
                             onClick={() => mutateProfile((p) => { p.classic.splice(i, 1); })}>
@@ -275,9 +251,9 @@ export function SectionBesoins() {
                 <tfoot>
                   <tr>
                     <td colSpan={5}>Sous-total classiques</td>
-                    <td className="num">{fmt(ct.total)}</td>
-                    <td className="num">{fmt(ct.real)}</td>
-                    <td className="num">{fmt(ct.energy)}</td>
+                    <td className="num">—</td>
+                    <td className="num">—</td>
+                    <td className="num">—</td>
                     <td />
                   </tr>
                 </tfoot>
@@ -329,11 +305,8 @@ export function SectionBesoins() {
                 </thead>
                 <tbody>
                   {visibleInductive.map(({ e, i }) => {
-                    const line = balance.inductive[i];
-                    const isWorst =
-                      Boolean(startup) && !startup!.satisfied && startup!.detail.includes(e.name);
                     return (
-                      <tr key={e.id} className={isWorst ? 'row-err' : undefined}>
+                      <tr key={e.id}>
                         <td className="name">
                           <input className="cell-in" data-r={i} data-c={0} aria-label="Nom" value={e.name}
                             onChange={(ev) => mutateProfile((p) => { p.inductive[i].name = ev.target.value; })} />
@@ -358,19 +331,9 @@ export function SectionBesoins() {
                           <input className="cell-in" data-r={i} data-c={5} aria-label="Heures d'usage" value={e.opHours}
                             onChange={(ev) => mutateProfile((p) => { p.inductive[i].opHours = num(ev.target.value); })} />
                         </td>
-                        <td className="derived num">{fmt(line.totalPower)}</td>
-                        <td className="derived num">{fmt(line.realPower)}</td>
-                        <td className="derived num">
-                          {fmt(line.energy)}
-                          {isWorst && (
-                            <span
-                              className="flag"
-                              title={`Pointe de démarrage ${fmt(line.peakPower)} W — au-delà de la réserve de surcharge`}
-                            >
-                              ⚠
-                            </span>
-                          )}
-                        </td>
+                        <td className="derived num">—</td>
+                        <td className="derived num">—</td>
+                        <td className="derived num">—</td>
                         <td>
                           <button className="rowdel" title="Supprimer la ligne"
                             onClick={() => mutateProfile((p) => { p.inductive.splice(i, 1); })}>
@@ -384,30 +347,16 @@ export function SectionBesoins() {
                 <tfoot>
                   <tr>
                     <td colSpan={6}>Sous-total inductifs</td>
-                    <td className="num">{fmt(it.total)}</td>
-                    <td className="num">{fmt(it.real)}</td>
-                    <td className="num">{fmt(it.energy)}</td>
+                    <td className="num">—</td>
+                    <td className="num">—</td>
+                    <td className="num">—</td>
                     <td />
                   </tr>
                   <tr>
                     <td colSpan={6}>Total besoins</td>
-                    <td className="num">{fmt(balance.totalPowerW)}</td>
-                    <td className="num">
-                      <Prov
-                        title="Puissance réelle appelée"
-                        formula="P. réelle = Σ (Qté × P. unit.) / rendement"
-                        rows={[
-                          ['Classiques', `${fmt(ct.real)} W`],
-                          ['Inductifs', `${fmt(it.real)} W`],
-                          ['Pointe démarrages inclus', `${fmt(balance.peakPowerW)} W`],
-                          ['Facteur de qualité γ', fmt(balance.qualityFactor, 2)],
-                        ]}
-                        source="Besoins · liste d'appareils"
-                      >
-                        {fmt(balance.realPowerW)}
-                      </Prov>
-                    </td>
-                    <td className="num">{fmt(balance.dailyEnergyWh)}</td>
+                    <td className="num">—</td>
+                    <td className="num">—</td>
+                    <td className="num">—</td>
                     <td />
                   </tr>
                 </tfoot>
@@ -468,9 +417,7 @@ export function SectionBesoins() {
               ))}
             </div>
           ))}
-          <p className="label">
-            Total saisi : {fmt(profile.hourly.reduce((s, h) => s + h.realPower, 0), 2)} kWh/jour
-          </p>
+          <CapabilityNotice capability="sizing" state={calculation} compact />
         </section>
       )}
 
@@ -579,6 +526,10 @@ export function SectionBesoins() {
             </footer>
           </div>
         </div>
+      )}
+
+      {profile.source === 'equipments' && (
+        <CapabilityNotice capability="sizing" state={calculation} compact />
       )}
 
     </div>
