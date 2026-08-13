@@ -488,7 +488,7 @@ export function SectionSite() {
                     } else {
                       // Localité connue mais sans série : on ne fabrique pas
                       // un profil à partir de rien, on le dit.
-                      p.site.monthlyIrradiation = new Array(12).fill(0);
+                      p.site.monthlyIrradiation = Array.from<number>({ length: 12 }).fill(0);
                       p.site.irradiation = 0;
                       p.site.irradiationBasis = null;
                     }

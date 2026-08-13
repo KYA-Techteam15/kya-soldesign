@@ -131,7 +131,7 @@ export function annualMeanIrradiance(
   monthly: number[],
 ): number[] {
   const total = DAYS_IN_MONTH.reduce((a, b) => a + b, 0);
-  const sum = new Array(24).fill(0);
+  const sum = Array.from<number>({ length: 24 }).fill(0);
   for (let m = 0; m < 12; m++) {
     const profile = hourlyMeanIrradiance(latitude, m, tilt, azimuth, monthly[m] ?? 0);
     for (let h = 0; h < 24; h++) sum[h] += profile[h] * DAYS_IN_MONTH[m];

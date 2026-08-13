@@ -137,7 +137,7 @@ export function coordsFromPlace(countryCode: string, town: string): GeoHit | nul
   if (!centroid) return null;
   // Ville inconnue dans un pays connu : on décale légèrement le centroïde pour
   // ne pas rendre deux fois la même position à deux villes différentes.
-  const jitter = ([...needle].reduce((a, c) => a + c.charCodeAt(0), 0) % 40) / 100 - 0.2;
+  const jitter = (Array.from(needle).reduce((a, c) => a + c.charCodeAt(0), 0) % 40) / 100 - 0.2;
   return {
     name: town.trim(),
     countryCode,

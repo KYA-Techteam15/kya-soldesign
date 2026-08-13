@@ -82,7 +82,7 @@ export function Home() {
       return;
     }
     const id = create(type);
-    nav(`/projet/${id}/atelier/projet`);
+    void nav(`/projet/${id}/atelier/projet`);
   };
 
   return (

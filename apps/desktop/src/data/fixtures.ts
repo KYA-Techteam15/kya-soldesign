@@ -251,7 +251,7 @@ export const blankProject = (id: string, systemType: Project['systemType']): Pro
       latitude: 0,
       longitude: 0,
       irradiation: 0,
-      monthlyIrradiation: new Array(12).fill(0),
+      monthlyIrradiation: Array.from<number>({ length: 12 }).fill(0),
       irradiationBasis: null,
       downloadedSource: null,
     },
@@ -262,9 +262,11 @@ export const blankProject = (id: string, systemType: Project['systemType']): Pro
           ...base.load.profiles[0],
           classic: [],
           inductive: [],
-          hourly: new Array(24)
-            .fill(0)
-            .map((_, hour) => ({ hour, realPower: 0, peakPower: 0 })),
+          hourly: Array.from({ length: 24 }, (_, hour) => ({
+            hour,
+            realPower: 0,
+            peakPower: 0,
+          })),
         },
       ],
     },

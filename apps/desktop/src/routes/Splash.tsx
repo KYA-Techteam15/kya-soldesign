@@ -13,12 +13,12 @@ export function Splash() {
 
   useEffect(() => {
     if (seen) {
-      nav('/accueil', { replace: true });
+      void nav('/accueil', { replace: true });
       return;
     }
     const timer = setTimeout(() => {
       markSeen();
-      nav('/accueil', { replace: true });
+      void nav('/accueil', { replace: true });
     }, 1800);
     return () => clearTimeout(timer);
   }, [seen, nav, markSeen]);

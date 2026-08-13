@@ -61,7 +61,7 @@ export function CommandPalette() {
       { id: 'go-settings', label: 'Ouvrir les réglages', run: () => nav('/reglages') },
       { id: 'new', label: 'Nouveau projet autonome tout-en-un', run: () => {
           const id = create('standalone_all_in_one');
-          nav(`/projet/${id}/atelier/projet`);
+          void nav(`/projet/${id}/atelier/projet`);
         } },
       { id: 'theme', label: ui.theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre', run: ui.toggleTheme },
       ...VIBES.filter((v) => v !== ui.vibe).map((v) => ({

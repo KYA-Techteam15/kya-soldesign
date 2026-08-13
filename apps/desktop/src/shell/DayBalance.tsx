@@ -83,7 +83,7 @@ export function DayBalance({
     // Irradiance en plan des modules, W/m², moyenne sur l'année entière.
     const irr = hasWeather
       ? annualMeanIrradiance(s.latitude, s.tilt, s.azimuth, s.monthlyIrradiation)
-      : new Array(24).fill(0);
+      : Array.from<number>({ length: 24 }).fill(0);
 
     return {
       load,
