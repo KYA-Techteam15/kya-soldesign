@@ -9,6 +9,9 @@ describe('canonical catalog adapter', () => {
     expect(all.length).toBeGreaterThan(0);
     expect(filtered[0]?.id).toBe(all[0]?.id);
     expect(filtered[0]?.provenance.sourceId).toBeTruthy();
+    const summary = await catalog.summary();
+    expect(summary.accepted).toEqual({ 'pv-module': 387, battery: 366, inverter: 81 });
+    expect(summary.quarantined).toEqual({ 'pv-module': 1, battery: 0, inverter: 3 });
   });
 
   it('exposes canonical localities and associated weather sources', async () => {

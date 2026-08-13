@@ -9,8 +9,8 @@
  * à l'aller, pays plus ville au retour, `null` quand rien n'est trouvé.
  */
 
-import { countries, localities, weatherSources } from '../data/reference';
 import type { LocalityRef, WeatherSourceRef } from './types';
+import { countryName } from '../app/models/catalogView.js';
 
 export interface GeoHit {
   name: string;
@@ -65,7 +65,7 @@ const distanceKm = (aLat: number, aLon: number, bLat: number, bLon: number): num
  * le pays, qui est sûr, et le repère le plus proche, que l'appelant présente
  * comme un point de départ à corriger.
  */
-export function placeFromCoords(latitude: number, longitude: number): GeoHit | null {
+export function placeFromCoords(latitude: number, longitude: number, localities: readonly LocalityRef[]): GeoHit | null {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
   if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
 
@@ -103,7 +103,7 @@ export function placeFromCoords(latitude: number, longitude: number): GeoHit | n
 }
 
 /** Lieu vers coordonnées, à la manière de `get_coords_from_address`. */
-export function coordsFromPlace(countryCode: string, town: string): GeoHit | null {
+export function coordsFromPlace(countryCode: string, town: string, localities: readonly LocalityRef[]): GeoHit | null {
   const needle = town.trim().toLowerCase();
   if (!countryCode || !needle) return null;
 
@@ -148,12 +148,11 @@ export function coordsFromPlace(countryCode: string, town: string): GeoHit | nul
 }
 
 /** Pays qui savent répondre, dans la langue courante. */
-export function geocodableCountries(lang: 'fr' | 'en'): { code: string; name: string }[] {
+export function geocodableCountries(lang: 'fr' | 'en', localities: readonly LocalityRef[]): { code: string; name: string }[] {
   const codes = new Set([...Object.keys(CENTROIDS), ...localities.map((l) => l.country_code)]);
   return [...codes]
     .map((code) => {
-      const c = countries.find((x) => x.alpha2 === code);
-      return { code, name: c ? (lang === 'fr' ? c.nom_fr_fr : c.nom_en_gb) : code };
+      return { code, name: countryName(code, lang) };
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 }
@@ -170,6 +169,7 @@ export function localityFor(
   name: string,
   latitude?: number,
   longitude?: number,
+  localities: readonly LocalityRef[] = [],
 ): LocalityRef | null {
   const needle = name.trim().toLowerCase();
   const hasPoint = Number.isFinite(latitude) && Number.isFinite(longitude);
@@ -207,6 +207,8 @@ export function existingSeriesFor(
   name: string,
   latitude?: number,
   longitude?: number,
+  localities: readonly LocalityRef[] = [],
+  weatherSources: readonly WeatherSourceRef[] = [],
 ): { locality: LocalityRef; source: WeatherSourceRef } | null {
   const needle = name.trim().toLowerCase();
   const hasPoint = Number.isFinite(latitude) && Number.isFinite(longitude);

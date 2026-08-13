@@ -3,7 +3,8 @@ import { localitySchema, weatherSourceSchema, type Locality, type WeatherSource 
 import equipmentSnapshot from '../../../../../packages/catalog/data/equipment.json';
 import localitySnapshot from '../../../../../packages/catalog/data/localities.json';
 import weatherSourceSnapshot from '../../../../../packages/catalog/data/weather-sources.json';
-import type { CatalogQuery, CatalogQueryPort } from '../contracts.js';
+import qualitySnapshot from '../../../../../packages/catalog/data/quality-report.json';
+import type { CatalogQuery, CatalogQueryPort, CatalogSummary } from '../contracts.js';
 
 interface SnapshotDocument {
   readonly schemaVersion: number;
@@ -59,5 +60,32 @@ export class CanonicalCatalog implements CatalogQueryPort {
 
   public async listWeatherSources(localityId?: string): Promise<readonly WeatherSource[]> {
     return localityId === undefined ? this.weatherSources : this.weatherSources.filter((source) => source.localityId === localityId);
+  }
+
+  public async summary(): Promise<CatalogSummary> {
+    const quality = qualitySnapshot as {
+      readonly reports: {
+        readonly pvModules: { readonly quarantinedRecordCount: number };
+        readonly batteries: { readonly quarantinedRecordCount: number };
+        readonly inverters: { readonly quarantinedRecordCount: number };
+      };
+      readonly totals: { readonly warnings: number };
+    };
+    const count = (kind: Equipment['kind']) => this.equipment.filter((item) => item.kind === kind).length;
+    return {
+      accepted: {
+        'pv-module': count('pv-module'),
+        battery: count('battery'),
+        inverter: count('inverter'),
+      },
+      quarantined: {
+        'pv-module': quality.reports.pvModules.quarantinedRecordCount,
+        battery: quality.reports.batteries.quarantinedRecordCount,
+        inverter: quality.reports.inverters.quarantinedRecordCount,
+      },
+      warnings: quality.totals.warnings,
+      localities: this.localities.length,
+      weatherSources: this.weatherSources.length,
+    };
   }
 }

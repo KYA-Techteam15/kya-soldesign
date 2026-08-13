@@ -10,7 +10,7 @@ import { useProjects } from '../../store/project';
 import { useUi } from '../../store/ui';
 import { useT } from '../../i18n';
 import { sectionStates } from '../../domain/completion';
-import { referenceCounts } from '../../data/reference';
+import { useCatalog } from '../../app/CatalogProvider';
 import { engine } from '../../engine';
 import { readiness } from '../../domain/readiness';
 
@@ -42,6 +42,7 @@ export function WorkshopLayout() {
   const toggleVerdict = useUi((s) => s.toggleVerdict);
   const { pathname } = useLocation();
   const centerRef = useRef<HTMLElement>(null);
+  const { summary } = useCatalog();
   const project = projects.find((p) => p.id === id) ?? null;
 
   useEffect(() => {
@@ -132,15 +133,15 @@ export function WorkshopLayout() {
           <div className="tree-sub" style={{ paddingLeft: 16 }}>
             <div>
               <span>Modules</span>
-              <span>{referenceCounts.modules}</span>
+              <span>{summary?.accepted['pv-module'] ?? '—'}</span>
             </div>
             <div>
               <span>Batteries</span>
-              <span>{referenceCounts.batteries}</span>
+              <span>{summary?.accepted.battery ?? '—'}</span>
             </div>
             <div>
               <span>Onduleurs</span>
-              <span>{referenceCounts.inverters}</span>
+              <span>{summary?.accepted.inverter ?? '—'}</span>
             </div>
           </div>
         </nav>

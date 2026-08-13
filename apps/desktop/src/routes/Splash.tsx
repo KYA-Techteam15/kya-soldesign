@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useT } from '../i18n';
 import { useUi } from '../store/ui';
-import { referenceCounts } from '../data/reference';
+import { useCatalog } from '../app/CatalogProvider';
 
 /** Une seule fois par lancement : on ne traverse pas deux fois le démarrage. */
 export function Splash() {
@@ -10,6 +10,7 @@ export function Splash() {
   const nav = useNavigate();
   const seen = useUi((s) => s.splashSeen);
   const markSeen = useUi((s) => s.markSplashSeen);
+  const { summary } = useCatalog();
 
   useEffect(() => {
     if (seen) {
@@ -34,8 +35,8 @@ export function Splash() {
         <i />
       </div>
       <p className="version">
-        {t('splash.loading')} — {referenceCounts.modules} modules ·{' '}
-        {referenceCounts.batteries} batteries · {referenceCounts.inverters} onduleurs
+        {t('splash.loading')} — {summary?.accepted['pv-module'] ?? '—'} modules ·{' '}
+        {summary?.accepted.battery ?? '—'} batteries · {summary?.accepted.inverter ?? '—'} onduleurs
       </p>
       <p className="version">v0.1.0 — prototype de design</p>
     </div>

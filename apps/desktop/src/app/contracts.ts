@@ -24,6 +24,15 @@ export interface CatalogQueryPort {
   list(query?: CatalogQuery): Promise<readonly Equipment[]>;
   listLocalities(): Promise<readonly Locality[]>;
   listWeatherSources(localityId?: string): Promise<readonly WeatherSource[]>;
+  summary(): Promise<CatalogSummary>;
+}
+
+export interface CatalogSummary {
+  readonly accepted: Readonly<Record<Equipment['kind'], number>>;
+  readonly quarantined: Readonly<Record<Equipment['kind'], number>>;
+  readonly warnings: number;
+  readonly localities: number;
+  readonly weatherSources: number;
 }
 
 export type CapabilityState<Output> =

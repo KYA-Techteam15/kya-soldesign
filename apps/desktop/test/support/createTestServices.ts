@@ -5,7 +5,10 @@ import { unavailableCalculations } from '../../src/app/adapters/unavailableCalcu
 
 export function createTestServices(): ApplicationServices {
   return {
-    projects: new InMemoryProjects(() => '2026-08-11T00:00:00.000Z'),
+    projects: new InMemoryProjects(
+      () => '2026-08-11T00:00:00.000Z',
+      () => '00000000-0000-4000-8000-000000000005',
+    ),
     catalog: new CanonicalCatalog(),
     calculations: unavailableCalculations,
   };

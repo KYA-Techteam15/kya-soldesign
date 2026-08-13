@@ -11,7 +11,8 @@
 
 import { useRef, useState } from 'react';
 import { fmt } from '../../domain/format';
-import { countryName } from '../../data/reference';
+import { useCatalog } from '../../app/CatalogProvider';
+import { countryName, localityToView, weatherSourceToView } from '../../app/models/catalogView';
 import {
   coordsFromPlace,
   existingSeriesFor,
@@ -52,8 +53,11 @@ export function WeatherDownload({
   const [preview, setPreview] = useState<TmyPreview | null>(null);
   const [file, setFile] = useState<{ name: string; kind: string; columns: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const catalog = useCatalog();
+  const localities = catalog.localities.map(localityToView);
+  const weatherSources = catalog.weatherSources.map(weatherSourceToView);
 
-  const countryList = geocodableCountries(lang);
+  const countryList = geocodableCountries(lang, localities);
 
   /** Changer de saisie invalide la position trouvée : on ne télécharge que
       ce qu'on vient de vérifier. */
@@ -68,8 +72,8 @@ export function WeatherDownload({
     setMiss(null);
     const found =
       mode === 'town'
-        ? coordsFromPlace(country, town)
-        : placeFromCoords(parseNum(lat), parseNum(lon));
+        ? coordsFromPlace(country, town, localities)
+        : placeFromCoords(parseNum(lat), parseNum(lon), localities);
     if (!found) {
       setHit(null);
       setMiss(
@@ -111,7 +115,7 @@ export function WeatherDownload({
       return;
     }
     const place = read.place;
-    const found = place ? placeFromCoords(place.latitude, place.longitude) : null;
+    const found = place ? placeFromCoords(place.latitude, place.longitude, localities) : null;
     setHit(
       found ?? {
         name: f.name.replace(/\.(json|csv)$/i, ''),
@@ -128,14 +132,21 @@ export function WeatherDownload({
   /* Localité connue : par le nom si le point s'y accorde, sinon par la
      proximité. Comparer les seuls noms rattachait à Alger un site situé à
      deux cents kilomètres, parce que le repère proposé porte ce nom. */
-  const existing = hit ? localityFor(hit.countryCode, hit.name, hit.latitude, hit.longitude) : null;
+  const existing = hit ? localityFor(hit.countryCode, hit.name, hit.latitude, hit.longitude, localities) : null;
   const sourceName = hit ? `${hit.name} PVGIS-TMY` : '';
   const max = preview ? Math.max(...preview.monthly, 0.001) : 1;
   /* Remplacer ou ajouter se décide sur le lieu VISÉ, une fois qu'il est
      trouvé — pas sur la série déjà ouverte dans le dossier. Choisir Alger
      puis télécharger Kara n'écrase rien : ce sont deux sites distincts.
      Tant que rien n'est localisé, la question ne se pose pas encore. */
-  const clash = hit ? existingSeriesFor(hit.countryCode, hit.name, hit.latitude, hit.longitude) : null;
+  const clash = hit ? existingSeriesFor(
+    hit.countryCode,
+    hit.name,
+    hit.latitude,
+    hit.longitude,
+    localities,
+    weatherSources,
+  ) : null;
   const replaces = clash !== null;
 
   return (

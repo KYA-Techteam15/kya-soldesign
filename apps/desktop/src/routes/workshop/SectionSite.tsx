@@ -3,7 +3,8 @@ import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { useUi } from '../../store/ui';
 import { fmt } from '../../domain/format';
-import { countryName, localities, weatherSources } from '../../data/reference';
+import { useCatalog } from '../../app/CatalogProvider';
+import { countryName, localityToView, weatherSourceToView } from '../../app/models/catalogView';
 import { Group, NumField, ReadField } from '../../ui/Field';
 import { StepHead } from '../../ui/Flow';
 import { Dialog } from '../../ui/Dialog';
@@ -25,6 +26,9 @@ const MONTH_NAMES = [
 
 export function SectionSite() {
   const project = useProject();
+  const catalog = useCatalog();
+  const localities = catalog.localities.map(localityToView);
+  const weatherSources = catalog.weatherSources.map(weatherSourceToView);
   const update = useProjects((s) => s.update);
   const notify = useUi((s) => s.notify);
   const lang = useUi((s) => s.lang);

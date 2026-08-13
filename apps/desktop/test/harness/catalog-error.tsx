@@ -21,6 +21,7 @@ const services = {
     },
     listLocalities: () => base.catalog.listLocalities(),
     listWeatherSources: (localityId?: string) => base.catalog.listWeatherSources(localityId),
+    summary: () => base.catalog.summary(),
   },
 };
 
