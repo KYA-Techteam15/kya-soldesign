@@ -33,6 +33,7 @@
 
 - [ ] T018 Exécuter `$ksd-calculation-test`, `$ksd-spec-audit` et `pnpm verify:phase`; corriger au maximum trois itérations dans le périmètre AIO.
 - [ ] T019 Exécuter `pnpm verify`, puis `$speckit-converge`; traiter seulement les tâches de convergence de cette feature.
+- [ ] T020 Mettre à jour `specs/003-aio-core/convergence.md` avec les commandes, sorties, hash des goldens et résultat final; ne déclarer vert que si toutes les preuves, dont le golden humain, existent.
 
 ## Dépendances
 
@@ -43,3 +44,9 @@ Les tâches marquées `[P]` sont parallélisables uniquement après que leurs pr
 ## Phase 6: Convergence
 
 - [ ] T021 Obtenir l'approbation humaine d'au moins un cas golden AIO indépendant (entrées, calcul manuel, sources `SRC-AIO-*`, relecteur et date), puis l'ajouter sans dériver d'une sortie legacy (FR-010, missing).
+- [ ] T022 Restaurer byte-for-byte le contrat public async `CalculationEngine.calculate` dans `packages/engine/src/engine.ts`; garder `calculateSync` comme extension AIO pure et faire déléguer `AioSizingEngine.calculate` vers ce cœur avec tests de contrat (FR-009, contradicts).
+- [ ] T023 Remplacer le fallback générique `AIO_INVALID_HOURLY_SERIES` par une classification déterministe des erreurs de frontière et une propagation par dépendance conforme à `contracts/engine-api.md`, incluant série horaire, startup, ressource solaire, hypothèses, contexte technique, provenance et forme non récupérable (FR-007, contradicts).
+- [ ] T024 Garantir une enveloppe sérialisable sans exception pour `NaN`, `Infinity` et valeurs non canoniques; introduire un identifiant diagnostique distinct du hash technique validé et tester le déterminisme (US1/AC3, US3/AC1, partial).
+- [ ] T025 Ajouter les tests unitaires et propriétés manquants pour zéro/positif, invalidités par champ, propagation minimale, ordre/déduplication des contraintes, déterminisme complet et unité/hash, sans cocher les exigences `G-*` (Constitution IV, partial).
+- [ ] T026 Réconcilier les chemins/noms de tests réellement adoptés avec les tâches et le registre, puis produire une matrice FR/US/CALC → test précis; ne cocher T005-T007/T014 qu'après golden humain approuvé (FR-010, partial).
+- [ ] T027 Exécuter `ksd-calculation-test`, `ksd-spec-audit`, `pnpm verify:phase`, `pnpm verify` et `$speckit-converge`; mettre à jour `convergence.md` avec les preuves exactes et laisser le statut non convergé tant que T021 reste ouvert (Constitution V, partial).

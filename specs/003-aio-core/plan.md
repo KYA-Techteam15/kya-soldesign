@@ -5,7 +5,7 @@
 | Sujet | Décision |
 |---|---|
 | Langage/runtime | TypeScript pur dans `packages/engine`; composition des validateurs, unités, charges, météo et enveloppe DATA-001 dans `packages/domain` |
-| API | `AioSizingEngineV1.calculate` synchrone et sans effets de bord |
+| API | `AioSizingEngineV1.calculateSync` synchrone et sans effets de bord; `CalculationEngine.calculate` asynchrone conservé sans modification et déléguant au même cœur |
 | Contrats | spécialisation de `CalculationRequest` / `CalculationEngine` / `CalculationEnvelope`, JSON sérialisable |
 | Hash | canonique stable des seules entrées techniques validées |
 | Tests | Vitest + fast-check + goldens revus + legacy non normatif |
