@@ -4,9 +4,9 @@
 
 | Sujet | Décision |
 |---|---|
-| Langage/runtime | TypeScript pur dans `packages/engine`; validation runtime et unités dans `packages/domain` |
+| Langage/runtime | TypeScript pur dans `packages/engine`; composition des validateurs, unités, charges, météo et enveloppe DATA-001 dans `packages/domain` |
 | API | `AioSizingEngineV1.calculate` synchrone et sans effets de bord |
-| Contrats | `AioSizingRequestV1` / `AioSizingEnvelopeV1`, JSON sérialisable |
+| Contrats | spécialisation de `CalculationRequest` / `CalculationEngine` / `CalculationEnvelope`, JSON sérialisable |
 | Hash | canonique stable des seules entrées techniques validées |
 | Tests | Vitest + fast-check + goldens revus + legacy non normatif |
 | UI | aucune modification dans AIO-001; un adaptateur de frontière peut être préparé sans import UI |
@@ -25,8 +25,9 @@ Toutes les portes sont **PASS** au niveau de conception. Toute extension de chim
 ## Architecture cible
 
 ```text
-packages/domain/src/aio.ts                 schémas, unités, types, provenance
-packages/engine/src/aio/normalize.ts       validation et canonicalisation de frontière
+packages/domain/src/units.ts                étendre seulement les unités manquantes
+packages/domain/src/aio.ts                  composition DATA-001 et écarts AIO stricts
+packages/engine/src/aio/normalize.ts       adaptation des contrats DATA-001 et canonicalisation
 packages/engine/src/aio/calculations.ts    CALC-AIO-001..007 purs
 packages/engine/src/aio/engine.ts          orchestration, contraintes, traces, hash
 packages/engine/src/aio/index.ts           export public
@@ -45,7 +46,7 @@ Le détail final des noms de fichiers peut suivre les conventions existantes, ma
 
 ## Aucune migration UI
 
-L'UI possède actuellement des champs plus larges (coûts, sécurité, météo partielle, `batteryEfficiencyRatio` ambigu). Les adapter vers AIO exige:
+L'UI possède actuellement des champs plus larges (coûts, sécurité, météo partielle, `batteryEfficiencyRatio` ambigu). Les adapter vers les contrats DATA-001 puis AIO exige:
 
 1. une valeur techniquement définie et sourcée;
 2. une conversion explicitement testée;

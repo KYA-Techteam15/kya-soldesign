@@ -10,9 +10,23 @@
 | Valeur dérivée de frontière | série issue d'une facture, conversion W→Wh | oui avec méthode/provenance |
 | Résultat moteur | besoin/predimensionnement, warnings, trace | sortie seulement |
 
+## Réemploi obligatoire du modèle existant
+
+L'AIO ne recrée pas les fondations DATA-001. Terra doit importer et composer les contrats existants, puis ajouter seulement les écarts qui n'y figurent pas encore.
+
+| Besoin AIO | Autorité existante à réemployer | Extension réellement permise |
+|---|---|---|
+| unités W, Wh, V, h et conversions | `packages/domain/src/units.ts` | ajouter seulement Ah, ratio, jours et kWh/m²/j, au même module |
+| appareils et fractions horaires | `LoadItem`, `hourlyOperatingFractionsSchema`, `deriveDailyLoadEnergyWh` dans `packages/domain/src/load.ts` | un adaptateur vers la charge journalière AIO; aucun second schéma d'appareil |
+| profil de facture | `NormalizedHourlyProfile` et `normalizeHourlyEnergyWeights` dans `packages/domain/src/load.ts` | contrat de période de facture, pas un nouveau profil à 24 poids |
+| localité, source et série météo | `Locality`, `WeatherSource`, `WeatherSeries`, validateurs dans `packages/domain/src/weather.ts` | projection POA de conception avec méthode/version, sans dupliquer la série |
+| provenance de données | `provenanceSchema` dans `packages/domain/src/weather.ts` | métadonnées AIO seulement si nécessaires à une hypothèse/source scientifique |
+| issues et trace minimale | `CalculationIssue`, `CalculationTraceEntry`, `CalculationEnvelope` dans `packages/domain/src/contracts.ts` | enveloppe AIO qui enrichit le contrat sans réécrire ses notions |
+| protocole moteur | `CalculationRequest` / `CalculationEngine` dans `packages/engine/src/engine.ts` | spécialisation AIO; pas de second protocole moteur concurrent |
+
 ## Alias TypeScript sérialisables attendus
 
-Ces noms sont contractuels; Terra les implémente avec types brandés et schémas runtime dans les packages prévus par `plan.md`.
+Ces noms représentent des spécialisations ou les seules unités absentes. Ils complètent les types brandés existants, jamais ne les remplacent.
 
 ```ts
 type Watt = number;                 // suffixe W, >= 0
@@ -59,9 +73,9 @@ interface CanonicalDailyLoadV1 {
 ```
 
 - `hourlyEnergyWh[i]` est l'énergie AC moyenne de l'intervalle `[i:00, i+1:00)`, jamais une fraction indéterminée.
-- `equipment-schedule`: par appareil et par heure, `Wh = activePowerW × quantity × simultaneityRatio × efficiency-adjusted operating fraction × 1 h`. L'adaptateur doit enregistrer si `efficiencyRatio` correspond à une consommation d'entrée ou à un rendement de sortie; sinon il bloque.
+- `equipment-schedule`: compose directement `LoadItem`; par appareil et par heure, `Wh = activePowerW × quantity × simultaneityRatio × operating fraction × 1 h`. La valeur existante `deriveDailyLoadEnergyWh` est la référence de conservation journalière. Les champs UI additionnels (`efficiencyRatio`, démarrage) ne sont admis que par un adaptateur sourcé et sans modifier le schéma `LoadItem`.
 - `direct-hourly-power`: `Wh = activePowerW × 1 h`; `peakPowerW` UI, s'il existe, devient un événement de démarrage seulement avec une sémantique/provenance explicite.
-- `meter-estimate`: `monthlyEnergyWh` peut dériver `dailyEnergyWh` avec le nombre de jours exact de la période. Il ne peut dériver `hourlyEnergyWh` que d'un `HourlyAllocationProfileV1` de 24 poids non négatifs de somme 1, sourcé/versionné. Sans ce profil, le besoin d'énergie est disponible mais le pic et l'onduleur sont bloqués.
+- `meter-estimate`: `monthlyEnergyWh` peut dériver `dailyEnergyWh` avec le nombre de jours exact de la période. Il ne peut dériver `hourlyEnergyWh` qu'avec le `NormalizedHourlyProfile` DATA-001 existant, sourcé/versionné. Sans ce profil, le besoin d'énergie est disponible mais le pic et l'onduleur sont bloqués.
 - Les granularités annuelle, mensuelle, hebdomadaire, journalière, périodique et combinée restent des données source; l'adaptateur doit documenter la période observée et son passage vers la journée de conception. La simple moyenne d'une granularité saisonnière contradictoire est interdite.
 
 ### `StartupEventV1`
@@ -86,7 +100,7 @@ interface CanonicalDailyLoadV1 {
 | `timeConvention` | obligatoire si issu d'une série : fuseau IANA, début/centre/fin d'intervalle, pas, période |
 | `qualityFlags` | observations source conservées |
 
-Un import futur de série météo doit refuser : timestamp non monotone, pas irrégulier non déclaré, unité inconnue, période manquante, valeurs non finies, coordonnées inconnues ou confusion GHI/POA. La conversion GHI→POA est hors AIO v1 : l'import doit fournir POA déjà calculée et sa méthode, ou laisser la donnée indisponible.
+Un import futur doit d'abord passer `validateWeatherSeries` et `validateWeatherSeriesAssociation` DATA-001. L'AIO ajoute seulement le contrôle de la projection POA de conception : timestamp non monotone, pas irrégulier non déclaré, unité inconnue, période manquante, valeurs non finies, coordonnées inconnues ou confusion GHI/POA. La conversion GHI→POA est hors AIO v1 : la frontière doit fournir POA déjà calculée et sa méthode, ou laisser la donnée indisponible.
 
 ### `AioAssumptionsV1`
 
@@ -122,20 +136,6 @@ Une sortie est soit `{ status: 'available', value, unit, traceIds }`, soit `{ st
 
 ## Provenance, warnings et contraintes
 
-```ts
-interface ProvenanceRecordV1 {
-  sourceId: string; provider: string; datasetOrDocument: string;
-  versionOrDate: string; locator: string; retrievedAtIso: string;
-  method?: string; declaredBy?: string;
-}
-interface ConstraintViolationV1 {
-  id: string; severity: 'error' | 'warning'; path: string;
-  code: string; message: string; blocksOutputIds: string[];
-}
-interface FormulaTraceV1 {
-  traceId: string; outputId: string; formulaId: string; sourceIds: string[];
-  inputPaths: string[]; substitutedValues: Record<string, number | string>;
-}
-```
+`ConstraintViolationV1` doit étendre `CalculationIssue` avec `blocksOutputIds`; `FormulaTraceV1` doit étendre `CalculationTraceEntry` avec les valeurs substituées et accepter `sourceIds` en plus du `sourceId` minimal. La provenance de données réutilise `provenanceSchema`; les métadonnées documentaires additionnelles restent dans les entrées d'hypothèse, pas dans un second modèle générique de provenance.
 
 Les warnings sont non bloquants (p. ex. `AIO_ZERO_LOAD`, « irradiation sélectionnée manuellement »). Les contraintes `error` bloquent les sorties concernées et sont stables par code.

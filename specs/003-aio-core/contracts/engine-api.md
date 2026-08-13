@@ -3,16 +3,11 @@
 ## Surface proposée
 
 ```ts
-export interface AioSizingEngineV1 {
-  calculate(request: AioSizingRequestV1): AioSizingEnvelopeV1;
-}
+export interface AioSizingEngineV1 extends CalculationEngine<AioSizingRequestV1, AioSizingOutputV1> {}
 
-export interface AioSizingEnvelopeV1 {
+export interface AioSizingEnvelopeV1 extends CalculationEnvelope<AioSizingOutputV1> {
   contractVersion: 1;
-  engineVersion: string;
-  inputHash: string;
   provenance: readonly ProvenanceRecordV1[];
-  output: AioSizingOutputV1;
   warnings: readonly EngineWarningV1[];
   violatedConstraints: readonly ConstraintViolationV1[];
   trace: readonly FormulaTraceV1[];
@@ -47,6 +42,6 @@ export interface AioSizingEnvelopeV1 {
 ## Compatibilité avec les contrats existants
 
 - Réutiliser les unités brandées de `packages/domain` lorsque compatibles; ajouter les marques ratio, Ah, irradiance et jours au même endroit plutôt que de dupliquer les primitives.
-- Conserver `CalculationEnvelope` générique intact pour les features existantes. AIO introduit son enveloppe complète et un adaptateur explicite seulement si une évolution de format public est approuvée.
+- Étendre `CalculationEnvelope` et `CalculationTraceEntry` existants, ne pas les reconstruire. Toute évolution de format public hors de cette spécialisation exige une approbation explicite.
 - Les adaptateurs depuis `apps/desktop/src/app/models/projectInputs.ts` vivent hors moteur et sont testés. Ils ne peuvent pas changer une valeur nullable en défaut.
 - Aucun import de `apps/desktop`, des dossiers parents ou du legacy depuis `packages/engine`.

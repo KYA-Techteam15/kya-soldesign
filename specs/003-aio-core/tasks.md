@@ -2,9 +2,9 @@
 
 ## Phase 1: Fondations contractuelles
 
-- [ ] T001 [P] Ajouter unités ratio, Ah, jours et irradiation, plus schémas stricts dans `packages/domain/src/aio.ts` (FR-001, FR-009).
+- [ ] T001 [P] Étendre uniquement `packages/domain/src/units.ts` avec ratio, Ah, jours et irradiation, puis composer les schémas stricts existants dans `packages/domain/src/aio.ts` (FR-001, FR-009).
 - [ ] T002 [P] Écrire les tests de validation/canonicalisation dans `packages/domain/src/__tests__/aio.test.ts` (FR-001, FR-007).
-- [ ] T003 Créer `AioSizingRequestV1` et `AioSizingEnvelopeV1` selon `contracts/engine-api.md` dans `packages/engine/src/aio/contracts.ts` (FR-009, FR-010).
+- [ ] T003 Créer la spécialisation AIO de `CalculationRequest`, `CalculationEngine`, `CalculationEnvelope` et `CalculationTraceEntry` selon `contracts/engine-api.md` dans `packages/engine/src/aio/contracts.ts` (FR-009, FR-010).
 - [ ] T004 Créer le hash stable des seules entrées techniques dans `packages/engine/src/aio/inputHash.ts` avec tests déterministes (FR-009).
 
 ## Phase 2: Calculs test-first
