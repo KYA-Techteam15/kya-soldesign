@@ -1,0 +1,201 @@
+import { z } from 'zod';
+
+const nullableFinite = z.number().finite().nullable();
+const nullableNonNegative = z.number().finite().min(0).nullable();
+const nullablePositive = z.number().finite().positive().nullable();
+const nullableRatio = z.number().finite().min(0).max(1).nullable();
+const nullableInteger = z.number().int().min(0).nullable();
+const localTime = z.string().regex(/^$|^(?:[01]\d|2[0-3]):[0-5]\d$/);
+const calendarDate = z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/);
+
+export const applicationTypeSchema = z.enum([
+  'residential',
+  'commercial',
+  'industrial',
+  'agricultural',
+]);
+
+export const projectDetailsInputV1Schema = z.object({
+  clientName: z.string(),
+  clientAddress: z.string(),
+  clientPhone: z.string(),
+  clientEmail: z.union([z.literal(''), z.email()]),
+  projectOfficerName: z.string(),
+  applicationType: applicationTypeSchema,
+  projectDate: calendarDate.nullable(),
+  projectNumber: z.string(),
+  projectLocationLabel: z.string(),
+  projectImageRef: z.string().nullable(),
+}).strict();
+
+export const siteInputV1Schema = z.object({
+  countryCode: z.string().regex(/^[A-Z]{2}$/).nullable(),
+  localityId: z.string().min(1).nullable(),
+  regionLabel: z.string(),
+  latitudeDeg: z.number().finite().min(-90).max(90).nullable(),
+  longitudeDeg: z.number().finite().min(-180).max(180).nullable(),
+  arrayTiltDeg: z.number().finite().min(0).max(90).nullable(),
+  arrayAzimuthDeg: z.number().finite().min(0).lt(360).nullable(),
+  weatherSourceId: z.string().min(1).nullable(),
+}).strict();
+
+export const projectLoadItemV1Schema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  quantity: z.number().int().positive(),
+  activePowerW: z.number().finite().min(0),
+  powerFactor: z.number().finite().gt(0).max(1).nullable(),
+  simultaneityRatio: nullableRatio,
+  efficiencyRatio: z.number().finite().gt(0).max(1).nullable(),
+  operatingHoursPerDay: z.number().finite().min(0).max(24),
+  startupPowerMultiplier: z.number().finite().min(1).nullable(),
+}).strict();
+
+export const hourlyLoadPointV1Schema = z.object({
+  hourIndex: z.number().int().min(0).max(23),
+  activePowerW: z.number().finite().min(0),
+  peakPowerW: z.number().finite().min(0).nullable(),
+}).strict();
+
+export const meterLoadInputV1Schema = z.object({
+  monthlyEnergyWh: nullableNonNegative,
+  meterCurrentA: nullablePositive,
+  networkType: z.enum(['single-phase', 'three-phase']),
+  morningPeak: z.object({ startLocalTime: localTime, endLocalTime: localTime }).strict(),
+  eveningPeak: z.object({ startLocalTime: localTime, endLocalTime: localTime }).strict(),
+  peakImportanceRatio: nullableRatio,
+  targetQualityFactor: nullableFinite,
+}).strict();
+
+export const loadProfileInputV1Schema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  displayColor: z.string().min(1),
+  source: z.enum(['equipment', 'hourly', 'meter']),
+  items: z.array(projectLoadItemV1Schema),
+  hourlyPoints: z.array(hourlyLoadPointV1Schema).length(24),
+  meter: meterLoadInputV1Schema.nullable(),
+}).strict();
+
+export const loadInputV1Schema = z.object({
+  granularity: z.enum(['annual', 'weekly', 'daily', 'monthly', 'periodic', 'combined']),
+  activeProfileId: z.string().min(1),
+  minimumOperatingIrradianceWPerM2: z.number().finite().min(0).nullable(),
+  profiles: z.array(loadProfileInputV1Schema).min(1),
+}).strict().superRefine((value, context) => {
+  if (!value.profiles.some((profile) => profile.id === value.activeProfileId)) {
+    context.addIssue({
+      code: 'custom',
+      message: 'activeProfileId must identify an existing load profile',
+      path: ['activeProfileId'],
+    });
+  }
+});
+
+export const assumptionInputV1Schema = z.object({
+  maxLpspRatio: nullableRatio,
+  maxLolpRatio: nullableRatio,
+  systemPerformanceRatio: nullableRatio,
+  inverterEfficiencyRatio: nullableRatio,
+  batteryEfficiencyRatio: nullableRatio,
+  batteryNominalVoltageV: nullablePositive,
+  batteryDodRatio: nullableRatio,
+  pvSpecificCostMinorPerKw: nullableInteger,
+  pvMarginRatio: nullableRatio,
+  batterySpecificCostMinorPerKwh: nullableInteger,
+  batteryMarginRatio: nullableRatio,
+  inverterSpecificCostMinorPerKw: nullableInteger,
+  inverterMarginRatio: nullableRatio,
+  projectLifetimeYears: nullableInteger,
+  pvLifetimeYears: nullableInteger,
+  batteryLifetimeYears: nullableInteger,
+  inverterLifetimeYears: nullableInteger,
+  pvMaintenanceRatioPerYear: nullableRatio,
+  batteryMaintenanceRatioPerYear: nullableRatio,
+  inverterMaintenanceRatioPerYear: nullableRatio,
+  discountRateRatio: nullableRatio,
+  gridTariffMinorPerKwh: nullableInteger,
+  gridEmissionKgCo2PerKwh: nullableNonNegative,
+  selfConsumptionRatio: nullableRatio,
+  dieselSpecificCostMinorPerKw: nullableInteger,
+}).strict();
+
+export const circuitSegmentSchema = z.enum([
+  'pv-inverter',
+  'inverter-battery',
+  'inverter-load',
+]);
+
+export const cableChoiceInputV1Schema = z.object({
+  segment: circuitSegmentSchema,
+  lengthM: nullableNonNegative,
+  material: z.enum(['copper', 'aluminium']),
+  installation: z.enum(['buried', 'not-buried']),
+}).strict();
+
+export const protectionChoiceInputV1Schema = z.object({
+  segment: circuitSegmentSchema,
+  ratingA: nullablePositive,
+}).strict();
+
+const additionalCostItemV1Schema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string(),
+  quantity: z.number().finite().positive(),
+  unitCostMinor: z.number().int().min(0),
+  marginRatio: z.number().finite().min(0).max(1),
+}).strict();
+
+const ancillaryCostV1Schema = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('absolute'), amountMinor: z.number().int().min(0) }).strict(),
+  z.object({ mode: z.literal('ratio'), ratio: z.number().finite().min(0).max(1) }).strict(),
+]);
+
+export const costingInputV1Schema = z.object({
+  useGlobalCost: z.boolean(),
+  moduleUnitPriceMinor: z.number().int().min(0),
+  moduleMarginRatio: z.number().finite().min(0).max(1),
+  batteryUnitPriceMinor: z.number().int().min(0),
+  batteryMarginRatio: z.number().finite().min(0).max(1),
+  inverterUnitPriceMinor: z.number().int().min(0),
+  inverterMarginRatio: z.number().finite().min(0).max(1),
+  cabling: ancillaryCostV1Schema,
+  electricalBox: ancillaryCostV1Schema,
+  supports: ancillaryCostV1Schema,
+  transport: ancillaryCostV1Schema,
+  installation: ancillaryCostV1Schema,
+  cablingMarginRatio: z.number().finite().min(0).max(1),
+  electricalBoxMarginRatio: z.number().finite().min(0).max(1),
+  supportsMarginRatio: z.number().finite().min(0).max(1),
+  transportMarginRatio: z.number().finite().min(0).max(1),
+  installationMarginRatio: z.number().finite().min(0).max(1),
+  vatRatio: z.number().finite().min(0).max(1),
+  discountRatio: z.number().finite().min(0).max(1),
+  downPaymentRatio: z.number().finite().min(0).max(1),
+  deliveryDays: z.number().int().min(0),
+  offerValidityDays: z.number().int().min(0),
+  productWarrantyMonths: z.number().int().min(0),
+  additional: z.array(additionalCostItemV1Schema),
+}).strict();
+
+export const projectInputsV1Schema = z.object({
+  schemaVersion: z.literal(1),
+  details: projectDetailsInputV1Schema,
+  site: siteInputV1Schema,
+  load: loadInputV1Schema,
+  assumptions: assumptionInputV1Schema,
+  cableChoices: z.array(cableChoiceInputV1Schema),
+  protectionChoices: z.array(protectionChoiceInputV1Schema),
+  costing: costingInputV1Schema,
+  currencyCode: z.string().regex(/^[A-Z]{3}$/),
+}).strict();
+
+export type ProjectInputsV1 = z.infer<typeof projectInputsV1Schema>;
+export type ProjectDetailsInputV1 = z.infer<typeof projectDetailsInputV1Schema>;
+export type SiteInputV1 = z.infer<typeof siteInputV1Schema>;
+export type LoadInputV1 = z.infer<typeof loadInputV1Schema>;
+
+export function parseProjectInputsV1(value: unknown): ProjectInputsV1 {
+  return projectInputsV1Schema.parse(value);
+}

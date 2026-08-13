@@ -3,7 +3,10 @@ import { InMemoryProjects } from '../../src/app/adapters/inMemoryProjects.js';
 
 describe('in-memory project session', () => {
   it('starts empty and creates a versioned AIO draft', () => {
-    const projects = new InMemoryProjects(() => '2026-08-11T00:00:00.000Z');
+    const projects = new InMemoryProjects(
+      () => '2026-08-11T00:00:00.000Z',
+      () => '00000000-0000-4000-8000-000000000004',
+    );
     expect(projects.list()).toEqual([]);
     const project = projects.create('standalone-all-in-one', 'fr');
     expect(project.lastCalculation).toBeNull();

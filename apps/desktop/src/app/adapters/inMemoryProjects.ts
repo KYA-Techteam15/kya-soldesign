@@ -1,15 +1,24 @@
 import type { SystemKind } from '@ksd/domain';
 import { parseProjectFile, type ProjectFileV1 } from '@ksd/project-format';
+import { createEmptyProjectFile } from '../models/projectAdapters.js';
 import type { ProjectSessionPort, UiLocale } from '../contracts.js';
 
 type Clock = () => string;
+type IdFactory = () => string;
 
 const defaultClock: Clock = () => new Date().toISOString();
+const defaultIdFactory: IdFactory = () => crypto.randomUUID();
 
 export class InMemoryProjects implements ProjectSessionPort {
-  private projects: ProjectFileV1[] = [];
+  private projects: ProjectFileV1[];
 
-  public constructor(private readonly now: Clock = defaultClock) {}
+  public constructor(
+    private readonly now: Clock = defaultClock,
+    private readonly createId: IdFactory = defaultIdFactory,
+    seed: readonly ProjectFileV1[] = [],
+  ) {
+    this.projects = seed.map((project) => parseProjectFile(project));
+  }
 
   public list(): readonly ProjectFileV1[] {
     return this.projects;
@@ -21,17 +30,12 @@ export class InMemoryProjects implements ProjectSessionPort {
 
   public create(system: SystemKind, locale: UiLocale): ProjectFileV1 {
     const timestamp = this.now();
-    const project = parseProjectFile({
-      schemaVersion: 1,
-      id: crypto.randomUUID(),
-      name: locale === 'fr' ? 'Nouvelle étude AIO' : 'New AIO study',
+    const project = createEmptyProjectFile(
+      this.createId(),
       system,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      inputs: {},
-      selectedEquipmentIds: [],
-      lastCalculation: null,
-    });
+      timestamp,
+      locale === 'fr' ? 'Nouveau projet' : 'New project',
+    );
     this.projects = [project, ...this.projects];
     return project;
   }

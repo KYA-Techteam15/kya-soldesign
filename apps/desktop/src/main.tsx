@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
+import { ProjectSessionProvider } from './app/ProjectSessionProvider';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/vivid.css';
@@ -13,7 +14,9 @@ import './styles/print.css';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <ProjectSessionProvider>
+        <App />
+      </ProjectSessionProvider>
     </BrowserRouter>
   </StrictMode>,
 );
