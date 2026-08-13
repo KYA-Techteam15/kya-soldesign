@@ -1,0 +1,430 @@
+/* ==========================================================================
+   Thème « Clair éclatant »
+
+   Troisième intensité. Le pari : le blanc n'est pas le contraire de l'éclat,
+   c'est son meilleur support. On ne peint rien — on éclaire.
+
+   Quatre leviers, dans l'ordre d'impact :
+     1. Lumière colorée   — des halos très diffus derrière les surfaces, au
+                            lieu de fonds pleins. La carte paraît éclairée.
+     2. Profondeur        — la bordure 1 px cède la place à l'élévation. Ça
+                            hiérarchise sans consommer un pixel de hauteur (C7).
+     3. Un grand moment   — un seul geste typographique par écran : le SVI.
+     4. Couleur = donnée  — sur blanc, une jauge teal ressort trois fois plus.
+                            Ce qui brille est le résultat, pas le châssis.
+
+   Garde-fou, parce que blanc + halos + dégradés mal dosés donnent une page
+   d'accueil de start-up : LE CHIFFRE N'EST JAMAIS DÉCORÉ. Le décor vit autour,
+   jamais dans la donnée. Aucune couleur hors charte : Orange #F99D32, Teal
+   #1CA18C, Energy #FFD700, Gray 50→900 ; tout le reste est dérivé par color-mix.
+
+   Trois moments spectacle — démarrage, accueil, verdict — et le reste calme :
+   c'est là qu'on passe huit heures.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- Tokens */
+
+:root[data-vibe='radiant'] {
+  /* Le canevas s'éclaircit, les surfaces restent blanc pur : c'est l'écart
+     entre les deux, minuscule, qui laisse l'ombre faire le travail. */
+  --bg: color-mix(in srgb, #f5f5f5 45%, #ffffff);
+  --surface: #ffffff;
+  --surface-2: color-mix(in srgb, #f5f5f5 72%, #ffffff);
+  --surface-3: color-mix(in srgb, #e8e8e8 70%, #ffffff);
+  --border: color-mix(in srgb, #e8e8e8 62%, #ffffff);
+  --border-strong: color-mix(in srgb, #b0b0b0 70%, #ffffff);
+  --grid-line: color-mix(in srgb, #e8e8e8 45%, #ffffff);
+
+  /* Élévation : deux ombres empilées — le contact net, puis la diffusion. */
+  --lift-1: 0 1px 1px rgb(26 26 26 / 0.04), 0 2px 6px rgb(26 26 26 / 0.05);
+  --lift-2: 0 1px 2px rgb(26 26 26 / 0.05), 0 8px 24px rgb(26 26 26 / 0.07);
+  --shadow-pop: 0 12px 40px rgb(26 26 26 / 0.16);
+
+  /* Lumières colorées, très diluées : on ne les voit pas, on les sent. */
+  --glow-warm: color-mix(in srgb, var(--accent) 20%, transparent);
+  --glow-cool: color-mix(in srgb, var(--ok) 17%, transparent);
+  --brand-sweep: linear-gradient(
+    100deg,
+    var(--accent) 0%,
+    var(--accent-hover) 30%,
+    var(--ok) 72%,
+    var(--ok) 100%
+  );
+}
+
+/* En sombre, l'éclat vient de la lumière émise plutôt que reçue : mêmes
+   halos, plus concentrés, sur les surfaces de la charte. */
+:root[data-vibe='radiant'][data-theme='dark'] {
+  --lift-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --lift-2: 0 2px 4px rgb(0 0 0 / 0.4), 0 10px 28px rgb(0 0 0 / 0.45);
+  --glow-warm: color-mix(in srgb, var(--accent) 16%, transparent);
+  --glow-cool: color-mix(in srgb, var(--ok) 16%, transparent);
+}
+
+/* ---------------------------------------------------------------- Coque
+   La barre supérieure reste blanche — elle doit se fondre avec le rapport
+   client, qui sort en blanc. Ce qui la sépare du contenu n'est plus un trait
+   mais une ombre, plus le filet de marque sur toute la largeur. */
+
+[data-vibe='radiant'] .topbar {
+  background: var(--surface);
+  border-bottom: 0;
+  box-shadow: var(--lift-1);
+  z-index: 5;
+}
+[data-vibe='radiant'] .topbar::after {
+  height: 2px;
+  bottom: 0;
+  background: var(--brand-sweep);
+  opacity: 0.9;
+}
+[data-vibe='radiant'] .wordmark i {
+  box-shadow:
+    3px 3px 0 0 var(--ok),
+    0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+[data-vibe='radiant'] .topbar .btn {
+  border-color: transparent;
+  background: var(--surface-2);
+}
+[data-vibe='radiant'] .topbar .btn:hover {
+  background: var(--surface-3);
+}
+[data-vibe='radiant'] .topbar .btn-primary {
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  border-color: transparent;
+  box-shadow: 0 1px 2px rgb(224 125 18 / 0.3), 0 4px 14px rgb(249 157 50 / 0.34);
+}
+[data-vibe='radiant'] .topbar .btn-primary:hover {
+  box-shadow: 0 1px 2px rgb(224 125 18 / 0.3), 0 6px 20px rgb(249 157 50 / 0.46);
+}
+
+/* ---------------------------------------------------------------- Colonne de gauche
+   Blanche elle aussi. La sélection ne se lit plus par contraste de fond mais
+   par une pastille pleine, orange pâle, posée en relief. */
+
+[data-vibe='radiant'] .pane-left {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+[data-vibe='radiant'] .nav-item {
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  margin-right: var(--sp-2);
+}
+[data-vibe='radiant'] .nav-item.on {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 16%, var(--surface)),
+    var(--accent-soft) 70%
+  );
+  box-shadow: var(--lift-1);
+}
+[data-vibe='radiant'] .pane-right {
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+}
+
+/* Le repère d'état gagne son propre halo : il se voit sur blanc sans grossir */
+[data-vibe='radiant'] .st-done {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 16%, transparent);
+}
+[data-vibe='radiant'] .st-partial {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ---------------------------------------------------------------- Élévation
+   Partout où il y avait un cadre, il y a maintenant une carte posée. */
+
+[data-vibe='radiant'] .tbl-wrap,
+[data-vibe='radiant'] .eq,
+[data-vibe='radiant'] .kpis,
+[data-vibe='radiant'] .proj-list,
+[data-vibe='radiant'] .palette,
+[data-vibe='radiant'] .modal,
+[data-vibe='radiant'] .toast {
+  box-shadow: var(--lift-1);
+}
+[data-vibe='radiant'] .eq-head,
+[data-vibe='radiant'] table.tbl th {
+  background: var(--surface);
+  border-bottom-color: var(--border-strong);
+}
+[data-vibe='radiant'] .eq-head {
+  border-bottom-width: 1px;
+}
+/* L'arête colorée dit la nature du bloc avant qu'on le lise */
+[data-vibe='radiant'] .eq {
+  border-top: 3px solid var(--accent);
+}
+[data-vibe='radiant'] .eq:nth-of-type(2) {
+  border-top-color: var(--ok);
+}
+[data-vibe='radiant'] .eq:nth-of-type(3) {
+  border-top-color: color-mix(in srgb, var(--energy) 88%, var(--accent-press));
+}
+/* Colonne calculée : un lavis, pas un gris — la donnée saisie reste sur blanc */
+[data-vibe='radiant'] th.derived,
+[data-vibe='radiant'] td.derived {
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+[data-vibe='radiant'] table.tbl tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+[data-vibe='radiant'] table.tbl tbody tr:hover td.derived {
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+}
+[data-vibe='radiant'] tfoot td {
+  background: var(--surface);
+  border-top: 1px solid var(--accent);
+}
+/* ---------------------------------------------------------------- Verdict
+   Le grand moment. Le halo teal est porté par le fond de la carte, jamais par
+   un débordement : le panneau défile, une ombre qui sort créerait une barre. */
+
+[data-vibe='radiant'] .verdict {
+  border-color: var(--border);
+  box-shadow: var(--lift-2);
+}
+[data-vibe='radiant'] .verdict.is-ok {
+  background:
+    radial-gradient(
+      120% 90% at 82% 0%,
+      var(--glow-cool) 0%,
+      transparent 62%
+    ),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--ok) 30%, var(--border));
+}
+[data-vibe='radiant'] .verdict.is-bad {
+  background:
+    radial-gradient(
+      120% 90% at 82% 0%,
+      color-mix(in srgb, var(--danger) 13%, transparent) 0%,
+      transparent 62%
+    ),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+}
+[data-vibe='radiant'] .verdict-val {
+  font-size: 46px;
+  letter-spacing: -0.04em;
+}
+[data-vibe='radiant'] .is-ok .verdict-val {
+  color: var(--ok-strong);
+}
+[data-vibe='radiant'] .gauge {
+  height: 9px;
+  border-radius: 5px;
+  border-color: transparent;
+  background: var(--surface-3);
+  box-shadow: inset 0 1px 2px rgb(26 26 26 / 0.07);
+}
+[data-vibe='radiant'] .gauge .fill {
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ok) 82%, var(--energy)),
+    var(--ok)
+  );
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ok) 45%, transparent);
+}
+[data-vibe='radiant'] .is-bad .gauge .fill {
+  background: linear-gradient(90deg, var(--accent), var(--danger));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--danger) 40%, transparent);
+}
+[data-vibe='radiant'] .kpi-head {
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+}
+[data-vibe='radiant'] .alert {
+  background:
+    radial-gradient(
+      100% 140% at 0% 0%,
+      color-mix(in srgb, var(--danger) 12%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
+  box-shadow: var(--lift-1);
+}
+[data-vibe='radiant'] .badge.ok {
+  background: var(--ok);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--ok) 45%, transparent);
+}
+[data-vibe='radiant'] .badge.bad {
+  background: var(--danger);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--danger) 40%, transparent);
+}
+[data-vibe='radiant'] .bar {
+  height: 6px;
+  border-radius: 3px;
+}
+[data-vibe='radiant'] .bar > i {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ok) 78%, var(--energy)),
+    var(--ok)
+  );
+}
+[data-vibe='radiant'] .bar > i.over {
+  background: linear-gradient(90deg, var(--accent-hover), var(--accent-press));
+}
+
+/* ---------------------------------------------------------------- Accueil
+   Le seul écran où l'on a le droit d'en faire beaucoup : c'est celui qu'on
+   ouvre en réunion, et celui qu'on voit vingt fois par jour. */
+
+[data-vibe='radiant'] .page-home .page-body {
+  background:
+    radial-gradient(
+      760px 380px at 12% -6%,
+      var(--glow-warm) 0%,
+      transparent 64%
+    ),
+    radial-gradient(
+      680px 420px at 92% 4%,
+      var(--glow-cool) 0%,
+      transparent 62%
+    ),
+    /* Le bas de l'accueil est souvent vide : mieux vaut un blanc éclairé
+       qu'un blanc mort. */
+      radial-gradient(
+        900px 340px at 78% 104%,
+        var(--glow-warm) 0%,
+        transparent 60%
+      ),
+    var(--bg);
+}
+/* `inline-block` : sans lui le dégradé s'étale sur la largeur du bloc et le
+   texte n'en reçoit que les premiers pour-cent — donc que de l'orange. */
+[data-vibe='radiant'] .page-home .page-title {
+  display: inline-block;
+  font-size: 34px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  background: var(--brand-sweep);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+[data-vibe='radiant'] .page-home .page-lead {
+  font-size: var(--fs-lg);
+  max-width: 52ch;
+}
+[data-vibe='radiant'] .sys-card {
+  border-color: transparent;
+  box-shadow: var(--lift-1);
+}
+[data-vibe='radiant'] .sys-card:not(:disabled):hover {
+  background: var(--surface);
+  border-color: transparent;
+  box-shadow: var(--lift-2);
+  transform: translateY(-2px);
+}
+[data-vibe='radiant'] .sys-card .glyph {
+  background: linear-gradient(140deg, var(--accent-fill-hover), var(--accent-fill));
+  border-color: transparent;
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-fill) 42%, transparent);
+}
+[data-vibe='radiant'] .sys-card:disabled .glyph {
+  background: var(--surface-3);
+  color: var(--text-faint);
+  box-shadow: none;
+}
+[data-vibe='radiant'] .proj-row:hover {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 9%, var(--surface)),
+    var(--surface) 62%
+  );
+}
+
+/* ---------------------------------------------------------------- Démarrage
+   Deux secondes par lancement : autant qu'elles donnent envie. */
+
+[data-vibe='radiant'] .splash {
+  background:
+    radial-gradient(
+      600px 420px at 50% 26%,
+      color-mix(in srgb, var(--accent) 16%, transparent) 0%,
+      transparent 66%
+    ),
+    radial-gradient(
+      520px 380px at 50% 72%,
+      color-mix(in srgb, var(--ok) 14%, transparent) 0%,
+      transparent 68%
+    ),
+    var(--surface);
+}
+[data-vibe='radiant'] .splash .mark i {
+  box-shadow:
+    7px 7px 0 0 var(--ok),
+    0 0 0 10px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+[data-vibe='radiant'] .splash .bar {
+  background: var(--surface-3);
+  box-shadow: inset 0 1px 2px rgb(26 26 26 / 0.08);
+}
+[data-vibe='radiant'] .splash .bar i {
+  background: var(--brand-sweep);
+}
+
+/* ---------------------------------------------------------------- Barre d'état */
+
+[data-vibe='radiant'] .statusbar {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+[data-vibe='radiant'] .simbanner {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  border-color: transparent;
+}
+[data-vibe='radiant'] .statusbar .live::before {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 26%, transparent);
+}
+
+/* ---------------------------------------------------------------- Mouvement
+   Court et utile : ce qui doit impressionner, c'est la vitesse de réponse,
+   pas la durée de l'animation. Tout est coupé si le système le demande. */
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-vibe='radiant'] .gauge .fill,
+  [data-vibe='radiant'] .bar > i {
+    transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-vibe='radiant'] .sys-card,
+  [data-vibe='radiant'] .nav-item,
+  [data-vibe='radiant'] .btn-primary {
+    transition:
+      background 140ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+  /* Arrivée en cascade sur l'accueil — 90 ms d'écart, terminé en moins d'une
+     demi-seconde. `forwards` : l'état final est celui qu'on capture. */
+  [data-vibe='radiant'] .page-home .sys-card {
+    opacity: 0;
+    animation: radiant-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  [data-vibe='radiant'] .page-home .sys-card:nth-child(2) { animation-delay: 45ms; }
+  [data-vibe='radiant'] .page-home .sys-card:nth-child(3) { animation-delay: 90ms; }
+  [data-vibe='radiant'] .page-home .sys-card:nth-child(4) { animation-delay: 135ms; }
+  [data-vibe='radiant'] .page-home .sys-card:nth-child(5) { animation-delay: 180ms; }
+  [data-vibe='radiant'] .page-home .sys-card:nth-child(6) { animation-delay: 225ms; }
+}
+
+@keyframes radiant-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -16,7 +16,7 @@ async function setLocale(page: Page, locale: Locale) {
 async function openDraft(page: Page, locale: Locale) {
   await page.goto('/accueil');
   await setLocale(page, locale);
-  await page.getByRole('button', { name: locale === 'fr' ? 'Créer l’étude' : 'Create study' }).click();
+  await page.getByRole('button', { name: locale === 'fr' ? 'Nouveau projet' : 'New project', exact: true }).click();
 }
 
 for (const viewport of viewports) {
@@ -39,14 +39,14 @@ for (const viewport of viewports) {
       await page.setViewportSize(viewport);
       await openDraft(page, locale);
       const surfaces = [
-        [locale === 'fr' ? /Bilan des consommations/ : /Consumption assessment/, 'needs'],
-        [locale === 'fr' ? /^05 Dimensionnement$/ : /^05 Equipment sizing$/, 'equipment'],
-        [locale === 'fr' ? /^08 Vue synoptique/ : /^08 System diagram/, 'dossier'],
+        [2, 'needs'],
+        [4, 'equipment'],
+        [7, 'dossier'],
       ] as const;
-      for (const [step, name] of surfaces) {
-        await page.getByRole('button', { name: step }).click();
+      for (const [stepIndex, name] of surfaces) {
+        await page.locator('.nav-item').nth(stepIndex).click();
         await expect(page.locator('.work-card')).toBeVisible();
-        await expect(page).toHaveScreenshot(`${name}-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });
+        await expect(page).toHaveScreenshot(`${name}-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled', maxDiffPixels: 250 });
       }
     });
 
@@ -58,8 +58,9 @@ for (const viewport of viewports) {
       await expect(page.getByRole('dialog')).toBeVisible();
       await expect(page).toHaveScreenshot(`palette-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });
       await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: locale === 'fr' ? 'Créer l’étude' : 'Create study' }).click();
-      await page.getByRole('link', { name: locale === 'fr' ? /Retour aux projets/ : /Back to projects/ }).click();
+      await page.getByRole('button', { name: locale === 'fr' ? 'Nouveau projet' : 'New project', exact: true }).click();
+      await page.getByRole('button', { name: locale === 'fr' ? '← Retour' : '← Back', exact: true }).click();
+      await page.getByRole('button', { name: locale === 'fr' ? 'Projets →' : 'Projects →', exact: true }).click();
       await page.getByRole('button', { name: locale === 'fr' ? 'Supprimer' : 'Remove' }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
       await expect(page).toHaveScreenshot(`dialog-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });

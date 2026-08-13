@@ -1,0 +1,2790 @@
+/* ==========================================================================
+   Compléments applicatifs à la couche de tokens.
+   Tout ce qui n'existait pas dans les maquettes statiques : démarrage, accueil,
+   notifications, modales, ébauches de section.
+   ========================================================================== */
+
+#root {
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------- Démarrage */
+
+.splash {
+  height: 100%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--sp-5);
+  background: var(--surface);
+  text-align: center;
+}
+.splash .mark {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.splash .mark i {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--accent);
+  box-shadow: 7px 7px 0 0 var(--ok);
+  margin-right: 7px;
+}
+.splash .mark span {
+  font-weight: 300;
+  color: var(--text-muted);
+}
+.splash p {
+  margin: 0;
+  color: var(--text-muted);
+}
+.splash .bar {
+  width: 220px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.splash .bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  animation: splash-load 1.6s ease-out forwards;
+}
+@keyframes splash-load {
+  from {
+    width: 4%;
+  }
+  to {
+    width: 100%;
+  }
+}
+.splash .version {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+/* ---------------------------------------------------------------- Pages simples */
+
+.page {
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr var(--statusbar-h);
+  height: 100%;
+}
+.page-body {
+  overflow: auto;
+  scrollbar-width: thin;
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+}
+.page-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--sp-5);
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+.page-lead {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------- Accueil */
+
+.sys-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+.sys-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: var(--sp-3) var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  min-height: 96px;
+}
+.sys-card:not(:disabled):hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sys-card:disabled {
+  cursor: not-allowed;
+}
+/* On éteint le texte d'une carte à venir, pas son badge : c'est lui qui
+   dit de quelle famille elle relève, et l'information reste vraie même
+   quand le type n'est pas encore ouvert. */
+.sys-card:disabled b,
+.sys-card:disabled > span:not(.glyph) {
+  opacity: 0.6;
+}
+.sys-card b {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+/* Badge et nom sur la même ligne, alignés par leur milieu. */
+.sys-name {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.sys-name b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* La ligne qui dit ce que l'architecture a de propre. Deux lignes au plus :
+   au-delà, les six cartes cessent d'avoir la même hauteur. */
+.sys-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+  min-height: calc(1.45em * 2);
+}
+.sys-state {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.sys-card span {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.sys-card .glyph {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  display: grid;
+  place-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--accent-ink);
+}
+
+/* Le synoptique de l'architecture, en tête de carte.
+
+   Il occupe une bande de proportion fixe : la carte garde sa hauteur que le
+   schéma soit là ou non, et les six vignettes de la grille restent alignées.
+   `object-fit: contain` protège le dessin d'un rognage qui couperait un bloc
+   du schéma. */
+.sys-card.has-schema {
+  padding-top: 0;
+  overflow: hidden;
+}
+.sys-schema {
+  width: calc(100% + var(--sp-3) * 2);
+  margin: 0 calc(var(--sp-3) * -1) 2px;
+  aspect-ratio: 16 / 7;
+  object-fit: contain;
+  /* Le schéma est dessiné sur blanc : la bande reprend ce blanc pour que
+     l'image n'y flotte pas dans un rectangle plus clair qu'elle. */
+  background: #ffffff;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+  display: block;
+}
+/* Le schéma d'un type à venir s'atténue avec le reste de la carte : il décrit
+   une architecture qui n'est pas encore ouverte. */
+.sys-card:disabled .sys-schema {
+  opacity: 0.55;
+}
+
+/* Une teinte par famille technique. Le badge trie les six cartes avant
+   qu'on ait lu leurs trois lettres. */
+.sys-card .glyph.g-solar {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  color: var(--accent-ink);
+}
+.sys-card .glyph.g-grid {
+  background: rgb(58 110 165 / 0.1);
+  border-color: rgb(58 110 165 / 0.34);
+  color: #2f6194;
+}
+.sys-card .glyph.g-hybrid {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+  color: var(--danger);
+}
+.sys-card .glyph.g-light {
+  background: var(--energy-soft);
+  border-color: color-mix(in srgb, var(--energy) 42%, var(--border));
+  color: #8a6900;
+}
+.sys-card .glyph.g-water {
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 32%, var(--border));
+  color: var(--ok-strong);
+}
+
+.proj-list {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.proj-row {
+  display: grid;
+  /* Le nom prend la place restante ; les colonnes de droite s'ajoutent
+     d'elles-mêmes. Trois colonnes figées faisaient retomber le quatrième
+     élément à la ligne, et un badge occupait alors toute la largeur. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: auto;
+  justify-items: end;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 9px var(--sp-3);
+  border-bottom: 1px solid var(--grid-line);
+  width: 100%;
+  text-align: left;
+}
+.proj-row > :first-child {
+  justify-self: start;
+}
+.proj-row:last-child {
+  border-bottom: 0;
+}
+.proj-row:hover {
+  background: var(--surface-2);
+}
+.proj-row b {
+  display: block;
+  font-weight: 600;
+}
+.proj-row small {
+  color: var(--text-muted);
+}
+.proj-row .when {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.empty {
+  padding: var(--sp-5);
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.empty b {
+  display: block;
+  font-family: var(--font-display);
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+/* ---------------------------------------------------------------- Bandeau simulation */
+
+.simbanner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  height: 100%;
+  background: var(--accent-soft);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  color: var(--accent-ink);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.simbanner::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--accent);
+  flex: none;
+}
+
+/* ---------------------------------------------------------------- Notifications */
+
+.toasts {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: calc(var(--statusbar-h) + var(--sp-3));
+  z-index: 90;
+  display: grid;
+  gap: var(--sp-2);
+  width: 320px;
+}
+.toast {
+  display: grid;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 2px 0 var(--accent), var(--shadow-pop);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+}
+.toast.success {
+  border-left-color: var(--ok);
+}
+.toast.warning {
+  border-left-color: var(--energy);
+}
+.toast.error {
+  border-left-color: var(--danger);
+}
+.toast b {
+  font-family: var(--font-display);
+}
+.toast span {
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------- Modales */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(26 26 26 / 0.34);
+  display: grid;
+  place-content: center;
+}
+.modal {
+  width: 420px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+.modal header {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.modal-wide {
+  width: min(720px, calc(100vw - 96px));
+}
+/* L'en-tête porte le titre, sa précision, et la fermeture. */
+.modal header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+.modal header small {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.modal-x {
+  margin-left: auto;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-faint);
+  padding: 2px 4px;
+  border-radius: var(--r-sm);
+}
+.modal-x:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.modal .body {
+  padding: var(--sp-4);
+  color: var(--text-muted);
+  max-height: min(62vh, 560px);
+  overflow: auto;
+}
+/* Champ de recherche d'un dialogue. Il portait la classe `btn`, ce qui lui
+   donnait l'apparence d'une action alors qu'il attend une frappe : on tape
+   dedans, on ne clique pas dessus. */
+.dlg-search {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+.dlg-search:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+/* Champ de filtre posé dans un en-tête de section : il partage la rangée
+   avec des boutons de barre, donc leur hauteur, mais pas leur habit — on
+   tape dedans, on ne clique pas dessus. */
+.hdr-search {
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+.hdr-search:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+/* Récapitulatif d'une action qui écrit : ce qu'on touche, avant de toucher. */
+.dlg-recap {
+  margin-top: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.dlg-recap div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: 6px var(--sp-3);
+  border-bottom: 1px solid var(--grid-line);
+  font-size: var(--fs-sm);
+}
+.dlg-recap div:last-child {
+  border-bottom: none;
+}
+.dlg-recap span {
+  flex: none;
+  width: 116px;
+  color: var(--text-faint);
+}
+.dlg-recap b {
+  color: var(--text);
+  font-weight: 600;
+}
+/* Champ qui ouvre un dialogue : il a l'allure d'une saisie, pas d'un bouton. */
+/* Sélecteur en champ : ouvre un dialogue de choix, mais se présente comme la
+   valeur qu'il porte. Il prend la hauteur et la bordure d'une saisie, pas
+   l'habit d'un bouton d'action. */
+.pickfield {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  justify-content: flex-start;
+  font-size: var(--fs-sm);
+}
+.pickfield:hover {
+  border-color: var(--accent);
+}
+.pickfield b {
+  font-weight: 500;
+}
+.pickfield small {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+/* Bande de comparaison du cycle de vie, en pied de Chiffrage. */
+.lifebar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 10px var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.lifebar-say {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.lifebar-say b {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+}
+.lifebar-say span {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.lifebar-net {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+}
+.lifebar-net span {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.lifebar-net b {
+  font-family: var(--font-mono);
+  font-size: 16px;
+}
+.lifebar-net.good {
+  background: var(--ok-soft);
+}
+.lifebar-net.good b {
+  color: var(--ok-strong);
+}
+.lifebar-net.bad {
+  background: var(--danger-soft);
+}
+.lifebar-net.bad b {
+  color: var(--danger);
+}
+
+/* Sélecteur de référence : chaque ligne dit ce que devient le système. */
+.pick-list {
+  margin-top: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.pick-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px 96px 62px 84px;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 8px var(--sp-3);
+  border-bottom: 1px solid var(--grid-line);
+  text-align: left;
+  cursor: pointer;
+}
+/* La colonne d'état ne porte un badge que quand il dit quelque chose ; elle
+   reste réservée pour que les lignes ne se décalent pas. */
+.pick-state {
+  display: flex;
+  justify-content: flex-end;
+}
+.pick-row:last-child {
+  border-bottom: none;
+}
+.pick-row:hover {
+  background: var(--surface-2);
+}
+.pick-row.on {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.pick-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.pick-id b {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pick-id small {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pick-spec {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  text-align: right;
+}
+/* Colonne conséquence : le nombre d'unités et la configuration obtenue. */
+.pick-conf {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.pick-conf b {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+.pick-conf small {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.pick-res {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+.dlg-check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-right: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Ligne d'état d'une étape, dans la synthèse du dossier. */
+.checkline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--grid-line);
+  font-size: var(--fs-sm);
+}
+.checkline:last-child {
+  border-bottom: none;
+}
+.checkline b {
+  flex: none;
+  width: 168px;
+  font-weight: 500;
+}
+.checkline > span:not(.when) {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.checkline .when {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- Ébauches */
+
+.stub {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: var(--sp-4);
+  display: grid;
+  gap: 6px;
+}
+.stub b {
+  font-family: var(--font-display);
+}
+.stub ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  display: grid;
+  gap: 3px;
+}
+.stub .tag {
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-faint);
+}
+
+/* ---------------------------------------------------------------- Divers */
+
+.linkish {
+  color: var(--accent-ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+.linkish:hover {
+  text-decoration: underline;
+}
+.rowline {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.rowline .sep {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------------- Provenance
+   Le composant Prov n'utilise que des <span> : un popover doit pouvoir vivre
+   dans une cellule de tableau ou dans un <b> sans invalider le HTML. */
+
+.pop-h5 {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.pop-dl {
+  display: grid;
+  gap: 2px;
+}
+.pop-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.pop-dt {
+  color: var(--text-muted);
+}
+.pop-dd {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Bandeau profil */
+
+/* Deux rangées : la feuille, puis la barre d'avancement. La troisième datait
+   du bandeau de profil supprimé et laissait une rangée vide. */
+.pane-center.pinned {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  height: 62px;
+}
+.chart .hrs {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+/* ---------------------------------------------------------------- Tableaux éditables */
+
+table.tbl td .cell-in {
+  width: 100%;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+table.tbl td.name .cell-in {
+  text-align: left;
+  font-family: var(--font-sans);
+}
+table.tbl td .cell-in:hover {
+  border-color: var(--border);
+  background: var(--bg);
+}
+table.tbl td .cell-in:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+  outline: none;
+}
+.addrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 5px var(--sp-2);
+  border-top: 1px solid var(--grid-line);
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+.addrow .sep {
+  flex: 1;
+}
+.rowdel {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  padding: 0 4px;
+}
+.rowdel:hover {
+  color: var(--danger);
+}
+
+/* Grille horaire */
+.hourgrid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.hourgrid > div {
+  background: var(--surface);
+  padding: 4px 3px;
+  text-align: center;
+}
+.hourgrid > div > span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.hourgrid .cell-in {
+  width: 100%;
+  height: 20px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+}
+.hourgrid .cell-in:hover {
+  border-color: var(--border);
+  background: var(--bg);
+}
+.hourgrid .cell-in:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* Formulaires */
+.form-rows {
+  display: grid;
+  /* Colonnes automatiques : un formulaire de neuf champs courts dans un
+     panneau large se répartissait en colonne unique et forçait à défiler,
+     les deux tiers droits restant vides (défaut vu au rendu). La largeur
+     minimale garde les valeurs lisibles ; au-delà, la grille remplit. */
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: var(--gap-field) var(--sp-5);
+  align-items: end;
+}
+.form-rows label {
+  /* Libellé au-dessus du champ : on lit le nom, puis la valeur, puis
+     l'unité. En colonnes, ces trois informations se disputaient la même
+     ligne et le libellé se faisait tronquer. */
+  display: grid;
+  gap: 4px;
+  /* Un libellé qui passe sur deux lignes ne doit pas décaler la saisie
+     par rapport à ses voisines : le contenu se cale en bas de la rangée. */
+  align-content: end;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.form-rows input,
+.form-rows select {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.form-rows input:focus-visible,
+.form-rows select:focus-visible {
+  border-color: var(--accent);
+}
+
+/* Champ à unité accolée : le caisson d'unité est soudé au bord droit de
+   la saisie, et non posé dans le libellé. La valeur garde toute la largeur. */
+.uf {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+.uf input {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  border-right: 0;
+}
+.uf .uf-unit {
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.uf:focus-within input,
+.uf:focus-within .uf-unit {
+  border-color: var(--accent);
+}
+
+/* Geste posé dans le champ, à droite de l'unité : le calcul d'optimum
+   appartient à l'angle qu'il change. Même hauteur que la saisie, encre
+   d'accent — coloré sans prendre le poids d'un aplat. */
+.uf-act {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  margin-left: -1px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.uf input:only-child + .uf-act,
+.uf > input:first-child + .uf-act {
+  border-left-width: 1px;
+}
+.uf-act:hover {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  border-color: var(--accent);
+}
+.uf-act:disabled {
+  cursor: not-allowed;
+  background: var(--surface-2);
+  color: var(--text-faint);
+}
+/* L'unité perd son arrondi droit quand un geste la suit. */
+.uf .uf-unit:not(:last-child) {
+  border-radius: 0;
+  border-right: 0;
+}
+
+/* Champ de lecture : occupe la même case de grille qu'une saisie et garde
+   le même rythme vertical, mais sans bordure blanche ni fond de saisie —
+   la valeur est déduite, on ne peut pas écrire dessus. */
+.ro-field {
+  display: grid;
+  gap: 4px;
+  align-content: end;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  min-width: 0;
+}
+.ro-lbl {
+  color: var(--text-muted);
+}
+.ro-box {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+}
+.ro-val {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.ro-val > b {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ro-val .unit {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+/* Valeur périmée : elle existe encore mais ne répond plus aux paramètres
+   courants. Le moteur Python vide son profil dans ce cas ; on le dit. */
+.ro-val.is-stale > b {
+  color: var(--text-faint);
+}
+.ro-note {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ro-field .prov {
+  min-width: 0;
+}
+/* Le popover s'aligne d'ordinaire sur le bord droit, ce qui convient aux
+   tableaux où la valeur est calée à droite. Ici la valeur commence à gauche
+   de sa case : ancré à droite, l'encart sortait par le bord du panneau. */
+.ro-field .prov > .pop {
+  right: auto;
+  left: 0;
+}
+
+/* Étapes d'un dialogue en plusieurs temps. Le numéro et le titre disent où
+   l'on en est ; l'étape encore inaccessible s'efface au lieu de disparaître,
+   pour qu'on sache ce qui attend. */
+.dlg-step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0 var(--sp-3);
+}
+.dlg-step:first-child {
+  margin-top: 0;
+}
+.dlg-step.is-off {
+  opacity: 0.45;
+}
+.dlg-num {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.dlg-step-t {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+/* Mensuelles de l'aperçu : mêmes chiffres que la grille de saisie, mais en
+   lecture — la série n'est pas encore acquise. */
+.prev-m {
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+/* Un graphe périmé reste lisible mais cesse de se présenter comme la
+   réponse : il s'efface le temps qu'on relance le calcul. */
+.tbl-wrap.is-stale {
+  opacity: 0.55;
+}
+
+/* Champ de plage : deux bornes d'un même intervalle dans un seul contrôle.
+   En champs séparés, « Début » et « Fin de pointe du matin » tombaient de
+   part et d'autre d'un saut de rangée et la paire se lisait comme deux
+   réglages indépendants. */
+.rf {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+.rf input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.rf input:first-child {
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  border-right: 0;
+}
+.rf input:last-child {
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  border-left: 0;
+}
+.rf-sep {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-left: 0;
+  border-right: 0;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+.rf:focus-within input,
+.rf:focus-within .rf-sep {
+  border-color: var(--accent);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-group) var(--sp-5);
+}
+
+/* Groupes en pleine largeur : quand un groupe porte cinq ou six champs, les
+   enfermer dans une demi-colonne les remet en pile et fait défiler. Empilés
+   sur toute la largeur, leurs champs se répartissent en rangées. */
+.form-stack {
+  display: grid;
+  gap: var(--gap-group);
+}
+
+/* ---------------------------------------------------------------- Fil d'avancement */
+
+.stephead {
+  display: grid;
+  gap: 3px;
+  margin-bottom: var(--sp-2);
+}
+.stephead-top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+.stephead-top .sep {
+  flex: 1;
+}
+.stephead-q {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  max-width: 78ch;
+}
+.stepbadge {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.stepbadge i {
+  font-style: normal;
+  opacity: 0.5;
+}
+/* L'action suivante est en bas à droite, séparée du contenu par un filet :
+   c'est le geste qui rend le parcours fluide sans verrouiller l'ordre.
+
+   Elle est ÉPINGLÉE au bas du volet, pas posée en fin de feuille : sur les
+   écrans denses (besoins, chiffrage, matériel) la feuille défile, et un pied
+   posé en fin de flux tombait sous la ligne de flottaison — donc invisible
+   exactement là où le parcours en a le plus besoin. Constaté au rendu :
+   visible sur 2 écrans sur 7 seulement. */
+.stepnext {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 5px var(--sp-4) 6px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.stepnext-where {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+.stepnext .btn {
+  height: 28px;
+}
+
+/* ---------------------------------------------------------------- Groupes repliables */
+
+.fold + .fold {
+  margin-top: var(--sp-2);
+}
+.fold-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 9px var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  text-align: left;
+}
+.fold-head:hover {
+  background: var(--surface-3);
+}
+.fold-head .sep {
+  flex: 1;
+}
+.fold-title {
+  font-weight: 600;
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+.fold-chev {
+  color: var(--text-faint);
+  transition: transform 0.15s ease;
+  line-height: 1;
+}
+.fold.on .fold-chev {
+  transform: rotate(180deg);
+}
+.fold.on .fold-head {
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  border-bottom-color: transparent;
+}
+.fold-body {
+  padding: var(--sp-4) var(--sp-3) var(--sp-3);
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 var(--r-md) var(--r-md);
+}
+/* Trois colonnes de champs dans un groupe ouvert, comme la maquette v2 :
+   les paramètres se balaient d'un regard au lieu de défiler. */
+.fold-body .form-rows {
+  max-width: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap-field) var(--sp-5);
+}
+
+/* Largeurs fixes : une valeur rognée est un défaut bloquant (critère B5) */
+table.tbl.t-classic,
+table.tbl.t-induct {
+  table-layout: fixed;
+}
+.t-classic th:nth-child(2), .t-classic td:nth-child(2) { width: 46px; }
+.t-classic th:nth-child(3), .t-classic td:nth-child(3) { width: 68px; }
+.t-classic th:nth-child(4), .t-classic td:nth-child(4) { width: 58px; }
+.t-classic th:nth-child(5), .t-classic td:nth-child(5) { width: 60px; }
+.t-classic th:nth-child(6), .t-classic td:nth-child(6) { width: 70px; }
+.t-classic th:nth-child(7), .t-classic td:nth-child(7) { width: 70px; }
+.t-classic th:nth-child(8), .t-classic td:nth-child(8) { width: 82px; }
+.t-classic th:nth-child(9), .t-classic td:nth-child(9) { width: 26px; }
+.t-induct th:nth-child(2), .t-induct td:nth-child(2) { width: 42px; }
+.t-induct th:nth-child(3), .t-induct td:nth-child(3) { width: 64px; }
+.t-induct th:nth-child(4), .t-induct td:nth-child(4) { width: 58px; }
+.t-induct th:nth-child(5), .t-induct td:nth-child(5) { width: 58px; }
+.t-induct th:nth-child(6), .t-induct td:nth-child(6) { width: 52px; }
+.t-induct th:nth-child(7), .t-induct td:nth-child(7) { width: 64px; }
+.t-induct th:nth-child(8), .t-induct td:nth-child(8) { width: 64px; }
+.t-induct th:nth-child(9), .t-induct td:nth-child(9) { width: 96px; }
+.t-induct th:nth-child(10), .t-induct td:nth-child(10) { width: 26px; }
+
+/* En-tête de tableau : le séparateur doit pousser les actions à droite */
+.tbl-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-bottom: 6px;
+}
+.tbl-title .sep {
+  flex: 1;
+}
+/* Un bouton nomme un geste : tronqué, il ne le nomme plus. C'est la mention
+   d'état voisine qui cède la place, elle se relit dans le contenu en dessous. */
+.tbl-title > .btn {
+  flex: none;
+}
+.tbl-title > .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Les cellules éditables respirent moins que les cellules de lecture :
+   c'est ce qui permet aux valeurs numériques de tenir sans être rognées (B5). */
+table.tbl.t-classic td,
+table.tbl.t-induct td {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.t-classic th:nth-child(4), .t-classic td:nth-child(4) { width: 66px; }
+.t-classic th:nth-child(5), .t-classic td:nth-child(5) { width: 64px; }
+.t-induct th:nth-child(4), .t-induct td:nth-child(4) { width: 64px; }
+.t-induct th:nth-child(5), .t-induct td:nth-child(5) { width: 64px; }
+.t-induct th:nth-child(6), .t-induct td:nth-child(6) { width: 58px; }
+
+/* Les libellés de champ portent l'unité, pas la valeur */
+.form-rows label > span:first-child {
+  display: block;
+}
+.form-grid .form-rows {
+  max-width: none;
+}
+
+/* ---------------------------------------------------------------- Blocs matériel */
+
+.eq {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.eq-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 7px var(--sp-3);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.eq-head .role {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  width: 92px;
+  flex: none;
+}
+.eq-head .ref {
+  font-weight: 600;
+}
+.eq-head .maker {
+  color: var(--text-muted);
+}
+.eq-head .sep {
+  flex: 1;
+}
+.eq-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 232px;
+}
+.eq-specs {
+  padding: var(--sp-3);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px var(--sp-4);
+  align-content: flex-start;
+}
+.spec {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--fs-sm);
+}
+.spec > span {
+  color: var(--text-muted);
+}
+.spec b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.eq-fit {
+  padding: var(--sp-3);
+  display: grid;
+  gap: 5px;
+  align-content: start;
+}
+.fitline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.fitline b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 600;
+}
+.config {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+select.cell-in {
+  text-align: left;
+  font-family: var(--font-sans);
+}
+/* Un sélecteur en cellule doit tenir son option la plus longue : à
+   `width:100%` dans une colonne serrée, « Cuivre » devenait « C... »
+   (valeur rognée, critère B5). On élargit la colonne plutôt que le contrôle,
+   sinon le tableau pousse sa dernière colonne hors du cadre. */
+table.tbl.t-cables {
+  table-layout: fixed;
+}
+/* En `table-layout: fixed`, une `min-width` de cellule n'est pas honorée : la
+   première colonne ne récupérait que le reliquat, 62 px, et « Onduleur →
+   Batterie » se cassait en trois lignes. Largeurs explicites, donc, calculées
+   pour que le plus long segment tienne d'un trait. */
+.t-cables th:nth-child(1), .t-cables td:nth-child(1) { width: 150px; }
+.t-cables th:nth-child(2), .t-cables td:nth-child(2) { width: 62px; }
+/* Matériau et pose portent un sélecteur : ils gardent de quoi afficher leur
+   option la plus longue en entier, chevron compris (critère B5). La colonne
+   « Tension » ayant rejoint le popover de provenance, les 74 px libérés vont
+   à ces deux sélecteurs et au nom de segment. */
+.t-cables th:nth-child(3), .t-cables td:nth-child(3) { width: 90px; }
+.t-cables th:nth-child(4), .t-cables td:nth-child(4) { width: 90px; }
+.t-cables th:nth-child(5), .t-cables td:nth-child(5) { width: 54px; }
+.t-cables th:nth-child(6), .t-cables td:nth-child(6) { width: 54px; }
+/* « Section min. » ne se coupe pas en deux mots plus courts : la colonne se
+   règle sur son en-tête, pas sur ses trois chiffres. */
+.t-cables th:nth-child(7), .t-cables td:nth-child(7) { width: 74px; }
+.t-cables th:nth-child(8), .t-cables td:nth-child(8) { width: 78px; }
+
+/* Table des protections : sept colonnes dans les mêmes 676 px. La dernière
+   porte un badge, on lui laisse le reste. */
+table.tbl.t-prot {
+  table-layout: fixed;
+}
+.t-prot th:nth-child(1), .t-prot td:nth-child(1) { width: 136px; }
+.t-prot th:nth-child(2), .t-prot td:nth-child(2) { width: 104px; }
+.t-prot th:nth-child(3), .t-prot td:nth-child(3) { width: 92px; }
+.t-prot th:nth-child(4), .t-prot td:nth-child(4) { width: 88px; }
+.t-prot th:nth-child(5), .t-prot td:nth-child(5) { width: 66px; }
+.t-prot th:nth-child(6), .t-prot td:nth-child(6) { width: 48px; }
+.t-prot th:nth-child(7), .t-prot td:nth-child(7) { width: 122px; }
+/* Le nom du segment tient sur une ligne : trois lignes pour trois mots
+   faisaient payer à chaque rangée une hauteur qu'elle n'utilisait pas. */
+.t-prot td:nth-child(1),
+.t-cables td:nth-child(1) {
+  white-space: nowrap;
+}
+
+/* Comparatif prédimensionné / retenu. Quatre colonnes : la grandeur, le
+   plancher théorique en retrait, la valeur réelle en avant, l'écart. Largeurs
+   fixes pour que les nombres restent alignés d'une rangée à l'autre. */
+table.tbl.t-cmp {
+  table-layout: fixed;
+}
+.t-cmp th:nth-child(1), .t-cmp td:nth-child(1) { width: auto; text-align: left; }
+.t-cmp th:nth-child(2), .t-cmp td:nth-child(2) { width: 132px; }
+.t-cmp th:nth-child(3), .t-cmp td:nth-child(3) { width: 132px; }
+.t-cmp th:nth-child(4), .t-cmp td:nth-child(4) { width: 84px; }
+.t-cmp td:nth-child(1) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* La colonne du plancher est un repère, pas un résultat : elle s'efface
+   devant la valeur réelle qui la suit. */
+.t-cmp td:nth-child(2) {
+  color: var(--text-faint);
+}
+.cmp-ok {
+  color: var(--ok-strong);
+}
+.cmp-bad {
+  color: var(--danger);
+}
+
+/* Les libellés d'en-tête sont plus larges que les valeurs qu'ils coiffent.
+   Plutôt que d'élargir neuf colonnes au-delà du cadre, on laisse l'intitulé
+   passer à la ligne : la hauteur se paie une fois, en tête, pas sur chaque
+   rangée — et aucun mot n'est rogné. */
+.t-prot th,
+.t-cables th {
+  white-space: normal;
+  line-height: 1.25;
+  vertical-align: bottom;
+}
+/* L'unité passe sous l'intitulé : accolée, elle forçait « Longueur m » à
+   tenir d'un bloc et rognait un libellé que la colonne pouvait porter. */
+.t-prot th .unit,
+.t-cables th .unit {
+  display: block;
+  margin: 0;
+}
+/* Le chevron natif du navigateur réserve près de vingt pixels dans une
+   cellule qui en compte quatre-vingts : « Cuivre » devenait « Cuiv… ». On le
+   remplace par un marqueur dessiné, plus petit, et le libellé tient. */
+table.tbl select.cell-in {
+  appearance: none;
+  padding-right: 14px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-faint) 50%),
+    linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
+  background-position: right 7px center, right 3px center;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+
+/* La feuille ne doit jamais comprimer ses blocs : les rangées partent du haut
+   et gardent leur hauteur de contenu (défaut vu au rendu, critère B5). */
+.sheet {
+  align-content: start;
+}
+.sheet > * {
+  min-height: 0;
+}
+.eq {
+  overflow: visible;
+}
+.eq-head {
+  border-radius: var(--r-md) var(--r-md) 0 0;
+}
+
+/* Le grid comprimait les rangées quand la feuille a une hauteur définie.
+   En colonne flex avec `flex: none`, chaque bloc garde sa hauteur de contenu. */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.sheet > * {
+  flex: none;
+  min-height: auto;
+}
+
+/* 12 mois sur une ligne : sans min-width:0 les champs débordent et la moitié
+   des mois disparaît (défaut vu au rendu, critère B5). */
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  margin-top: 4px;
+  gap: 2px;
+}
+.month-grid > div {
+  min-width: 0;
+  text-align: center;
+}
+.month-grid .cell-in {
+  padding: 0 2px;
+  font-size: var(--fs-xs);
+}
+/* `.cell-in` n'avait width:100% que dans les tableaux : hors tableau l'input
+   garde sa largeur intrinsèque et déborde de sa colonne. */
+.month-grid .cell-in,
+.hourgrid .cell-in {
+  width: 100%;
+}
+
+/* Deux graphes de même hauteur côte à côte : combien de soleil dans l'année,
+   et à quelle heure il arrive. Empilés, le second tombait sous la ligne de
+   flottaison et personne ne le voyait. */
+.chart-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-group) var(--sp-5);
+}
+@media (max-width: 1180px) {
+  .chart-duo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Une barre mensuelle commande le mois de la courbe voisine. */
+.bar-pick {
+  cursor: pointer;
+}
+.bar-pick:hover {
+  fill: var(--accent-fill-hover);
+}
+.mo-sel {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+}
+/* En dessous de 1400 px, titre, unité et sélecteur de mois se disputent la
+   même ligne et le titre se casse en deux. L'unité est déjà dite par la
+   crête, sous le graphe : c'est elle qui cède. */
+@media (max-width: 1400px) {
+  .chart-duo section:last-child .tbl-title .label {
+    display: none;
+  }
+}
+.hour-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.daily-note {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+/* Quatre mentions courtes valent mieux qu'une phrase pliée en trois : chaque
+   fragment reste d'un bloc, et c'est la rangée qui passe à la ligne. */
+.daily-note > span {
+  white-space: nowrap;
+}
+.daily-note {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.daily-note b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* Ouverture d'un fichier : un geste et ce qui a été lu, sur une rangée. */
+.file-drop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.file-drop .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Un nom de source coupé en deux lignes au milieu d'une phrase se lit comme
+   deux mots séparés : « Cacaveli / PVGIS-TMY existe déjà ». Il reste d'un
+   bloc, quitte à passer à la ligne avant. */
+.alert b {
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Palette Ctrl+K */
+
+.palette-scrim {
+  align-content: start;
+  justify-content: center;
+  padding-top: 12vh;
+}
+.palette {
+  width: 560px;
+  border: 1px solid var(--border-strong);
+  border-top: 2px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+.palette-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 var(--sp-4);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-size: var(--fs-lg);
+  outline: none;
+}
+.palette-list {
+  max-height: 46vh;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 7px var(--sp-4);
+  text-align: left;
+  font-size: var(--fs-md);
+  border-left: 2px solid transparent;
+}
+.palette-item.on {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+.palette-item > span:first-child {
+  flex: 1;
+}
+.palette-hint {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.palette-empty {
+  padding: var(--sp-4);
+  color: var(--text-muted);
+  text-align: center;
+}
+.palette-foot {
+  padding: 6px var(--sp-4);
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+/* ---------------------------------------------------------------- Corrections d'usage */
+
+/* Panneau verdict repliable : la largeur revient au centre, le SVI monte en haut. */
+.app.verdict-off .main {
+  grid-template-columns: var(--pane-left) minmax(0, 1fr);
+}
+/* L'encoche de réouverture. Adossée au bord droit, à l'aplomb du panneau
+   qu'elle rouvre, elle porte son libellé à la verticale et se glisse en
+   hauteur. Position en `top` piloté par le store, donc pas de transition sur
+   cette propriété : elle doit suivre le doigt sans retard. */
+.verdict-tab {
+  position: fixed;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 30px;
+  padding: 12px 0;
+  border: 1px solid var(--border-strong);
+  border-right: none;
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  background: var(--surface);
+  color: var(--text-muted);
+  box-shadow: -2px 0 8px rgb(0 0 0 / 8%);
+  cursor: grab;
+  touch-action: none;
+}
+.verdict-tab.is-drag {
+  cursor: grabbing;
+}
+.verdict-tab:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.verdict-tab-txt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  writing-mode: vertical-rl;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.verdict-tab-txt b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+}
+/* La poignée dit que l'encoche se déplace, sans un mot pour l'expliquer. */
+.verdict-tab-grip {
+  width: 12px;
+  height: 3px;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  flex: none;
+}
+.verdict-tab.ok {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+  background: var(--ok-soft);
+  color: var(--ok-strong);
+}
+.verdict-tab.bad {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* Le bouton de repli du verdict reprend celui du bandeau bas */
+.verdict .toggle {
+  width: 20px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  flex: none;
+}
+.verdict .toggle:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Le fil d'Ariane cède la place aux actions plutôt que de passer à la ligne */
+.crumbs {
+  white-space: nowrap;
+  overflow: hidden;
+}
+.crumbs b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crumbs em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* L'avertissement de pointe tient dans sa cellule ou n'y est pas */
+.flag {
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--danger);
+}
+/* La barre supérieure ne pousse jamais l'application au-delà de la fenêtre :
+   c'est le fil d'Ariane qui cède, pas la mise en page (critère D2). */
+.topbar {
+  overflow: hidden;
+}
+.crumbs {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.crumbs > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Le bouton Retour ne se rogne pas : c'est une sortie, pas du texte d'appoint. */
+.crumbs > .btn {
+  flex: none;
+  overflow: visible;
+}
+
+/* ==========================================================================
+   Navigation latérale — refonte
+   Plus aucune pastille ronde : le repère d'état reprend le CARRÉ du logo KYA.
+   La sélection se voit à trois signes à la fois : filet orange, fond ambré,
+   libellé en gras. Un seul de ces signes ne suffisait pas.
+   ========================================================================== */
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  height: auto;
+  padding: 5px var(--sp-4) 5px 10px;
+  border-left: 3px solid transparent;
+  font-size: var(--fs-md);
+  color: var(--text-muted);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.nav-item:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+/* Le rang reprend la numérotation du fil : le rail et l'en-tête d'écran
+   racontent la même histoire. */
+.nav-rank {
+  flex: none;
+  width: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.nav-item.on .nav-rank {
+  color: var(--accent-ink);
+}
+.nav-item.on {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+.nav-item.on .nav-meta {
+  color: var(--accent-ink);
+}
+
+/* Le carré du logo, décliné en trois états */
+.st {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+/* Hiérarchie inversée à dessein : sur un dossier avancé, six sections sur
+   sept sont complètes. Si le vert crie, l'unique section à traiter se noie
+   dans le lot. Le complet s'efface, l'incomplet se voit. */
+.st-done {
+  background: color-mix(in srgb, var(--ok) 55%, transparent);
+}
+.st-partial {
+  background: var(--accent-fill);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.st-empty {
+  background: none;
+  border: 1px solid var(--border-strong);
+}
+/* La section incomplète porte son nom en pleine encre, les autres non. */
+.nav-item:has(.st-partial) .nav-label,
+.nav-item:has(.st-empty) .nav-label {
+  color: var(--text);
+}
+.nav-item:has(.st-partial) .nav-meta {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.nav-label {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.nav-meta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+/* Titre de groupe : un filet orange court, écho du bandeau de la marque */
+.pane-left .h-sec {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.pane-left .h-sec::before {
+  content: '';
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--accent) 0 60%, var(--ok) 60% 100%);
+  flex: none;
+}
+
+/* Signature de marque sous la barre supérieure : orange puis teal, comme le rapport */
+.topbar {
+  position: relative;
+}
+.topbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 22%,
+    var(--ok) 22% 30%,
+    transparent 30% 100%
+  );
+}
+/* Dans le fil d'Ariane, le nom du projet et son numéro gardent leur place ;
+   c'est le nom du client qui cède en premier. */
+.crumbs b,
+.crumbs .ref {
+  flex: none;
+}
+.crumbs em {
+  flex: 1 1 auto;
+}
+
+/* Structure de la colonne de gauche (récupérée du bloc supprimé) */
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tree-group {
+  padding: var(--sp-3) var(--sp-4) 4px;
+}
+.tree-sub {
+  padding: 2px var(--sp-4) 8px 30px;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  display: grid;
+  gap: 2px;
+}
+.tree-sub div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.tree-sub div span:last-child {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.tree-note {
+  margin: 6px var(--sp-4) 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ------------------------------------------------- Résultats de calcul
+
+   Une page d'étude alterne ce qu'on saisit et ce que la machine répond. Tant
+   que les deux partagent le gabarit du formulaire — même graisse, même
+   colonne, même hauteur — l'utilisateur doit deviner lequel il regarde. Les
+   résultats prennent donc un fond propre, un chiffre nettement plus grand, et
+   un repère textuel qui nomme leur nature. */
+
+.out {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: visible;
+}
+.out-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 7px var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.out-head .h-sec {
+  margin: 0;
+}
+/* Le repère est écrit, pas seulement coloré : une pastille de couleur seule
+   ne se lit pas en noir et blanc ni pour un daltonien. */
+.out-tag {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.out-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: var(--sp-3) var(--sp-5);
+  padding: var(--sp-4);
+}
+.out-cell {
+  display: grid;
+  gap: 1px;
+  align-content: start;
+  min-width: 0;
+}
+/* Libellé au-dessus et en petit : dans un formulaire, le libellé mène et la
+   valeur suit ; ici c'est la valeur qui porte l'information. */
+.out-lbl {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.out-val {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.out-val > b {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Les grandeurs qui commandent la suite de l'étude sortent d'un cran. */
+.out-cell.is-lead .out-val > b {
+  font-size: var(--fs-xl);
+}
+.out-val .unit {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+.out-cell.t-ok .out-val > b {
+  color: var(--ok-strong);
+}
+.out-cell.t-bad .out-val > b {
+  color: var(--danger);
+}
+.out-note {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Barre de lancement.
+
+   Le calcul n'est pas instantané — 121 combinaisons, chacune simulée sur
+   8 760 heures — donc rien ne se met à jour pendant la frappe. Le geste doit
+   se voir : il occupe sa propre ligne, entre les entrées et les résultats
+   qu'il produit. */
+.runbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 9px var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.btn-run {
+  height: 32px;
+  padding: 0 16px;
+}
+.runbar-note {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Critères modifiés depuis le dernier calcul : le logiciel garde les valeurs
+   affichées — `_mark_results_stale` ne les efface pas — mais il faut dire
+   qu'elles ne répondent plus à ce qui est saisi. */
+.runbar.is-stale {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+}
+.runbar.is-stale .runbar-note {
+  color: var(--accent);
+}
+.out.is-stale .out-tag {
+  background: var(--surface-3);
+  color: var(--text-faint);
+}
+.out.is-stale .out-val > b {
+  color: var(--text-faint);
+}
+
+/* Rien n'a encore été calculé : le tiret n'est pas une valeur nulle, c'est une
+   absence. Il se lit en gris, sans unité, sans note. */
+.out-cell.is-pending .out-val > b {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------- Étape 5 · matériel
+
+   Le choix n'est pas symétrique : module et batterie se prennent au catalogue,
+   l'onduleur se déduit des deux. La page suit cet ordre — ce qu'il faut
+   couvrir, les deux choix, la déduction, le calcul, le résultat. */
+
+/* Les minimums de l'étape 4, rappelés en tête. Bande sans cadre : ce ne sont
+   pas des résultats de cette page, seulement le cahier des charges. */
+.targets {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-5);
+  padding: 8px var(--sp-4);
+  border: 1px solid var(--border);
+  box-shadow: inset 2px 0 var(--accent-fill);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.targets-tag {
+  flex: none;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.tgt {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.tgt-lbl {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.tgt-val {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.tgt-val > b {
+  font-weight: 600;
+}
+.tgt-val .unit {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.tgt-got {
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.tgt-got.ok {
+  color: var(--ok-strong);
+}
+.tgt-got.bad {
+  color: var(--danger);
+}
+
+/* Les deux choix libres, une ligne chacun. Les fiches techniques occupaient
+   deux pavés de sept caractéristiques ; elles sont passées sous l'infobulle. */
+.picklist {
+  display: grid;
+  gap: 6px;
+}
+.pickrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 6px var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.pickrow.is-empty {
+  border-style: dashed;
+  background: transparent;
+}
+.pickrow-n {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.pickrow-role {
+  flex: none;
+  width: 76px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.pickrow-ref {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pickrow-ref .mut {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.pickrow .sep {
+  flex: 1;
+}
+
+/* Les candidats. Chacun porte sa configuration complète, parce que
+   `get_compatible_inverters` renvoie un montage, pas une référence. */
+.candlist {
+  display: grid;
+  gap: 4px;
+}
+.cand {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1.2fr) 62px;
+  align-items: baseline;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 7px var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.cand:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+.cand.is-sel {
+  border-color: var(--accent-fill);
+  background: var(--accent-soft);
+}
+.cand-ref {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cand-ref .mut,
+.cand-pow .mut {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.cand-pow {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.cand-pow .unit {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.cand-cfg {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cand .res {
+  justify-self: end;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.cand-more {
+  justify-self: start;
+}
+
+/* Ce qui remplace le message « choisissez d'abord… » en italique perdu : un
+   encart qui explique la dépendance, pas un vide. */
+.hint-box {
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* Requis / obtenu, trois colonnes. */
+.fitgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+.fitcell {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
+}
+/* Chaque famille est une unité de lecture : trois colonnes posées sur le
+   fond nu se touchaient par leurs valeurs, et la barre de réserve de l'une
+   semblait commenter le nombre de la suivante. Un cadre léger suffit à les
+   séparer sans les transformer en cartes flottantes. */
+.fitcell {
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.fitgrid {
+  gap: var(--sp-3);
+}
+/* L'intitulé de famille porte le montage (« 3S x 1P = 3 modules ») : il doit
+   tenir sur une ligne, quitte a etre tronque, sinon la hauteur des trois
+   cellules cesse d'etre identique. */
+.fitcell .out-lbl {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--grid-line);
+  margin-bottom: 2px;
+}
+.checklist {
+  display: grid;
+  gap: 3px;
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--grid-line);
+}
+
+/* ------------------------------------------------- Panneau droit en attente
+
+   Un bloc sans données ne se remplit pas de tirets : il dit ce qui manque et
+   emmène au bon endroit. */
+.verdict.is-wait {
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+.verdict.is-wait .verdict-head {
+  align-items: center;
+}
+.kpi-wait-cta {
+  display: block;
+  width: 100%;
+  padding: 8px var(--sp-3);
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--accent);
+  cursor: pointer;
+}
+.kpi-wait-cta:hover {
+  background: var(--accent-soft);
+}
+
+/* ------------------------------------------------------- Étape 7 · chiffrage
+
+   La page était bâtie à l'envers du prédimensionnement : le tableau de
+   résultats en tête, les entrées reléguées en bas et hors écran. On changeait
+   une marge à l'aveugle avant de remonter voir l'effet. L'ordre est désormais
+   le même qu'à l'étape 4 — on saisit, puis on lit. */
+
+/* Une famille de matériel : rôle, quantité héritée, prix, marge, total. */
+.costlist {
+  display: grid;
+  gap: 6px;
+}
+/* Les cinq postes annexes tiennent en une bande de cartes plutôt qu'en cinq
+   rangées pleine largeur : deux nombres n'ont pas besoin de 1 100 px. */
+.acclist {
+  display: grid;
+  /* Cinq colonnes tant que la largeur le permet, moins ensuite.
+
+     En `repeat(5, 1fr)` sec, les cinq postes tenaient coûte que coûte : à
+     1 180 px de fenêtre, chaque champ tombait à 20 px de large et n'affichait
+     plus un seul chiffre. `auto-fit` avec un plancher rend la main — on
+     préfère une seconde ligne à des cases illisibles (critère B5).
+
+     Le plancher vaut ce que réclament les deux champs côte à côte : la marge
+     et son caisson prennent 74 px — mesuré sur « 30,0 » — le coût en veut
+     autant pour sa valeur et son unité, plus la gouttière. */
+  grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
+  gap: var(--sp-2) var(--sp-3);
+}
+.accitem {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.accitem-lbl {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.accitem-pair {
+  display: grid;
+  /* Le coût prend la place restante, la marge prend ce que « 30,0 » plus son
+     caisson de pourcentage réclament — 74 px, mesurés, pas devinés. */
+  grid-template-columns: minmax(0, 1fr) 74px;
+  gap: 5px;
+}
+/* L'unité ne doit pas manger la valeur dans une case étroite. */
+.accitem-pair .uf-unit {
+  padding: 0 6px;
+  font-size: var(--fs-xs);
+}
+/* Dans une case étroite, la valeur se serre contre son unité plutôt que de
+   se faire couper. */
+.accitem-pair input {
+  padding-left: 7px;
+  padding-right: 4px;
+}
+/* La marge se lit comme un complément du coût, pas comme un champ égal. */
+.accrow-fld-m .uf-unit {
+  color: var(--text-faint);
+}
+
+/* Pied du bloc résultat : la comparaison au groupe électrogène, sur une ligne. */
+.out-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--grid-line);
+}
+/* Écran court — la page ne défile jamais (critère D2), il faut donc que
+   quelque chose cède. L'ordre de sacrifice est délibéré :
+     1. la respiration entre les blocs,
+     2. la phrase de comparaison au groupe électrogène, dont le chiffre reste,
+     3. les notes de composition du résultat, qui vivent dans « Détail par
+        poste ».
+   Les montants, eux, ne cèdent jamais. */
+/* Un rang plutôt que deux : la page ne défile pas, et chaque rang se paie en
+   hauteur. Quatre colonnes, parce qu'à six les montants en FCFA se rognaient.
+
+   Le plancher est ce qu'il faut à un montant à huit chiffres suivi de son
+   unité, mesuré à 148 px. En dessous, la grille se replie d'elle-même : mieux
+   vaut deux rangs lisibles qu'un rang de nombres tronqués. À 168 px elle
+   tombait à deux colonnes alors que trois tenaient largement. */
+.out-grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+}
+.out-foot-say {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.out-foot-net {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  background: var(--surface-2);
+}
+.out-foot-net .mut {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.out-foot-net b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+.out-foot-net .unit {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.out-foot-net.good {
+  background: var(--ok-soft);
+}
+.out-foot-net.good b {
+  color: var(--ok-strong);
+}
+.out-foot-net.bad {
+  background: var(--danger-soft);
+}
+.out-foot-net.bad b {
+  color: var(--danger);
+}
+.costrow {
+  display: grid;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 5px var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+/* En-tête de colonne : nomme les champs une fois pour toute la liste. */
+.costhead {
+  display: grid;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-3) 2px;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.costrow {
+  grid-template-columns: 92px 58px minmax(0, 1fr) minmax(0, 1fr) 148px;
+}
+.costhead {
+  grid-template-columns: 92px 58px minmax(0, 1fr) minmax(0, 1fr) 148px;
+}
+
+/* Étroit : le prix garde la main, la marge se réduit à ce qu'elle affiche —
+   trois caractères et un signe de pourcentage. Le total de vente cède aussi,
+   il reste aligné à droite. */
+@media (max-width: 1340px) {
+  .costrow,
+  .costhead {
+    grid-template-columns: 84px 46px minmax(0, 1fr) minmax(0, 0.66fr) minmax(0, 118px);
+    gap: var(--sp-3);
+  }
+}
+.costhead .ta-r {
+  text-align: right;
+}
+
+/* Écran court : l'en-tête de colonnes du matériel disparaît. Les caissons
+   FCFA et % sont accolés aux champs, et le rôle de chaque colonne se lit sans
+   étiquette. Cette règle vit ici, après la déclaration de `.costhead` : à
+   spécificité égale, c'est l'ordre du fichier qui tranche, et la placer plus
+   haut la laissait sans effet. */
+@media (max-height: 860px) {
+  .costhead {
+    display: none;
+  }
+}
+.costrow-role {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+/* La quantité vient du dimensionnement : elle se constate, elle ne se saisit
+   pas. D'où l'absence de cadre de champ. */
+.costrow-qty,
+.costrow-total {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.costrow-qty > b {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.costrow-total {
+  justify-content: flex-end;
+}
+.costrow-total > b {
+  font-weight: 600;
+}
+.costrow-qty .unit,
+.costrow-total .unit {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+/* Les champs héritent du gabarit de `.form-rows` sans en reprendre la grille :
+   ici c'est la rangée qui commande les colonnes. */
+.costrow-fld,
+.accrow-fld {
+  min-width: 0;
+}
+.costrow-fld label,
+.accrow-fld label {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+/* Le libellé vide ne doit pas réserver de place. */
+.costrow-fld label > span:first-child:empty,
+.accrow-fld label > span:first-child:empty {
+  display: none;
+}
+.costrow-fld input,
+.accrow-fld input {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.costrow-fld input:focus-visible,
+.accrow-fld input:focus-visible {
+  border-color: var(--accent);
+}
+
+/* ------------------------------------------- Chiffrage · écrans peu hauts
+
+   La page ne défile jamais (critère D2), il faut donc que quelque chose cède.
+   L'ordre de sacrifice est délibéré :
+     1. la respiration entre les blocs,
+     2. la phrase de comparaison au groupe électrogène, dont le chiffre reste,
+     3. les notes de composition du résultat, qui vivent dans « Détail par
+        poste »,
+     4. l'en-tête de colonnes, redondant avec les caissons d'unité.
+   Les montants, eux, ne cèdent jamais.
+
+   Ces règles closent le bloc chiffrage : placées plus haut, elles se faisaient
+   écraser par les déclarations qui suivaient, à spécificité égale. */
+@media (max-height: 920px) {
+  .targets {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .costlist {
+    gap: 4px;
+  }
+  .acclist {
+    row-gap: 4px;
+  }
+  .accitem {
+    gap: 2px;
+  }
+  .out-grid-4 {
+    row-gap: 6px;
+  }
+  .out-foot {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+  .out-foot-say {
+    display: none;
+  }
+}
+
+/* Le seuil se lit sur la fenêtre, pas sur la feuille : entre les deux il y a
+   la barre du haut, l'en-tête d'étape, le pied de navigation et la barre
+   d'état, soit une centaine de pixels. Un 1280×720 ne laisse que 608 px à la
+   feuille — c'est ce cas qu'il faut couvrir. */
+@media (max-height: 860px) {
+  .out-grid-4 .out-note {
+    display: none;
+  }
+  .costrow {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+  /* Les notes ayant disparu, une valeur ne tient plus que sur deux lignes :
+     les quatre montants reviennent sur un seul rang. */
+  .out-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: var(--sp-3);
+  }
+  /* « Prix de revient » ne tient pas en un mot : à quatre colonnes serrées, le
+     libellé se replie plutôt que de perdre sa fin. */
+  .out-grid-4 .out-lbl {
+    white-space: normal;
+    line-height: 1.2;
+  }
+  /* Le TTC descend d'un cran de corps : huit chiffres en `--fs-xl` ne passent
+     pas dans un quart de largeur. Mieux vaut un montant entier un peu plus
+     petit qu'un montant imposant qui s'arrête à « 13 621 9… ». */
+  .out-grid-4 .out-cell.is-lead .out-val > b {
+    font-size: var(--fs-lg);
+  }
+  .out-head {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .tbl-title {
+    margin-bottom: 2px;
+  }
+}

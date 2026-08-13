@@ -1,11 +1,20 @@
 import { expect, test } from '@playwright/test';
 
-test('shows only owned unavailable calculation states', async ({ page }) => {
-  await page.goto('/accueil'); await page.getByRole('button', { name: 'Créer l’étude' }).click();
-  for (const step of [/^04 Prédimensionnement$/, /^05 Dimensionnement$/, /^06 Protections et câblerie$/, /^07 Évaluation financière$/, /^08 Vue synoptique et rapports$/]) {
-    await page.getByRole('button', { name: step }).click();
-    await expect(page.getByText('Cette capacité n’est pas encore disponible.')).toBeVisible();
-    await expect(page.getByText(/Prévu dans (AIO-001|EQP-001|SAFE-001|FIN-001|DOC-001)/)).toBeVisible();
-    await expect(page.locator('.state-panel.unavailable')).not.toContainText(/\b\d+(?:[.,]\d+)?\s*(?:kWh|Wh|FCFA|€|Wc|kW|Ah|V|A)\b/i);
-  }
+test('retains the complete Bombouaka reference study and its calculated outputs', async ({ page }) => {
+  await page.goto('/projet/p-2026-041/atelier/projet');
+  await expect(page.locator('input[value="District Sanitaire de Bombouaka"]')).toBeVisible();
+  await page.goto('/projet/p-2026-041/atelier/site');
+  await expect(page.locator('.pane-center')).toContainText('Bombouaka');
+  await page.goto('/projet/p-2026-041/atelier/besoins');
+  await expect(page.locator('input[value="Réfrigérateur à vaccins"]')).toBeVisible();
+  await expect(page.locator('input[value="Pompe à eau de surface"]')).toBeVisible();
+  await page.goto('/projet/p-2026-041/atelier/hypotheses');
+  await page.getByRole('button', { name: 'Lancer le prédimensionnement' }).click();
+  await expect(page.locator('.pane-center')).toContainText(/121 combinaisons/);
+  await page.goto('/projet/p-2026-041/atelier/materiel');
+  await expect(page.locator('.pane-center')).toContainText(/84 onduleurs/);
+  await page.goto('/projet/p-2026-041/atelier/chiffrage');
+  await expect(page.locator('.pane-center')).toContainText('Total TTC');
+  await page.goto('/projet/p-2026-041/atelier/dossier');
+  await expect(page.getByRole('heading', { name: 'Vue synoptique et rapports' })).toBeVisible();
 });

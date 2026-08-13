@@ -1,2 +1,8 @@
+import { useApplication } from '../ApplicationProvider.js';
 import { useT } from '../../shared/i18n/index.js';
-export function StatusBar() { const t = useT(); return <footer className="statusbar"><span className="status-dot" aria-hidden="true"/><span>{t('app.sessionOnly')}</span></footer>; }
+
+export function StatusBar() {
+  const t = useT();
+  const { locale } = useApplication();
+  return <footer className="statusbar"><span className="live">{t('app.sessionOnly')}</span><span className="sep" /><span>{locale === 'fr' ? 'Français' : 'English'}</span></footer>;
+}

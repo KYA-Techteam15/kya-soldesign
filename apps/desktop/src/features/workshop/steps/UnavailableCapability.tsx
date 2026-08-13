@@ -9,5 +9,5 @@ export function UnavailableCapability({ projectId, capability, titleKey, childre
   const t = useT();
   const [state, setState] = useState<CapabilityState<ReactNode>>({ status: 'loading', messageKey: 'state.loading' });
   useEffect(() => { let active = true; void services.calculations.read<ReactNode>(projectId, capability).then((result) => { if (active) setState(result); }).catch(() => { if (active) setState({ status: 'error', code: 'CAPABILITY_READ_FAILED', messageKey: 'state.error', retryable: false }); }); return () => { active = false; }; }, [capability, projectId, services]);
-  return <section className="work-card"><h2>{t(titleKey)}</h2>{children}<p>{t('workshop.unavailableDetail')}</p><CapabilityStateView state={state}>{null}</CapabilityStateView></section>;
+  return <section><div className="tbl-title"><h2 className="h-sec">{t(titleKey)}</h2><span className="sep" /><span className="label">{t('workshop.unavailableDetail')}</span></div>{children}<CapabilityStateView state={state}>{null}</CapabilityStateView></section>;
 }

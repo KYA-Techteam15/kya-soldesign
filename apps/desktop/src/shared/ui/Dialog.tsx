@@ -6,5 +6,5 @@ export function Dialog({ open, title, onClose, children }: { readonly open: bool
   const titleId = useId();
   useDialogFocus(open, container, undefined, onClose);
   if (!open) return null;
-  return <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}><section ref={container} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}><h2 id={titleId}>{title}</h2>{children}</section></div>;
+  return <div className="scrim" role="presentation" onMouseDown={onClose}><section ref={container} className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}><header><h2 className="h-page" id={titleId}>{title}</h2><button className="modal-x" aria-label="Fermer" onClick={onClose}>{'×'}</button></header><div className="body">{children}</div></section></div>;
 }

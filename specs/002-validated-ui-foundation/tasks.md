@@ -147,4 +147,17 @@ Phase 1 architecture
 - [x] T057 Strengthen browser acceptance for all named cases: disabled-card explanations, project resume, injected catalog error/retry, eight step URLs with back/forward and unknown segment, per-surface zero-result assertions, keyboard-only end-to-end navigation, focus trap/restore, workshop 1024×768/200% text, and reduced motion per SC-UIBASE-001/004/006 and T024/T025/T033–T035/T046 (resolved).
 - [x] T058 Complete and review the required FR/EN visual matrix at 1440×1000 and 1024×768 for top-level routes, Needs, Equipment, Dossier, palette, and dialog; compare against fresh live references, remove the orphan foundation snapshot, record only observed evidence, rerun Impeccable/UI acceptance, `pnpm test:visual`, `pnpm verify`, and `$speckit-converge` per FR-UIBASE-016/018 and T022/T031/T043/T044/T047–T050 (resolved).
 
+## Phase 7: Faithful-port recovery
+
+- [x] T059 Reopen `UI-BASE-001`, lock the visual authority to `1be343f...`, and record why target-authored snapshots did not establish source fidelity.
+- [x] T060 Port the validated sober tokens, global styles, shell, shared UI, and six system assets without prototype runtime dependencies.
+- [x] T061 Port Home, Projects, Catalog, and Settings with source geometry and interactions backed by Next application ports.
+- [x] T062 Port the workshop shell and all eight source sections; preserve structure while replacing simulated results with roadmap-owned unavailable states.
+- [x] T063 Port the dossier structure, palette, dialogs, status presentation, bilingual copy, keyboard behavior, and responsive rules.
+- [x] T064 Run phase/final gates and repair all in-scope failures without weakening assertions or inventing results.
+- [x] T065 Validate source and target end-to-end in the in-app browser at 1440 × 1000 and 1024 × 768, record observed differences, and complete one bounded repair pass plus confirmation.
+- [x] T066 Replace invalid self-authored visual baselines only after source-led review, record final evidence, and close `UI-BASE-001` only if genuinely converged.
+
+**Recovery evidence (2026-08-13)**: the reference and target were run on isolated strict ports and compared in the in-app browser. The source shell, Home, top-level routes, workshop steps, catalog, palette/dialog, and responsive layout were reviewed at 1440×1000 and 1024×768. `verify:phase`, 16 E2E scenarios, Axe/keyboard checks, and the 12-scenario/36-baseline visual matrix passed; Impeccable returned `[]`. Only the pre-approved truthful differences VD-001–VD-006 remain.
+
 **Convergence evidence (2026-08-11)**: T052–T058 closed after the follow-up audit. `corepack pnpm test:visual` passed 12 scenarios/36 baselines, Impeccable returned `[]`, and `corepack pnpm verify` passed the source contracts, 49 covered tests, production build, and browser acceptance. The catalog error/retry is exercised through a Vite-only injected-service harness outside the production graph. `MoreBelow` and grid-navigation abstractions were not retained because fewer than two approved consumers required them, per the roadmap extraction rule. The clean convergence result is recorded in `convergence.md`.

@@ -6,7 +6,7 @@ export function CapabilityStateView({ state, children }: { readonly state: Capab
   const t = useT();
   if (state.status === 'ready') return <>{children}</>;
   if (state.status === 'unavailable') {
-    return <section className="state-panel unavailable" role="status"><h2>{t('state.unavailable')}</h2><p>{t('state.owner')} {state.roadmapOwner}.</p></section>;
+    return <section className="capability-unavailable state-panel unavailable" role="status"><strong>{t('state.unavailable')}</strong><p>{t('state.owner')} {state.roadmapOwner}.</p></section>;
   }
   if (state.status === 'error') return <section className="state-panel" role="alert"><h2>{t('state.error')}</h2><p>{state.code}</p></section>;
   if (state.status === 'loading') return <section className="state-panel" role="status"><h2>{t('state.loading')}</h2></section>;

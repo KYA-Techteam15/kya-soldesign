@@ -12,5 +12,5 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({ open, title, body, danger = false, onConfirm, onClose }: ConfirmDialogProps) {
   const t = useT();
-  return <Dialog open={open} title={title} onClose={onClose}><p>{body}</p><div className="dialog-actions"><button data-dialog-initial className="button button-secondary" onClick={onClose}>{t('action.cancel')}</button><button className={`button ${danger ? 'button-danger' : 'button-primary'}`} onClick={onConfirm}>{t('action.confirm')}</button></div></Dialog>;
+  return <Dialog open={open} title={title} onClose={onClose}><p>{body}</p><footer><button data-dialog-initial className="btn" onClick={onClose}>{t('action.cancel')}</button><button className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>{t('action.confirm')}</button></footer></Dialog>;
 }

@@ -2,7 +2,7 @@
 
 **Purpose**: Completion evidence for faithful implementation of the validated live design.
 **Authority**: `contracts/visual-acceptance.md` and `reference-captures/`
-**Owner**: Terra execution goal, reviewed through `$ksd-ui-acceptance`
+**Owner**: Sol High recovery goal, with future maintenance delegated only after acceptance
 
 ## Environment
 
@@ -48,5 +48,5 @@
 | 1024×768 captures | `apps/desktop/e2e/visual.spec.ts-snapshots/*-1024-chromium-win32.png` | green |
 | 200% text capture | `apps/desktop/e2e/responsive.spec.ts` | green |
 | Accessibility report | `apps/desktop/e2e/accessibility.spec.ts` | Axe + keyboard green |
-| Difference ledger review | `contracts/visual-acceptance.md` | accepted against four live captures |
+| Difference ledger review | `contracts/visual-acceptance.md` | accepted through live source/target in-app-browser review |
 | Final UI acceptance | `corepack pnpm test:visual`, `corepack pnpm verify` | 12 visual scenarios + complete repository gate green |

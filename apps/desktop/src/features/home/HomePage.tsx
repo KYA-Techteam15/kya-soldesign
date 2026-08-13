@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useApplication } from '../../app/ApplicationProvider.js';
+import { TopBar } from '../../app/shell/TopBar.js';
+import { StatusBar } from '../../app/shell/StatusBar.js';
 import { useT } from '../../shared/i18n/index.js';
 import gridTied from '../../assets/systems/grid-tied.png';
 import pvDiesel from '../../assets/systems/pv-diesel.png';
@@ -9,19 +11,34 @@ import allInOne from '../../assets/systems/standalone-all-in-one.png';
 import controller from '../../assets/systems/standalone-inverter-controller.png';
 
 const systems = [
-  ['system.aio', 'system.aio.description', allInOne, true],
-  ['system.controller', 'system.comingSoon', controller, false],
-  ['system.grid', 'system.comingSoon', gridTied, false],
-  ['system.diesel', 'system.comingSoon', pvDiesel, false],
-  ['system.light', 'system.comingSoon', streetLight, false],
-  ['system.pump', 'system.comingSoon', waterPumping, false],
+  ['system.aio', 'system.aio.description', allInOne, true, 'AIO', 'solar'],
+  ['system.controller', 'system.controller.description', controller, false, 'I+R', 'solar'],
+  ['system.grid', 'system.grid.description', gridTied, false, 'RES', 'grid'],
+  ['system.diesel', 'system.diesel.description', pvDiesel, false, 'GE', 'hybrid'],
+  ['system.light', 'system.light.description', streetLight, false, 'LAM', 'light'],
+  ['system.pump', 'system.pump.description', waterPumping, false, 'PMP', 'water'],
 ] as const;
 
 export function HomePage() {
   const t = useT(); const navigate = useNavigate(); const { createProject, setCurrentProjectId, projects } = useApplication();
   const create = () => { const project = createProject(); setCurrentProjectId(project.id); void navigate(`/projet/${project.id}/atelier/projet`); };
-  return <main className="main-content"><header className="page-head"><p className="eyebrow">KYA SOLAR ENGINEERING</p><h1>{t('home.title')}</h1><p>{t('home.lede')}</p></header>
-    <section aria-labelledby="systems-title"><div className="section-heading"><h2 id="systems-title">{t('home.systems')}</h2><span>{t('app.sessionOnly')}</span></div><div className="system-grid">{systems.map(([name, description, image, enabled]) => <article className="system-card" key={name}><img src={image} alt="" /><div><h3>{t(name)}</h3><p>{t(description)}</p></div>{enabled ? <button className="button button-primary" onClick={create}>{t('action.create')}</button> : <button className="button button-secondary" disabled>{t('system.comingSoon')}</button>}</article>)}</div></section>
-    <section className="recent-section" aria-labelledby="recent-title"><div className="section-heading"><h2 id="recent-title">{t('home.recent')}</h2>{projects.length ? <button className="text-button" onClick={() => navigate('/accueil/projets')}>{t('nav.projects')}</button> : null}</div>{projects.length ? <div className="project-list">{projects.slice(0, 3).map((project) => <button className="project-row" key={project.id} onClick={() => navigate(`/projet/${project.id}/atelier/projet`)}><strong>{project.name}</strong><span>{t('system.aio')}</span></button>)}</div> : <section className="state-panel"><h2>{t('home.emptyProjects')}</h2><p>{t('home.emptyProjectsHelp')}</p></section>}</section>
-  </main>;
+  return <div className="page page-home">
+    <TopBar primary={{ label: t('app.newProject'), onClick: create }} />
+    <main className="page-body"><div className="page-inner">
+      <div><h1 className="page-title">{t('home.title')}</h1><p className="page-lead">{t('home.lede')}</p></div>
+      <section aria-labelledby="systems-title">
+        <div className="rowline" style={{ marginBottom: 8 }}><h2 className="h-sec" id="systems-title">{t('home.systems')}</h2><span className="sep" /><button className="btn" onClick={() => navigate('/catalogue')}>{t('nav.catalog')}</button><button className="btn" onClick={() => navigate('/reglages')}>{t('nav.settings')}</button></div>
+        <div className="sys-grid">{systems.map(([name, description, image, enabled, glyph, tone]) => <button key={name} className="sys-card has-schema" disabled={!enabled} onClick={enabled ? create : undefined} aria-describedby={`${name}-description`}>
+          <img className="sys-schema" src={image} alt="" aria-hidden="true" />
+          <span className="sys-name"><span className={`glyph g-${tone}`}>{glyph}</span><b>{t(name)}</b></span>
+          <span className="sys-desc" id={`${name}-description`}>{t(description)}</span><span className="sys-state">{enabled ? 'Disponible' : t('system.comingSoon')}</span>
+        </button>)}</div>
+      </section>
+      <section aria-labelledby="recent-title">
+        <div className="rowline" style={{ marginBottom: 8 }}><h2 className="h-sec" id="recent-title">{t('home.recent')}</h2><span className="sep" /><button className="linkish" onClick={() => navigate('/accueil/projets')}>{t('nav.projects')} →</button></div>
+        {projects.length ? <div className="proj-list">{projects.slice(0, 4).map((project) => <button className="proj-row" key={project.id} onClick={() => navigate(`/projet/${project.id}/atelier/projet`)}><span><b>{project.name}</b><small>{t('system.aio')}</small></span><span className="when">{project.id.slice(0, 8)}</span></button>)}</div> : <div className="empty"><b>{t('home.emptyProjects')}</b>{t('home.emptyProjectsHelp')}</div>}
+      </section>
+    </div></main>
+    <StatusBar />
+  </div>;
 }

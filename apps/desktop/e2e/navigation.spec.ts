@@ -1,38 +1,37 @@
 import { expect, test } from '@playwright/test';
 
-test('starts empty, exposes six system families, and opens an AIO draft', async ({ page }) => {
+test('restores the validated home with its six systems and three complete fixture projects', async ({ page }) => {
   await page.goto('/accueil');
   await expect(page.getByRole('heading', { name: 'Bienvenue' })).toBeVisible();
-  await expect(page.locator('.system-card')).toHaveCount(6);
-  await expect(page.locator('.system-card button:disabled')).toHaveCount(5);
-  await expect(page.getByText('Disponible dans une prochaine phase')).toHaveCount(10);
-  await expect(page.getByText('Aucune étude dans cette session.')).toBeVisible();
-  await page.getByRole('button', { name: 'Créer l’étude' }).click();
-  await expect(page).toHaveURL(/\/projet\/[^/]+\/atelier\/projet$/);
-  await expect(page.locator('.workshop-head h1')).toHaveText('Identification du projet');
+  await expect(page.locator('.sys-card')).toHaveCount(6);
+  await expect(page.locator('.sys-card:disabled')).toHaveCount(5);
+  await expect(page.locator('.proj-row')).toHaveCount(3);
+  await expect(page.getByText('Électrification centre de santé')).toBeVisible();
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
+  await expect(page).toHaveURL(/\/projet\/p-[^/]+\/atelier\/projet$/);
+  await expect(page.locator('.stephead .h-page')).toHaveText('Identification du projet');
 });
 
-test('projects can be filtered and removed from the in-memory session', async ({ page }) => {
-  await page.goto('/accueil');
-  await page.getByRole('button', { name: 'Créer l’étude' }).click();
-  await page.getByRole('link', { name: /Retour aux projets/ }).click();
-  await page.getByRole('button', { name: /Nouvelle étude AIO/ }).click();
-  await expect(page).toHaveURL(/\/atelier\/projet$/);
-  await page.getByRole('link', { name: /Retour aux projets/ }).click();
-  await expect(page.getByRole('button', { name: 'Supprimer' })).toBeVisible();
+test('projects can be filtered and a fixture can be removed through the original dialog', async ({ page }) => {
+  await page.goto('/accueil/projets');
+  await expect(page.locator('.proj-row')).toHaveCount(3);
+  await page.locator('.hdr-search').fill('Bombouaka');
+  await expect(page.locator('.proj-row')).toHaveCount(1);
   await page.getByRole('button', { name: 'Supprimer' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Confirmer' }).click();
-  await expect(page.getByText('Aucun projet dans la session courante.')).toBeVisible();
+  await expect(page.locator('.modal')).toContainText('Supprimer ce projet ?');
+  await page.locator('.modal').getByRole('button', { name: 'Supprimer' }).click();
+  await expect(page.getByText('Aucun projet trouvé')).toBeVisible();
 });
 
-test('unknown project cannot be opened', async ({ page }) => {
-  await page.goto('/projet/00000000-0000-0000-0000-000000000000/atelier/projet');
-  await expect(page.getByText('Cette étude n’existe pas dans la session courante.')).toBeVisible();
-});
-
-test('unknown application route is explicit and recoverable', async ({ page }) => {
-  await page.goto('/adresse-inconnue');
-  await expect(page.getByRole('heading', { name: 'Page introuvable' })).toBeVisible();
-  await page.getByRole('link', { name: 'Accueil' }).click();
+test('unknown projects keep the original recoverable state', async ({ page }) => {
+  await page.goto('/projet/inconnu/atelier/projet');
+  await expect(page.getByText('Projet introuvable')).toBeVisible();
+  await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
   await expect(page).toHaveURL(/\/accueil$/);
+});
+
+test('unknown application routes use the original redirect to home', async ({ page }) => {
+  await page.goto('/adresse-inconnue');
+  await expect(page).toHaveURL(/\/accueil$/);
+  await expect(page.getByRole('heading', { name: 'Bienvenue' })).toBeVisible();
 });

@@ -1,7 +1,24 @@
 import { useApplication } from '../../app/ApplicationProvider.js';
+import { StatusBar } from '../../app/shell/StatusBar.js';
+import { TopBar } from '../../app/shell/TopBar.js';
 import { useT } from '../../shared/i18n/index.js';
+import { useValidatedCopy } from '../../shared/i18n/useValidatedCopy.js';
 
 export function SettingsPage() {
- const t = useT(); const { locale, setLocale, theme, toggleTheme } = useApplication();
- return <main className="main-content"><header className="page-head"><h1>{t('settings.title')}</h1><p>{t('settings.desktopLater')}</p></header><section className="settings-card"><h2>{t('settings.language')}</h2><div className="button-group"><button className={locale === 'fr' ? 'button button-primary' : 'button button-secondary'} onClick={() => setLocale('fr')}>Français</button><button className={locale === 'en' ? 'button button-primary' : 'button button-secondary'} onClick={() => setLocale('en')}>English</button></div></section><section className="settings-card"><h2>{t('settings.theme')}</h2><button className="button button-secondary" onClick={toggleTheme}>{theme === 'light' ? t('settings.dark') : t('settings.light')}</button></section></main>;
+  const t = useT();
+  const v = useValidatedCopy();
+  const { locale, setLocale, theme, toggleTheme } = useApplication();
+  return <div className="page">
+    <TopBar back="/accueil" />
+    <main className="page-body"><div className="page-inner">
+      <h1 className="page-title">{t('settings.title')}</h1>
+      <div className="kpis">
+        <div className="kpi kpi-head"><span className="h-sec">{v('interface')}</span></div>
+        <div className="kpi"><span>{t('settings.theme')}</span><span className="seg"><button aria-pressed={theme === 'light'} onClick={theme === 'dark' ? toggleTheme : undefined}>{t('settings.light')}</button><button aria-pressed={theme === 'dark'} onClick={theme === 'light' ? toggleTheme : undefined}>{t('settings.dark')}</button></span></div>
+        <div className="kpi"><span>{t('settings.language')}</span><span className="seg"><button aria-pressed={locale === 'fr'} onClick={() => setLocale('fr')}>Français</button><button aria-pressed={locale === 'en'} onClick={() => setLocale('en')}>English</button></span></div>
+      </div>
+      <div className="stub"><b>{t('app.sessionOnly')}</b><p>{t('settings.desktopLater')}</p><span className="tag">{'DESK-001'}</span></div>
+    </div></main>
+    <StatusBar />
+  </div>;
 }

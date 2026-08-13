@@ -1,37 +1,1412 @@
+/* ==========================================================================
+   KYA-SolDesign — couche de tokens et primitives
+
+   Couleurs : charte KYA (docs/DESIGN_SYSTEM_REFONTE.md), hex exacts.
+   Les rares valeurs absentes de la charte sont DÉRIVÉES par color-mix à
+   partir d'une couleur de charte, jamais choisies à la main.
+
+   Polices : les 3 familles de la charte (Poppins / Inter / JetBrains Mono),
+   avec repli sur les polices système. Dans l'app Tauri elles seront
+   embarquées en woff2 local — embarqué n'est pas distant (critère D1).
+   ========================================================================== */
+
 :root {
-  color: #1a2e43;
-  background: #eaf0f6;
-  font-family: Aptos, "Segoe UI", system-ui, sans-serif;
-  font-synthesis: none;
-  --canvas: #eaf0f6;
-  --surface: #ffffff;
-  --surface-muted: #f4f7fa;
-  --border: #d9e2eb;
-  --text: #1a2e43;
-  --text-muted: #53697d;
-  --text-faint: #5f7181;
-  --orange: #e6a31a;
-  --orange-strong: #8a5700;
-  --orange-soft: #fbf2df;
-  --teal: #41a99c;
-  --teal-soft: #e1f3f0;
-  --danger: #b64542;
-  --danger-soft: #f9e6e4;
-  --shadow: 0 10px 30px rgb(20 44 70 / 8%);
-  --radius: 12px;
-  --focus: 0 0 0 3px rgb(65 169 156 / 35%);
+  /* --- Typographie : les 3 familles de la charte --------------------- */
+  --font-display: "Poppins", "Segoe UI Variable Display", "Segoe UI",
+    system-ui, sans-serif;
+  --font-sans: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui,
+    -apple-system, sans-serif;
+  /* Tout nombre passe par cette famille (critère B4) */
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, "SF Mono",
+    ui-monospace, monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 16px;
+  --fs-xl: 22px;
+  --fs-2xl: 34px;
+
+  /* --- Rythme -------------------------------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* Rythme vertical non linéaire. Une échelle régulière (8/12/16) place
+     tout à équidistance : l'œil ne trouve aucun palier et l'écran paraît
+     lourd alors qu'il n'est pas plus dense. L'écart entre deux groupes
+     doit valoir plusieurs fois celui entre deux champs. */
+  --gap-field: 10px; /* d'un champ au suivant */
+  --gap-group: 28px; /* d'un groupe au suivant */
+  --gap-block: 40px; /* d'une section au suivant */
+
+  --r-sm: 4px;
+  --r-md: 6px; /* jamais 16px : critère C2 */
+
+  /* 252 px : « Prédimensionnement » est le plus long libellé du rail et il
+     doit tenir en entier — un intitulé tronqué est un intitulé douteux. */
+  --pane-left: 252px;
+  --pane-right: 334px;
+  --topbar-h: 46px;
+  --statusbar-h: 26px;
+
+  /* ===================== CLAIR — palette « équipe offres » ============
+     Reprise des valeurs de KYA-SolDesign_maquette_v2.html, mode clair.
+     Le canevas n'est plus un gris neutre mais un gris bleuté #EEF1F5, et
+     les neutres portent tous la même pointe de bleu : c'est ce qui donne
+     à leur maquette son calme, et ça reste un canevas non blanc (C4).
+
+     L'accent garde le rôle de KYA Orange, mais prend la valeur sombre que
+     la v2 emploie sur fond clair : #B26A0E tient 4,6:1 sur blanc, là où
+     #F99D32 plafonne à 2,1:1. L'orange de charte reste la couleur des
+     aplats (--accent-fill), où le texte passe en sombre.
+     ================================================================== */
+
+  --bg: #eef1f5; /* canevas de travail */
+  --surface: #ffffff; /* surfaces de contenu */
+  --surface-2: #f4f6f9; /* en-têtes, encarts, panneaux */
+  --surface-3: #e9eef3; /* appuis, survol */
+  --border: rgb(15 35 55 / 0.1);
+  --border-strong: rgb(15 35 55 / 0.2);
+
+  --text: #152233;
+  --text-muted: #4d5f72;
+  /* Bleuté comme la v2, mais assombri : cette teinte porte les unités et
+     les méta du rail (critère B4). Le #8496A8 d'origine tombait à 3,04:1. */
+  --text-faint: #6b7e93;
+
+  /* Trois teintes signifiantes, pas une de plus (critère C1) */
+  /* Encre accentuée : Orange Dark de charte, assombri jusqu'au seuil de
+     lisibilité (4,15:1 sur blanc). La charte donne la teinte, la v2 donne
+     la règle — un accent doit pouvoir porter du texte. #E07D12 brut n'y
+     arrive pas (2,95:1), #F99D32 encore moins (2,12:1). */
+  --accent: #b8690e;
+  --accent-hover: #9c580b;
+  --accent-press: #7d4608;
+  --accent-soft: rgb(184 105 14 / 0.11); /* opacité .11 de la v2 */
+  --accent-ink: #b8690e;
+  /* Aplats : KYA Orange de charte, aux valeurs exactes de `tokens.py`
+     (BRAND_ORANGE, BRAND_ORANGE_HOVER). L'encre sombre y tient 8,8:1.
+     La charte assombrit au survol au lieu d'éclaircir — on suit sa
+     convention plutôt que l'inverse. */
+  --accent-fill: #f5a623;
+  --accent-fill-hover: #e09620;
+  --on-accent: #241701; /* encre de la v2 : plus chaude qu'un noir pur */
+
+  --ok: #158770; /* Teal Dark de charte — 4,44:1, mieux que le vert v2 */
+  --ok-strong: #0f6b58;
+  --ok-soft: rgb(21 135 112 / 0.11);
+  /* Aplat de validation — variante `success` du DSButton, absente de notre
+     premier cadre. La charte donne TEAL #0D9488, mais l'encre blanche n'y
+     tient que 3,8:1 ; TEAL_HOVER la porte au-delà de 4,5:1 sans quitter la
+     famille. Le survol descend sur TEAL_DARK, comme l'orange. */
+  --ok-fill: #0b7c72;
+  --ok-fill-hover: #065f56;
+  --on-ok: #ffffff;
+
+  --danger: #c3443a; /* rouge v2 — blocage */
+  --danger-soft: rgb(195 68 58 / 0.11);
+
+  --energy: #d8a406; /* Energy, assombri pour rester lisible sur blanc */
+  --energy-soft: rgb(255 215 0 / 0.22);
+
+  --grid-line: rgb(15 35 55 / 0.07);
+  --shadow-pop: 0 10px 28px rgb(15 35 55 / 0.16);
+  /* Fond des colonnes calculées : bleu ardoise très dilué. Assez froid pour
+     se distinguer d'une cellule saisie, assez pâle pour ne pas concurrencer
+     les valeurs qu'il porte. */
+  --derived-bg: rgb(58 110 165 / 0.07);
+  --derived-bg-hover: rgb(58 110 165 / 0.13);
+  color-scheme: light;
 }
 
-[data-theme='dark'] {
-  --canvas: #132130;
-  --surface: #1c2c3d;
-  --surface-muted: #243649;
-  --border: #395068;
-  --text: #edf4fa;
-  --text-muted: #b2c1cf;
-  --text-faint: #8da1b3;
-  --orange-soft: #483819;
-  --teal-soft: #1c4947;
-  --danger-soft: #4d2a2c;
-  --shadow: 0 12px 38px rgb(0 0 0 / 25%);
+/* ===================== SOMBRE ========================================
+   Surfaces de la charte. Sur fond sombre, l'accent passe à Orange Light
+   et le teal à Teal Light : ce sont les valeurs de la charte qui tiennent
+   le contraste. Ce n'est pas une inversion (critère C5).
+   =================================================================== */
+:root[data-theme="dark"] {
+  --bg: #070c14; /* fond principal */
+  --surface: #111b2a; /* cartes, panneaux */
+  --surface-2: #0c1521; /* barres, en-têtes, encarts */
+  --surface-3: #16233a; /* survol, appuis */
+  --border: rgb(255 255 255 / 0.09);
+  --border-strong: rgb(255 255 255 / 0.18);
+
+  --text: #eaf2fa;
+  --text-muted: #93a8c0;
+  --text-faint: #5c7189;
+
+  /* Orange Light de charte : 9,98:1 sur la surface navy, à égalité avec
+     l'ambre #FFB84D de la v2 (10,06:1). À lisibilité égale, la charte
+     tranche. Sur fond sombre l'accent n'a plus besoin d'être assombri :
+     un seul ambre suffit pour l'encre comme pour l'aplat. */
+  --accent: #fdb760;
+  --accent-hover: #ffc46b;
+  --accent-press: #f99d32;
+  --accent-soft: rgb(253 183 96 / 0.14); /* opacité .14 de la v2 */
+  --accent-ink: #fdb760;
+  --accent-fill: #fdb760;
+  --accent-fill-hover: #ffc46b;
+  --on-accent: #241701;
+
+  --ok: #2dbda6; /* Teal Light de charte */
+  --ok-strong: #2dbda6;
+  --ok-soft: rgb(45 189 166 / 0.14);
+  /* Sur fond navy, le teal clair porte de l'encre sombre — même logique
+     que l'accent, qui cesse d'être assombri en mode sombre. */
+  --ok-fill: #2dbda6;
+  --ok-fill-hover: #4fd3bd;
+  --on-ok: #04211c;
+
+  --danger: #ff7a70;
+  --danger-soft: rgb(255 122 112 / 0.14);
+
+  --energy: #ffd700;
+  --energy-soft: rgb(255 215 0 / 0.14);
+
+  --grid-line: rgb(255 255 255 / 0.07);
+  --shadow-pop: 0 10px 28px rgb(0 0 0 / 0.5);
+  --derived-bg: rgb(120 180 255 / 0.07);
+  --derived-bg-hover: rgb(120 180 255 / 0.13);
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 400 var(--fs-md) / 1.45 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; /* la fenêtre ne défile pas : critère D2 */
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-press);
+  outline-offset: 1px;
+}
+
+/* ==========================================================================
+   Coque applicative — trois zones (critère A3)
+   ========================================================================== */
+
+.app {
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr var(--statusbar-h);
+  height: 100%;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Signature de marque : le carré orange décalé du carré teal */
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.wordmark i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 3px 3px 0 0 var(--ok);
+  flex: none;
+  margin-right: 3px;
+}
+.wordmark span {
+  color: var(--text-muted);
+  font-weight: 300;
+}
+
+.crumbs {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+  flex: 1;
+}
+.crumbs b {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.crumbs em {
+  font-style: normal;
+  color: var(--text-faint);
+}
+.crumbs .ref {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.main {
+  display: grid;
+  grid-template-columns: var(--pane-left) minmax(0, 1fr) var(--pane-right);
+  min-height: 0;
+}
+
+.pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.pane-left {
+  background: var(--surface-2);
+  border-right: 1px solid var(--border);
+  padding: var(--sp-3) 0 var(--sp-5);
+}
+.pane-center {
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.pane-right {
+  background: var(--surface-2);
+  border-left: 1px solid var(--border);
+  /* Retrait bas réduit : le dernier bloc défile désormais chez lui, une
+     réserve de fin de colonne n'a plus d'objet. */
+  padding: var(--sp-4) var(--sp-4) var(--sp-4);
+  /* Le panneau ne défile pas d'un bloc : le graphe, le verdict et le point à
+     trancher sont l'information qui doit rester sous les yeux à toute
+     hauteur d'écran. Seule la liste de nombres cède, et défile chez elle. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pane-right > .dayb,
+.pane-right > .verdict,
+.pane-right > .alert {
+  flex: 0 0 auto;
+}
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.statusbar .sep {
+  flex: 1;
+}
+.statusbar .live::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+
+/* ==========================================================================
+   Typographie utilitaire
+   ========================================================================== */
+
+/* Titre de section : petites capitales espacées (Overline de la charte) */
+.h-sec {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.h-page {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.label {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* Tout nombre passe par .num (critère B4) */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+.unit {
+  color: var(--text-faint);
+  font-weight: 400;
+  font-size: 0.82em;
+  margin-left: 0.25em;
+}
+
+.mut {
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Contrôles
+   ========================================================================== */
+
+/* Boutons — quatre rangs, deux tailles.
+
+   Rang : `btn` seul est le rang normal, celui de toute action réelle qui ne
+   fait pas avancer le dossier (Rechercher, Télécharger, Recalculer, Changer).
+   `btn-primary` est l'avancement, un seul par écran et par dialogue.
+   `btn-ghost` est la navigation et les bascules de barre, il n'écrit jamais.
+   `btn-danger` reste aux confirmations destructives.
+
+   Taille : 26 px en barre, `btn-field` à 30 px dès qu'un bouton partage une
+   rangée avec des champs de saisie — sinon il flotte de quatre pixels au
+   milieu d'un formulaire. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.btn-field {
+  height: 30px;
+  padding: 0 14px;
+}
+/* Bouton réduit à son icône : carré, pour que la cible de clic reste franche
+   et que l'alignement avec les boutons textuels de la rangée soit exact. */
+.btn-icon {
+  width: 26px;
+  padding: 0;
+  color: var(--text-muted);
+}
+.btn-icon:hover {
+  color: var(--text);
+}
+.btn:hover {
+  background: var(--surface-2);
+}
+.btn-primary {
+  /* L'aplat prend l'orange de charte, jamais l'ambre sombre du texte :
+     l'encre y est sombre, comme dans la maquette v2. */
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: var(--accent-fill-hover);
+  border-color: var(--accent-fill-hover);
+}
+.btn-primary:active {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+}
+/* Rang validation — variante `success` du DSButton de charte, en teal.
+
+   L'orange fait avancer le dossier, le teal confirme un choix et l'écrit.
+   Distinguer les deux évite que le pied d'un dialogue emprunte la couleur
+   de l'avancement pour une action qui, elle, n'avance nulle part. */
+.btn-ok {
+  background: var(--ok-fill);
+  border-color: var(--ok-fill);
+  color: var(--on-ok);
+  font-weight: 600;
+}
+.btn-ok:hover {
+  background: var(--ok-fill-hover);
+  border-color: var(--ok-fill-hover);
+}
+/* Rang accentué — variante `link` de la charte, transposée en bouton.
+
+   Coloré sans être un aplat : dans un en-tête qui aligne trois actions,
+   il désigne la plus courante sans lui donner le poids d'un avancement.
+   Trois boutons blancs côte à côte ne hiérarchisaient rien. */
+.btn-accent {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.btn-accent:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+}
+/* Un bouton hors d'usage doit se voir avant d'être cliqué : l'aplat de
+   charte le faisait passer pour l'action à faire alors qu'il ne répondait
+   pas. Il se retire, sans disparaître — on sait ce qui attend. */
+.btn:disabled,
+.btn[disabled] {
+  cursor: not-allowed;
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-faint);
+  font-weight: 400;
+}
+.btn:disabled:hover,
+.btn[disabled]:hover {
+  background: var(--surface-2);
+}
+.btn-ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--text-muted);
+}
+.btn-ghost:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+/* Bouton bascule : il marque un état retenu, pas une action à faire. L'encre
+   d'accent et la bordure suffisent — l'aplat est réservé à l'avancement. */
+.btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--surface-3);
+  border-radius: var(--r-md);
+}
+.seg button {
+  height: 24px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.seg button:hover {
+  color: var(--text);
+}
+.seg button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(26 26 26 / 0.14);
+}
+
+/* ==========================================================================
+   Tableaux de données
+   ========================================================================== */
+
+.tbl-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+table.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+table.tbl th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 6px var(--sp-2);
+  text-align: right;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+table.tbl th:first-child {
+  text-align: left;
+}
+table.tbl td {
+  padding: 4px var(--sp-2);
+  border-bottom: 1px solid var(--grid-line);
+  text-align: right;
+  white-space: nowrap;
+}
+table.tbl td:first-child {
+  text-align: left;
+  white-space: normal;
+}
+table.tbl tbody tr:hover td {
+  background: var(--surface-2);
+}
+table.tbl tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Cellule calculée : lisiblement différente d'une cellule saisie (B2) */
+th.derived,
+td.derived {
+  /* Teinte froide plutôt que gris neutre : la nuance disait « inactif »
+     alors qu'elle doit dire « le logiciel s'en charge ». */
+  background: var(--derived-bg);
+  color: var(--text-muted);
+}
+table.tbl tbody tr:hover td.derived {
+  background: var(--derived-bg-hover);
+}
+th.derived {
+  font-style: italic;
+}
+
+/* Ligne de totaux */
+tfoot td {
+  padding: 7px var(--sp-2);
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  font-weight: 600;
+  text-align: right;
+}
+tfoot td:first-child {
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.row-err td {
+  background: var(--danger-soft) !important;
+}
+.flag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: var(--fs-xs);
+  color: var(--danger);
+}
+
+/* ==========================================================================
+   Panneau verdict (zone droite) — critère A1
+   ========================================================================== */
+
+/* Profil de charge & irradiance — le graphe permanent, en tête du panneau.
+
+   Couleurs de `MainGraphWidget` : teal pour la puissance consommée, orange
+   pour la réserve de démarrage et pour l'irradiance. L'orange sert deux
+   objets distincts, mais l'un est un aplat et l'autre un trait pointillé :
+   la confusion n'est pas possible, et c'est le codage du logiciel. */
+.dayb {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.dayb-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-bottom: 6px;
+}
+/* Titre et légende sur une ligne : le titre ne se replie pas, la légende
+   passe dessous si la largeur manque. */
+.dayb-head {
+  flex-wrap: wrap;
+  row-gap: 3px;
+}
+.dayb-head .h-sec {
+  white-space: nowrap;
+}
+.dayb-head .sep {
+  flex: 1;
+}
+/* Replié, le bloc se réduit à son titre et à ses quatre valeurs clés :
+   l'essentiel reste lisible pour le coût d'une ligne. */
+.dayb.is-shut .dayb-head {
+  margin-bottom: 0;
+}
+.dayb.is-shut .dayb-stats {
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.dayb .toggle {
+  width: 20px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1;
+  flex: none;
+}
+.dayb .toggle:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.dayb-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+/* La légende vit sur la ligne des unités, entre « kW » et « W/m² » : elle
+   n'y coûte aucune hauteur puisque cette ligne existe de toute façon. */
+.dayb-units .dayb-key {
+  font-size: 10px;
+  gap: 3px;
+}
+.dayb-key i {
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+}
+.dayb-key .k-load {
+  background: var(--ok-fill);
+}
+.dayb-key .k-peak {
+  background: color-mix(in srgb, var(--accent-fill) 55%, transparent);
+}
+.dayb-key .k-irr {
+  background: var(--accent-fill);
+}
+.dayb-plot {
+  display: block;
+  width: 100%;
+  height: 132px;
+}
+.dayb-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.dayb-axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.dayb-axis.is-irr {
+  stroke: color-mix(in srgb, var(--accent-fill) 60%, var(--border));
+}
+
+/* Graduations. `preserveAspectRatio: none` étire le repère : sans
+   `non-scaling-size` le texte serait déformé horizontalement, on le fixe
+   donc à une taille de rendu et non de repère. */
+.dayb-tick {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  fill: var(--text-faint);
+}
+.dayb-tick.t-left {
+  text-anchor: end;
+}
+.dayb-tick.t-right {
+  text-anchor: start;
+  fill: color-mix(in srgb, var(--accent) 70%, var(--text-faint));
+}
+.dayb-tick.t-hour {
+  text-anchor: middle;
+}
+
+/* Réserve de démarrage : l'aplat orange n'apparaît que là où la pointe
+   dépasse la consommation, puisque la barre teal est peinte par-dessus. */
+.dayb-bar-peak {
+  fill: color-mix(in srgb, var(--accent-fill) 45%, transparent);
+}
+.dayb-bar-load {
+  fill: var(--ok-fill);
+}
+.dayb-bar-load.is-peak {
+  fill: var(--ok-strong);
+}
+.dayb-irr {
+  fill: none;
+  stroke: var(--accent-fill);
+  stroke-width: 1.75;
+  stroke-dasharray: 5 3;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Unités des trois axes, hors du SVG pour échapper à l'étirement */
+.dayb-units {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-faint);
+}
+.dayb-units .u-left {
+  position: absolute;
+  left: 0;
+}
+.dayb-units .u-right {
+  position: absolute;
+  right: 0;
+  color: color-mix(in srgb, var(--accent) 70%, var(--text-faint));
+}
+
+/* Les quatre valeurs clés — les StatCards du tableau de bord d'origine,
+   réduites à une ligne : le panneau n'a pas la largeur de quatre cartes. */
+.dayb-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-2);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.dayb-stats > span,
+.dayb-stats .prov {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.dayb-stats b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.dayb-stats i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.dayb-read {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-top: 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.dayb-read > span {
+  white-space: nowrap;
+}
+.dayb-read b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.dayb-none {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+
+.verdict {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.verdict.is-ok {
+  border-color: color-mix(in srgb, var(--ok) 34%, var(--border));
+  background: linear-gradient(
+    color-mix(in srgb, var(--ok-soft) 60%, var(--surface)),
+    var(--surface) 40px
+  );
+}
+.verdict.is-bad {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  background: linear-gradient(
+    color-mix(in srgb, var(--danger-soft) 70%, var(--surface)),
+    var(--surface) 40px
+  );
+}
+
+.verdict-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.verdict-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-top: 2px;
+}
+.is-ok .verdict-val {
+  color: var(--ok-strong);
+}
+.is-bad .verdict-val {
+  color: var(--danger);
+}
+
+.verdict-say {
+  margin: 6px 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* Jauge de seuil : le remplissage donne la valeur, le trait donne le seuil */
+.gauge {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+}
+.gauge .fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px 0 0 3px;
+  background: var(--ok);
+}
+.is-bad .gauge .fill {
+  background: var(--danger);
+}
+.gauge .thr {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  left: 62.5%;
+  background: var(--text);
+}
+.gauge-scale {
+  position: relative;
+  height: 14px;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.gauge-scale .lo {
+  position: absolute;
+  left: 0;
+}
+.gauge-scale .hi {
+  position: absolute;
+  right: 0;
+}
+.gauge-scale .at {
+  position: absolute;
+  left: 62.5%;
+  transform: translateX(-50%);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Liste de KPI : libellé à gauche, nombre aligné à droite */
+.kpis {
+  display: grid;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-bottom: var(--sp-4);
+}
+/* Dans le panneau de droite, la liste absorbe le manque de hauteur. Les
+   en-têtes de famille restent accrochés pendant qu'on la parcourt, sinon on
+   lit un nombre sans savoir de quelle famille il relève. */
+.pane-right > .kpis {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-auto-rows: max-content;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  margin-bottom: 0;
+}
+/* La liste s'étire pour absorber la hauteur restante, mais son fond gris —
+   la couleur des séparations — restait visible sous la dernière ligne. */
+.pane-right > .kpis {
+  background: var(--surface);
+  align-content: start;
+  row-gap: 1px;
+}
+.pane-right > .kpis > * {
+  box-shadow: 0 -1px 0 var(--border);
+}
+.pane-right > .kpis > :first-child {
+  box-shadow: none;
+}
+.pane-right > .kpis .kpi-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Deux listes dans la colonne, deux comportements.
+
+   `flex: 1 1 auto` sur les deux leur donnait la même part de hauteur : le
+   bloc fiabilité + système, qui compte six lignes fixes, se retrouvait avec
+   la même réserve que le bloc économique, qui en compte davantage et qui
+   grandira avec le chiffrage. Résultat : deux ascenseurs côte à côte, dont un
+   qui coupait une ligne en deux.
+
+   La réponse n'était pas de mieux répartir la hauteur entre deux cadres, mais
+   de n'en avoir qu'un : `kpis-all` porte les trois familles et la seule course
+   de la colonne. On défile une fois, on voit tout. */
+.pane-right > .kpis.kpis-all {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+}
+/* La liste ne descend jamais sous quatre lignes utiles : en dessous, son
+   ascenseur coupe une rangée en deux et l'en-tête collant recouvre la
+   suivante — ce qui donnait l'impression d'une valeur tronquée. */
+.pane-right > .kpis.kpis-all {
+  min-height: 168px;
+}
+.kpi {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: 5px var(--sp-3);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+}
+.kpi > span:first-child {
+  color: var(--text-muted);
+}
+.kpi b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+.kpi .delta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ok-strong);
+  margin-left: 6px;
+}
+.kpi-head {
+  background: var(--surface-2);
+  padding: 4px var(--sp-3);
+}
+/* D'où vient la valeur : plancher théorique ou matériel réellement retenu.
+   Discrète par construction — c'est une note de bas de page, pas un état. */
+.kpi-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.prov-tag {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Point a trancher : remonte a cote du verdict, jamais sous la ligne de flottaison */
+.alert {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 7px 10px;
+  margin-bottom: var(--sp-3);
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+  border-left-width: 3px;
+  border-left-color: var(--danger);
+  border-radius: var(--r-md);
+  /* Aplat plein, l'encart couvrait près de neuf dixièmes de sa bande en
+     couleur et écrasait tout le reste du panneau. Le filet de gauche suffit
+     à désigner la gravité ; le fond n'a plus qu'à porter le texte. */
+  background: color-mix(in srgb, var(--danger-soft) 45%, var(--surface));
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+/* Un point à trancher n'est pas un blocage : l'arbitrage revient à
+   l'utilisateur, la couleur le dit sans crier à l'erreur. */
+.alert.warn {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-left-color: var(--accent-fill);
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+}
+.alert b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  margin-bottom: 1px;
+}
+
+/* ==========================================================================
+   Provenance : tout nombre remonte à ses hypothèses (critère B3)
+   Ouverture vers le bas : les panneaux défilent, jamais la fenêtre (D2).
+   ========================================================================== */
+
+.prov {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted var(--border-strong);
+}
+.prov > .pop {
+  /* Rattachée à la fenêtre : un ancêtre à `overflow: hidden` — liste de KPI,
+     tableau, carte — ne peut plus la rogner. La position vient de `Prov`. */
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 120;
+  width: 268px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-top: 2px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: var(--text);
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  /* `visibility: hidden` laissait la bulle dans l'étendue défilable du
+     panneau : un survol replié ajoutait 155 px de vide et faisait apparaître
+     une barre de défilement sur toutes les étapes. `display` la retire
+     vraiment ; `allow-discrete` préserve le fondu. */
+  display: none;
+  pointer-events: none;
+  transition:
+    opacity 90ms ease,
+    display 90ms allow-discrete;
+}
+.prov:hover > .pop,
+.prov:focus-visible > .pop {
+  opacity: 1;
+  display: block;
+}
+@starting-style {
+  .prov:hover > .pop,
+  .prov:focus-visible > .pop {
+    opacity: 0;
+  }
+}
+.pop h5 {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.pop .formula {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 7px;
+  margin: 6px 0;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  line-height: 1.5;
+  color: var(--text);
+}
+.pop dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px var(--sp-2);
+  margin: 0;
+}
+.pop dt {
+  color: var(--text-muted);
+}
+.pop dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.pop .src {
+  display: block;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+}
+
+/* ==========================================================================
+   Divers
+   ========================================================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 19px;
+  padding: 0 7px;
+  border-radius: var(--r-sm);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.badge.ok {
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+  color: var(--ok-strong);
+}
+.badge.bad {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  color: var(--danger);
+}
+.badge.warn {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+}
+
+.bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+.bar > i.over {
+  background: var(--accent);
+}
+
+/* La barre de marge dit le sens du chiffre, pas seulement sa valeur.
+   Sous le besoin : rouge. Marge mince : ambre. Saine : vert. Excédent
+   payé pour rien : ambre également, mais la barre est pleine. */
+.bar.t-short > i {
+  background: var(--danger);
+}
+.bar.t-tight > i {
+  background: var(--energy);
+}
+.bar.t-ok > i {
+  background: var(--ok);
+}
+.bar.t-over > i {
+  background: var(--accent-fill);
+}
+.res-short {
+  color: var(--danger);
+}
+.res-tight,
+.res-over {
+  color: var(--accent);
+}
+.res-ok {
+  color: var(--ok);
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  padding: 3px 0;
+}
+.check::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  margin-top: 3px;
+  flex: none;
+  background: var(--ok);
+  clip-path: polygon(14% 50%, 38% 74%, 86% 24%, 96% 34%, 38% 92%, 4% 58%);
+}
+.check.fail::before {
+  background: var(--danger);
+  clip-path: polygon(
+    18% 26%,
+    26% 18%,
+    50% 42%,
+    74% 18%,
+    82% 26%,
+    58% 50%,
+    82% 74%,
+    74% 82%,
+    50% 58%,
+    26% 82%,
+    18% 74%,
+    42% 50%
+  );
+}
+
+.sheet {
+  /* Retrait bas égal au haut : la réserve de 24 px datait du bandeau de
+     profil épinglé et suffisait à elle seule à faire déborder deux étapes
+     de quelques pixels. La barre d'avancement ferme déjà la colonne. */
+  padding: var(--sp-4);
+  display: grid;
+  gap: var(--sp-4);
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.sheet-head .sep {
+  flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   Bandeau epingle en bas de la zone centrale.
+   Le profil resultant doit rester visible pendant qu'on saisit (critere A2).
+   ========================================================================== */
+.pane-center.pinned {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+.pane-center.pinned > .sheet {
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* Quand la feuille se coupe en bas, il faut le dire.
+
+   Sans barre de défilement visible — et Chrome n'en peint aucune tant que la
+   souris ne survole pas la zone — le contenu s'arrêtait net au ras du pied de
+   page : rien ne distinguait « la page finit ici » de « il reste des champs
+   plus bas ». Le dégradé signale la coupe, la mention la nomme.
+
+   L'attribut `data-more` est posé par la coque, pas en CSS : il faut mesurer
+   la position de défilement pour ne rien afficher une fois arrivé en bas. */
+.pane-center.pinned {
+  position: relative;
+}
+/* Le dégradé de coupe se cale sur le bas de la feuille, pas du conteneur :
+   la barre d'avancement occupe la fin de la colonne. */
+.more-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 36px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  background: linear-gradient(transparent, var(--bg));
+  z-index: 2;
+}
+.pane-center.pinned[data-more='1'] .more-fade {
+  opacity: 1;
+}
+
+/* Repère chiffré : combien de champs restent sous la coupe. Placé sur le
+   bord de la feuille, il suit le défilement sans occuper de hauteur. */
+.more-cue {
+  position: absolute;
+  right: var(--sp-4);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.pane-center.pinned[data-more='1'] .more-cue {
+  opacity: 1;
+  transform: none;
+}
+.more-cue:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }

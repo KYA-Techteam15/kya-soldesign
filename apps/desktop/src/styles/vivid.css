@@ -1,0 +1,291 @@
+/* ==========================================================================
+   Thème « Vif »
+
+   Même charte, même vocabulaire de couleur — mais assumé au lieu d'être
+   réservé. L'orange et le teal quittent les seuls accents pour habiller les
+   surfaces : barre supérieure sombre, blocs signés par une arête colorée,
+   verdict qui rayonne, graphiques en dégradé.
+
+   Rien d'inventé : Orange #F99D32, Teal #1CA18C, Energy #FFD700, Gray 900.
+   Le thème sobre reste la référence ; celui-ci s'active par `data-vibe="vivid"`.
+   ========================================================================== */
+
+:root[data-vibe='vivid'] {
+  --shadow-card: 0 1px 2px rgb(26 26 26 / 0.05), 0 4px 12px rgb(26 26 26 / 0.06);
+  --brand-sweep: linear-gradient(
+    100deg,
+    var(--accent) 0%,
+    var(--accent-hover) 38%,
+    var(--ok) 78%,
+    var(--ok) 100%
+  );
+}
+
+:root[data-vibe='vivid'][data-theme='dark'],
+:root[data-vibe='vivid'] {
+  --shadow-pop: 0 10px 30px rgb(26 26 26 / 0.22);
+}
+
+/* ---------------------------------------------------------------- Barre supérieure
+   Le changement le plus fort : elle passe en Gray 900. L'application cesse
+   d'être une feuille blanche et devient un outil. */
+
+[data-vibe='vivid'] .topbar {
+  background: #1a1a1a;
+  border-bottom: 0;
+  color: #f5f5f5;
+}
+[data-vibe='vivid'] .topbar::after {
+  height: 3px;
+  bottom: 0;
+  background: var(--brand-sweep);
+}
+[data-vibe='vivid'] .wordmark {
+  color: #ffffff;
+}
+[data-vibe='vivid'] .wordmark span {
+  color: #b0b0b0;
+}
+[data-vibe='vivid'] .wordmark i {
+  box-shadow: 3px 3px 0 0 var(--ok), 0 0 14px rgb(249 157 50 / 0.55);
+}
+[data-vibe='vivid'] .crumbs b {
+  color: #ffffff;
+}
+[data-vibe='vivid'] .crumbs em,
+[data-vibe='vivid'] .crumbs .ref {
+  color: #9a9a9a;
+}
+[data-vibe='vivid'] .topbar .btn {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.16);
+  color: #f5f5f5;
+}
+[data-vibe='vivid'] .topbar .btn:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+[data-vibe='vivid'] .topbar .btn-ghost {
+  background: none;
+  border-color: transparent;
+  color: #b0b0b0;
+}
+[data-vibe='vivid'] .topbar .btn-ghost:hover {
+  background: rgb(255 255 255 / 0.1);
+  color: #ffffff;
+}
+[data-vibe='vivid'] .topbar .kbd {
+  background: rgb(255 255 255 / 0.1);
+  border-color: rgb(255 255 255 / 0.18);
+  color: #d0d0d0;
+}
+[data-vibe='vivid'] .topbar .btn-primary {
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  border-color: var(--accent-press);
+  color: #1a1a1a;
+  box-shadow: 0 2px 10px rgb(249 157 50 / 0.4);
+}
+
+/* ---------------------------------------------------------------- Colonne de gauche */
+
+[data-vibe='vivid'] .pane-left {
+  background: linear-gradient(180deg, var(--surface-2), var(--bg) 320px);
+}
+[data-vibe='vivid'] .nav-item.on {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 24%, var(--surface)),
+    var(--surface) 88%
+  );
+  border-left-width: 3px;
+}
+[data-vibe='vivid'] .st-done {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
+}
+[data-vibe='vivid'] .st-partial {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ---------------------------------------------------------------- Verdict
+   Le SVI devient le point le plus lumineux de l'écran. */
+
+[data-vibe='vivid'] .verdict.is-ok {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--ok) 18%, var(--surface)),
+    var(--surface) 62%
+  );
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--border));
+  box-shadow: var(--shadow-card);
+}
+[data-vibe='vivid'] .verdict.is-bad {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--danger) 16%, var(--surface)),
+    var(--surface) 62%
+  );
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  box-shadow: var(--shadow-card);
+}
+[data-vibe='vivid'] .verdict-val {
+  font-size: 42px;
+  letter-spacing: -0.035em;
+}
+[data-vibe='vivid'] .is-ok .verdict-val {
+  color: var(--ok-strong);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--ok) 35%, transparent);
+}
+[data-vibe='vivid'] .is-bad .verdict-val {
+  text-shadow: 0 0 22px color-mix(in srgb, var(--danger) 32%, transparent);
+}
+[data-vibe='vivid'] .gauge {
+  height: 10px;
+  border-radius: 5px;
+}
+[data-vibe='vivid'] .gauge .fill {
+  background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 60%, var(--energy)));
+  border-radius: 5px 0 0 5px;
+}
+[data-vibe='vivid'] .is-bad .gauge .fill {
+  background: linear-gradient(90deg, var(--accent), var(--danger));
+}
+
+/* Les en-têtes de groupe du panneau prennent la couleur de leur sujet */
+[data-vibe='vivid'] .kpi-head {
+  background: linear-gradient(90deg, var(--surface-3), var(--surface-2));
+  border-left: 3px solid var(--accent);
+}
+[data-vibe='vivid'] .kpis {
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------------------------------------------------------------- Blocs et tableaux
+   Chaque bloc porte une arête colorée : on identifie sa nature avant de lire. */
+
+[data-vibe='vivid'] .tbl-wrap,
+[data-vibe='vivid'] .eq {
+  box-shadow: var(--shadow-card);
+  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+[data-vibe='vivid'] .eq:nth-of-type(2) {
+  border-top-color: color-mix(in srgb, var(--ok) 65%, var(--border));
+}
+[data-vibe='vivid'] .eq:nth-of-type(3) {
+  border-top-color: color-mix(in srgb, var(--energy) 70%, var(--border));
+}
+[data-vibe='vivid'] table.tbl th {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-3));
+  color: var(--text);
+}
+[data-vibe='vivid'] table.tbl th.derived {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 10%, var(--surface-2)),
+    color-mix(in srgb, var(--accent) 16%, var(--surface-3))
+  );
+}
+[data-vibe='vivid'] td.derived {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+[data-vibe='vivid'] table.tbl tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+[data-vibe='vivid'] tfoot td {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-3));
+  border-top-color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- Badges et jauges */
+
+[data-vibe='vivid'] .badge.ok {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #ffffff;
+}
+[data-vibe='vivid'] .badge.bad {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+}
+[data-vibe='vivid'] .bar {
+  height: 7px;
+  border-radius: 4px;
+}
+[data-vibe='vivid'] .bar > i {
+  background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 55%, var(--energy)));
+}
+[data-vibe='vivid'] .bar > i.over {
+  background: linear-gradient(90deg, var(--accent-hover), var(--accent-press));
+}
+[data-vibe='vivid'] .alert {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--danger) 14%, var(--surface)),
+    var(--surface) 78%
+  );
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------------------------------------------------------------- Accueil */
+
+[data-vibe='vivid'] .sys-card {
+  box-shadow: var(--shadow-card);
+  border-top: 2px solid transparent;
+}
+[data-vibe='vivid'] .sys-card:not(:disabled):hover {
+  border-top-color: var(--accent);
+  background: linear-gradient(180deg, var(--accent-soft), var(--surface) 70%);
+  transform: translateY(-1px);
+}
+[data-vibe='vivid'] .sys-card .glyph {
+  background: linear-gradient(140deg, var(--accent), var(--accent-hover));
+  border-color: var(--accent-press);
+  color: #1a1a1a;
+  font-weight: 700;
+}
+[data-vibe='vivid'] .page-title {
+  background: var(--brand-sweep);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+[data-vibe='vivid'] .proj-list {
+  box-shadow: var(--shadow-card);
+}
+[data-vibe='vivid'] .proj-row:hover {
+  background: linear-gradient(90deg, var(--accent-soft), var(--surface) 60%);
+}
+
+/* ---------------------------------------------------------------- Barre d'état */
+
+[data-vibe='vivid'] .statusbar {
+  background: #1a1a1a;
+  border-top: 0;
+  color: #b0b0b0;
+}
+[data-vibe='vivid'] .simbanner {
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  color: #1a1a1a;
+  border: 0;
+}
+[data-vibe='vivid'] .simbanner::before {
+  background: #1a1a1a;
+}
+[data-vibe='vivid'] .statusbar .live::before {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 30%, transparent);
+}
+
+/* ---------------------------------------------------------------- Mouvement
+   Discret, et coupé si l'utilisateur ne le veut pas. */
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-vibe='vivid'] .gauge .fill,
+  [data-vibe='vivid'] .bar > i {
+    transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-vibe='vivid'] .sys-card,
+  [data-vibe='vivid'] .nav-item {
+    transition:
+      background 140ms ease,
+      transform 140ms ease;
+  }
+}

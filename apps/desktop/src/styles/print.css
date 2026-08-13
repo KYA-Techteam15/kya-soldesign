@@ -1,0 +1,428 @@
+/* ==========================================================================
+   Livrables A4.
+
+   L'impression est une cible de design, pas un export bricolé (critère D4).
+   La marque est forte ici et nulle part ailleurs (critère C6).
+   ========================================================================== */
+
+.a4-stack {
+  display: grid;
+  gap: var(--sp-5);
+  justify-items: center;
+  padding: var(--sp-4) 0 var(--sp-6);
+}
+
+.a4 {
+  --paper: #ffffff;
+  --ink: #1a1a1a;
+  --ink-2: #4a4a4a;
+  --ink-3: #7a7a7a;
+  --rule: #e8e8e8;
+  --rule-2: #b0b0b0;
+  --orange: #f99d32;
+  --teal: #1ca18c;
+  --teal-dark: #158770;
+  --band: #fff5e6;
+
+  width: 210mm;
+  min-height: 297mm;
+  padding: 16mm 16mm 14mm;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 10pt/1.5 var(--font-sans);
+  box-shadow: 0 2px 14px rgb(26 26 26 / 0.16);
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- En-tête de marque --- */
+.a4-brand {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+.a4-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-display);
+  font-size: 16pt;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.a4-logo i {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--orange);
+  box-shadow: 5px 5px 0 0 var(--teal);
+  margin-right: 4px;
+}
+.a4-logo span {
+  font-weight: 300;
+  color: var(--ink-2);
+}
+.a4-who {
+  text-align: right;
+  font-size: 7.5pt;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.a4-rule {
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    var(--orange) 0 34%,
+    var(--teal) 34% 46%,
+    var(--rule) 46% 100%
+  );
+}
+
+.a4-title {
+  font-family: var(--font-display);
+  margin: 16px 0 2px;
+  font-size: 20pt;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+.a4-title b {
+  font-weight: 700;
+}
+.a4-sub {
+  font-size: 8.5pt;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* --- Métadonnées --- */
+.a4-meta {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 18px 0 18px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.a4-meta > div {
+  padding: 8px 10px 8px 0;
+}
+.a4-meta dt {
+  font-size: 7pt;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 2px;
+}
+.a4-meta dd {
+  margin: 0;
+  font-size: 9.5pt;
+  font-weight: 600;
+}
+.a4-meta dd small {
+  display: block;
+  font-weight: 400;
+  font-size: 8pt;
+  color: var(--ink-2);
+}
+
+/* --- Énoncé principal --- */
+.a4-headline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--band);
+  border-left: 3px solid var(--orange);
+  margin-bottom: 16px;
+}
+.a4-headline h2 {
+  font-family: var(--font-display);
+  margin: 0 0 4px;
+  font-size: 14pt;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.a4-headline p {
+  margin: 0;
+  font-size: 9pt;
+  color: var(--ink-2);
+}
+.a4-seal {
+  text-align: center;
+  padding: 8px 14px;
+  border: 1px solid var(--teal);
+  border-radius: 4px;
+  color: var(--teal-dark);
+  white-space: nowrap;
+}
+.a4-seal.bad {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+.a4-seal b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 16pt;
+  font-weight: 700;
+  line-height: 1;
+}
+.a4-seal span {
+  font-size: 7pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* --- Sections et tableaux --- */
+.a4-sec {
+  margin: 18px 0 6px;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--rule);
+}
+table.a4-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+.a4-tbl th {
+  text-align: right;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 0 5px 4px;
+}
+.a4-tbl th:first-child,
+.a4-tbl td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+.a4-tbl td {
+  text-align: right;
+  padding: 4px 5px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.a4-tbl td:first-child {
+  font-family: var(--font-sans);
+}
+.a4-tbl td.ref {
+  font-size: 8pt;
+}
+.a4-tbl td small {
+  display: block;
+  color: var(--ink-2);
+  font-size: 8pt;
+  font-family: var(--font-sans);
+}
+.a4-tbl tr.total td {
+  border-top: 1.5px solid var(--rule-2);
+  font-weight: 700;
+}
+.a4-tbl tr.grand td {
+  border-top: 2px solid var(--ink);
+  font-weight: 700;
+  font-size: 11pt;
+  padding-top: 6px;
+}
+.a4-tbl tr.sub td {
+  color: var(--ink-2);
+}
+
+/* --- Indicateurs --- */
+.a4-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 4px 0 0;
+  border: 1px solid var(--rule);
+}
+.a4-kpis > div {
+  padding: 9px 11px;
+  border-right: 1px solid var(--rule);
+}
+.a4-kpis > div:last-child {
+  border-right: 0;
+}
+.a4-kpis dt {
+  font-size: 7pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.a4-kpis dd {
+  margin: 3px 0 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13pt;
+  font-weight: 600;
+}
+.a4-kpis .u {
+  color: var(--ink-3);
+  font-size: 0.75em;
+  margin-left: 0.25em;
+}
+
+/* --- Conditions, signature, pied --- */
+.a4-cond {
+  columns: 2;
+  column-gap: 24px;
+  font-size: 8.5pt;
+  color: var(--ink-2);
+}
+.a4-cond p {
+  margin: 0 0 5px;
+  break-inside: avoid;
+}
+.a4-cond b {
+  color: var(--ink);
+}
+.a4-sign {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  margin-top: 16px;
+}
+.a4-sign div {
+  padding-top: 30px;
+  border-top: 1px solid var(--rule-2);
+  font-size: 8pt;
+  color: var(--ink-2);
+}
+.a4-spacer {
+  flex: 1;
+}
+.a4-foot {
+  margin-top: 16px;
+  padding-top: 7px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 7pt;
+  color: var(--ink-3);
+}
+
+/* ==========================================================================
+   Impression : seul le document sort. L'interface disparaît.
+   ========================================================================== */
+@media print {
+  body {
+    overflow: visible;
+    background: none;
+  }
+  .topbar,
+  .statusbar,
+  .pane-left,
+  .pane-right,
+  .toasts,
+  .scrim,
+  .no-print,
+  .proj-list,
+  .alert,
+  .seg {
+    display: none !important;
+  }
+  /* La coque de l'étape sortait avec le document : l'en-tête « 8 / 8 Rapport
+     & synoptique », le pied « Poursuivre vers… », l'encoche du verdict et le
+     repère de défilement n'ont rien à faire sur une feuille remise au client.
+     Seul le A4 s'imprime. */
+  .stephead,
+  .stepnext,
+  .verdict-tab,
+  .more-fade,
+  .more-cue,
+  .runbar,
+  .modal,
+  .cmdk {
+    display: none !important;
+  }
+  /* Sur l'onglet Documents, la feuille A4 est le document : tout ce qui
+     l'entoure dans l'étape est de la commande d'interface. Les autres
+     onglets — synthèse, synoptique — s'impriment tels quels. */
+  .sheet.prints-paper > *:not(.paper-wrap) {
+    display: none !important;
+  }
+  .paper-wrap {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* Le centre est une colonne de grille bornée à l'écran : sans cette
+     libération, le A4 était rogné à la largeur du volet. */
+  .main,
+  .pane-center,
+  .sheet {
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: none !important;
+    gap: 0 !important;
+  }
+  .page,
+  .page-body,
+  .page-inner,
+  .app {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+  .a4-stack {
+    display: block;
+    padding: 0;
+  }
+  .a4 {
+    width: auto;
+    min-height: auto;
+    padding: 0;
+    box-shadow: none;
+    break-after: page;
+  }
+  /* Le papier reprend ses proportions de document : l'ombre et le cadrage
+     centré de l'aperçu n'ont plus lieu d'être une fois sur la feuille. */
+  .a4 {
+    display: flex !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+  /* La marge du papier est celle de `@page` : chaque feuille occupe la
+     largeur utile, sans rien qui déborde à droite. */
+  .a4-stack,
+  .a4 {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* Les aplats de charte — bandeau d'énoncé, filet bicolore, sceau — sont la
+     marque du document : sans cela les navigateurs les retirent par défaut. */
+  .a4,
+  .a4 * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .a4:last-child {
+    break-after: auto;
+  }
+  @page {
+    size: A4;
+    margin: 15mm 15mm 13mm;
+  }
+}
