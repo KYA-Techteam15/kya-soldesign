@@ -19,6 +19,51 @@ Préparer intégralement la feature roadmap `AIO-001` avant toute implémentatio
 11. Fais passer `$speckit-converge` sur les artefacts. Implémente uniquement les corrections documentaires ajoutées et répète jusqu’à convergence verte.
 12. Ne passe pas `AIO-001` à `in-progress` ou `done`, ne modifie pas `apps/desktop`, et ne commence aucune formule de production. Prépare à la fin un goal séparé `goals/AIO-001-implementation-terra.md` qui référencera exclusivement la spec convergée.
 
+## Entrées canoniques à spécifier
+
+### Identification du projet
+
+- Sépare explicitement les données administratives des données techniques utiles au calcul.
+- Trace le type d’application, la localisation et toute autre entrée réellement nécessaire au futur moteur.
+- Définis le traitement des valeurs absentes, nulles, incomplètes ou invalides sans inventer de valeur par défaut.
+
+### Site et météo
+
+- Spécifie la localité canonique, les coordonnées, la source météo, sa provenance, l’inclinaison et l’azimut.
+- Détermine les séries réellement nécessaires : mensuelles, horaires ou autres, ainsi que le pas de temps, le fuseau, la période et l’année de référence.
+- Définis un contrat d’import ou de fourniture d’une vraie série météo, ses contrôles de qualité et son comportement en cas de données manquantes.
+- Interdis explicitement toute irradiation, journée type ou production solaire fabriquée.
+- Laisse en décision humaine toute convention temporelle, source ou méthode scientifique ambiguë.
+
+### Besoins énergétiques
+
+- Couvre les appareils classiques et inductifs : quantité, puissance nominale, rendement, coefficient de démarrage et heures d’utilisation.
+- Couvre la saisie directe heure par heure, l’estimation depuis une facture, le type de réseau et les périodes de pointe.
+- Couvre les granularités annuelle, mensuelle, hebdomadaire, journalière et saisonnière.
+- Définis la transformation vers une série de charge canonique en distinguant strictement valeurs saisies, valeurs dérivées et résultats du moteur.
+- Spécifie les erreurs, avertissements et arbitrages requis pour les données invalides, incomplètes ou contradictoires.
+
+## Registre scientifique obligatoire
+
+Pour chaque règle ou formule candidate, documente dans une matrice traçable :
+
+`exigence → entrée canonique → formule/règle → unité → source → résultat → test`.
+
+Chaque formule classée `retain` ou `correct` doit comporter sa définition mathématique, ses unités d’entrée et de sortie, ses hypothèses, son domaine de validité, une source indépendante versionnée, ses contraintes, ses avertissements, un jeu de référence et une stratégie de test. Aucun attendu ne peut être justifié uniquement par le code historique.
+
+Pour chaque point `unresolved`, consigne le problème exact, les options possibles, leurs conséquences scientifiques et fonctionnelles, ainsi qu’une recommandation motivée. Ne tranche pas arbitrairement une unité, une convention temporelle ou une hypothèse d’ingénierie.
+
+## Frontières roadmap
+
+- `AIO-001` couvre uniquement le prédimensionnement autonome tout-en-un défini par la spec convergée.
+- `SIM-001` conserve la simulation horaire et la fiabilité.
+- `EQP-001` conserve la sélection, les quantités et la compatibilité du matériel.
+- `SAFE-001` conserve les protections et les câbles.
+- `FIN-001` conserve les résultats financiers.
+- `DOC-001` conserve les rapports et documents.
+
+Aucune logique de ces futures features ne doit être absorbée silencieusement dans `AIO-001`.
+
 ## Artefacts obligatoires
 
 - `specs/003-aio-core/spec.md`
