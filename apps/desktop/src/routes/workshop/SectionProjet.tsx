@@ -3,6 +3,7 @@ import { useProjects } from '../../store/project';
 import { Group, SelectField, TextField } from '../../ui/Field';
 import { StepHead } from '../../ui/Flow';
 import type { ApplicationType } from '../../app/models/projectView';
+import { useT } from '../../i18n';
 
 const APPLICATIONS: { value: ApplicationType; label: string }[] = [
   { value: 'residential', label: 'Résidentiel' },
@@ -12,6 +13,7 @@ const APPLICATIONS: { value: ApplicationType; label: string }[] = [
 ];
 
 export function SectionProjet() {
+  const t = useT();
   const project = useProject();
   const update = useProjects((s) => s.update);
   const d = project.details;
@@ -102,7 +104,7 @@ export function SectionProjet() {
       {!d.clientName && (
         <div className="alert">
           <div>
-            <b>Client non renseigné</b>
+            <b>{t('project.clientMissing')}</b>
             Le rapport et la facture proforma porteront un en-tête vide. Rien ne vous
             empêche de continuer et d’y revenir plus tard.
           </div>

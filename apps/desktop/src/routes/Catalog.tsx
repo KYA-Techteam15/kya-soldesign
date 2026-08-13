@@ -68,21 +68,21 @@ export function CatalogRoute() {
 
           <div className="tbl-wrap">
             {status === 'loading' && (
-              <div className="empty" role="status"><b>Chargement du catalogue…</b></div>
+              <div className="empty" role="status"><b>{t('catalog.loading')}</b></div>
             )}
             {status === 'error' && (
               <div className="empty" role="alert">
-                <b>Le catalogue canonique est indisponible.</b>
+                <b>{t('catalog.unavailable')}</b>
                 <span>{errorCode}</span>
-                <button className="btn" onClick={retry}>Réessayer</button>
+                <button className="btn" onClick={retry}>{t('catalog.retry')}</button>
               </div>
             )}
             {status === 'ready' && tab === 'modules' && (
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Référence</th>
-                    <th>Fabricant</th>
+                    <th>{t('catalog.reference')}</th>
+                    <th>{t('catalog.manufacturer')}</th>
                     <th>
                       Puissance<span className="unit">Wc</span>
                     </th>
@@ -123,9 +123,9 @@ export function CatalogRoute() {
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Référence</th>
-                    <th>Fabricant</th>
-                    <th>Technologie</th>
+                    <th>{t('catalog.reference')}</th>
+                    <th>{t('catalog.manufacturer')}</th>
+                    <th>{t('catalog.technology')}</th>
                     <th>
                       Capacité<span className="unit">Ah</span>
                     </th>
@@ -163,9 +163,9 @@ export function CatalogRoute() {
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Référence</th>
-                    <th>Fabricant</th>
-                    <th>Type</th>
+                    <th>{t('catalog.reference')}</th>
+                    <th>{t('catalog.manufacturer')}</th>
+                    <th>{t('catalog.type')}</th>
                     <th>
                       Puissance<span className="unit">W</span>
                     </th>

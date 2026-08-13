@@ -61,7 +61,7 @@ export function WorkshopLayout() {
         <div className="page-body">
           <div className="page-inner">
             <div className="empty">
-              <b>Projet introuvable</b>
+              <b>{t('workshop.projectMissing')}</b>
               Il a peut-être été supprimé.{' '}
               <button className="linkish" onClick={() => nav('/accueil')}>
                 Retour à l’accueil
@@ -119,19 +119,19 @@ export function WorkshopLayout() {
               besoin. Les couvertures partielles n'étaient qu'un produit en
               croix appliqué au résultat, sans simulation propre. */}
           <div className="tree-group" style={{ marginTop: 16 }}>
-            <h2 className="h-sec">Base matériel</h2>
+            <h2 className="h-sec">{t('workshop.catalogBase')}</h2>
           </div>
           <div className="tree-sub" style={{ paddingLeft: 16 }}>
             <div>
-              <span>Modules</span>
+              <span>{t('workshop.modules')}</span>
               <span>{summary?.accepted['pv-module'] ?? '—'}</span>
             </div>
             <div>
-              <span>Batteries</span>
+              <span>{t('workshop.batteries')}</span>
               <span>{summary?.accepted.battery ?? '—'}</span>
             </div>
             <div>
-              <span>Onduleurs</span>
+              <span>{t('workshop.inverters')}</span>
               <span>{summary?.accepted.inverter ?? '—'}</span>
             </div>
           </div>

@@ -2,7 +2,13 @@ import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, relative, resolve } from 'node:path';
 
 const root = resolve('apps/desktop/src');
-const allowed = new Set(['KYA', 'SolDesign', 'Ctrl K', 'KYA SOLAR ENGINEERING', 'Français', 'English']);
+const allowed = new Set([
+  'KYA', 'SolDesign', 'KYA SOLAR ENGINEERING', 'Français', 'English',
+  'Ctrl K', 'Ctrl D', 'Ctrl V', 'Entrée', 'Échap',
+  'W', 'Wc', 'Wh', 'kW', 'kWc', 'kWh', 'V', 'A', 'Ah', 'm', 'mm²',
+  'FCFA', 'FCFA/kWh', 'FCFA/Wc', '%', 'u', 'DoD', 'PV max', 'Vdc',
+  'LPSP', 'LOLP', 'SRI', 'SVI', 'CO₂',
+]);
 
 async function files(directory) {
   const entries = await readdir(directory, { withFileTypes: true });

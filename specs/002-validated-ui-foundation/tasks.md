@@ -158,6 +158,12 @@ Phase 1 architecture
 - [x] T065 Validate source and target end-to-end in the in-app browser at 1440 × 1000 and 1024 × 768, record observed differences, and complete one bounded repair pass plus confirmation.
 - [x] T066 Replace invalid self-authored visual baselines only after source-led review, record final evidence, and close `UI-BASE-001` only if genuinely converged.
 
+## Phase 8: Model-convergence acceptance
+
+- [x] T067 CRITICAL Remove remaining mixed-language workshop/status copy and strengthen static coverage so the complete English route matrix contains no French fallback per FR-UIBASE-009/010 and SC-UIBASE-002 (resolved).
+- [x] T068 Replace misleading autosave/database status claims with truthful session-memory and calculation-capability wording while preserving the validated status-bar geometry per FR-UIBASE-003/008 and T020 (resolved).
+- [x] T069 Reconcile the obsolete visual selectors and invalid pre-convergence snapshots against the reviewed `9e945de` port plus the pre-authorized canonical/unavailable ledger, then rerun the full visual and repository gates per FR-UIBASE-016/018 and T058/T066 (resolved).
+
 **Recovery evidence (2026-08-13)**: the reference and target were run on isolated strict ports and compared in the in-app browser. The source shell, Home, top-level routes, workshop steps, catalog, palette/dialog, and responsive layout were reviewed at 1440×1000 and 1024×768. `verify:phase`, 16 E2E scenarios, Axe/keyboard checks, and the 12-scenario/36-baseline visual matrix passed; Impeccable returned `[]`. Only the pre-approved truthful differences VD-001–VD-006 remain.
 
 **Convergence evidence (2026-08-11)**: T052–T058 closed after the follow-up audit. `corepack pnpm test:visual` passed 12 scenarios/36 baselines, Impeccable returned `[]`, and `corepack pnpm verify` passed the source contracts, 49 covered tests, production build, and browser acceptance. The catalog error/retry is exercised through a Vite-only injected-service harness outside the production graph. `MoreBelow` and grid-navigation abstractions were not retained because fewer than two approved consumers required them, per the roadmap extraction rule. The clean convergence result is recorded in `convergence.md`.

@@ -45,7 +45,7 @@ export function ProjectsRoute() {
 
           {shown.length === 0 ? (
             <div className="empty">
-              <b>Aucun projet trouvé</b>
+              <b>{t('projects.noneFound')}</b>
               {needle
                 ? 'Aucun dossier ne correspond à cette recherche.'
                 : 'Créez votre premier projet.'}

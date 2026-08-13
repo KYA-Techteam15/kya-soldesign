@@ -9,6 +9,7 @@
  */
 
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useUi } from '../store/ui';
 
 export interface Step {
   slug: string;
@@ -62,8 +63,25 @@ export const STEPS: Step[] = [
   },
 ];
 
+const STEP_LABEL_EN: Record<string, string> = {
+  projet: 'Project identification', site: 'Site selection', besoins: 'Consumption assessment',
+  hypotheses: 'Pre-sizing', materiel: 'Equipment sizing', protections: 'Protection devices and wiring selection',
+  chiffrage: 'Financial assessment', dossier: 'System diagram & reports',
+};
+const STEP_QUESTION_EN: Record<string, string> = {
+  projet: 'Who is the project for, and where is the site?',
+  site: 'What solar resource reaches this site, and at what orientation?',
+  besoins: 'How much energy is needed, and at what times? Any error here affects the rest of the study.',
+  hypotheses: 'Is this project feasible, and at what order of cost—before choosing catalog equipment?',
+  materiel: 'Which real equipment should be used, and are the constraints met?',
+  protections: 'Which protection ratings and cable sections follow?',
+  chiffrage: 'What is the sale price, and what margin remains?',
+  dossier: 'What is delivered to the client, and is the file coherent?',
+};
+
 /** En-tête d'écran : rang, titre, et la question de l'écran. */
 export function StepHead({ slug, aside }: { slug: string; aside?: React.ReactNode }) {
+  const lang = useUi((state) => state.lang);
   const i = STEPS.findIndex((s) => s.slug === slug);
   const step = STEPS[i];
   if (!step) return null;
@@ -73,11 +91,11 @@ export function StepHead({ slug, aside }: { slug: string; aside?: React.ReactNod
         <span className="stepbadge">
           {i + 1} <i>/</i> {STEPS.length}
         </span>
-        <h1 className="h-page">{step.label}</h1>
+        <h1 className="h-page">{lang === 'en' ? STEP_LABEL_EN[step.slug] ?? step.label : step.label}</h1>
         <span className="sep" />
         {aside}
       </div>
-      <p className="stephead-q">{step.question}</p>
+      <p className="stephead-q">{lang === 'en' ? STEP_QUESTION_EN[step.slug] ?? step.question : step.question}</p>
     </div>
   );
 }

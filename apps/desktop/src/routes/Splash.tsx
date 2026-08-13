@@ -38,7 +38,7 @@ export function Splash() {
         {t('splash.loading')} — {summary?.accepted['pv-module'] ?? '—'} modules ·{' '}
         {summary?.accepted.battery ?? '—'} batteries · {summary?.accepted.inverter ?? '—'} onduleurs
       </p>
-      <p className="version">v0.1.0 — prototype de design</p>
+      <p className="version">{t('splash.prototype')}</p>
     </div>
   );
 }

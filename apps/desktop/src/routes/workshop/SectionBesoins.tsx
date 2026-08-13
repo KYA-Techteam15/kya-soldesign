@@ -8,6 +8,7 @@ import { useGridNav } from '../../ui/useGridNav';
 import type { Granularity, LoadSource, NamedProfile } from '../../app/models/projectView';
 import { useCalculationState } from '../../app/CalculationProvider';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
+import { useT } from '../../i18n';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -28,6 +29,7 @@ const GRANULARITIES: { key: Granularity; label: string; n: string; hint: string 
 ];
 
 export function SectionBesoins() {
+  const t = useT();
   const project = useProject();
   const update = useProjects((s) => s.update);
   const notify = useUi((s) => s.notify);
@@ -162,7 +164,7 @@ export function SectionBesoins() {
         <div style={{ display: 'grid', gap: 'var(--sp-4)' }}>
           <section>
             <div className="tbl-title">
-              <h2 className="h-sec">Appareils classiques</h2>
+              <h2 className="h-sec">{t('loads.classic')}</h2>
               <span className="label">
                 {profile.classic.length} lignes
                 {filter && ` · ${visibleClassic.length} filtrées`}
@@ -200,14 +202,14 @@ export function SectionBesoins() {
               <table className="tbl t-classic">
                 <thead>
                   <tr>
-                    <th>Nom</th>
-                    <th>Qté</th>
-                    <th>P. unit.<span className="unit">W</span></th>
-                    <th>Rend.</th>
-                    <th>Heures</th>
-                    <th className="derived">P. totale<span className="unit">W</span></th>
-                    <th className="derived">P. réelle<span className="unit">W</span></th>
-                    <th className="derived">E. totale<span className="unit">Wh</span></th>
+                    <th>{t('loads.name')}</th>
+                    <th>{t('loads.quantity')}</th>
+                    <th>{t('loads.unitPower')}<span className="unit">W</span></th>
+                    <th>{t('loads.efficiency')}</th>
+                    <th>{t('loads.hours')}</th>
+                    <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
+                    <th className="derived">{t('loads.realPower')}<span className="unit">W</span></th>
+                    <th className="derived">{t('loads.totalEnergy')}<span className="unit">Wh</span></th>
                     <th aria-label="Actions" />
                   </tr>
                 </thead>
@@ -250,7 +252,7 @@ export function SectionBesoins() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={5}>Sous-total classiques</td>
+                    <td colSpan={5}>{t('loads.classicSubtotal')}</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
@@ -275,7 +277,7 @@ export function SectionBesoins() {
 
           <section>
             <div className="tbl-title">
-              <h2 className="h-sec">Appareils inductifs</h2>
+              <h2 className="h-sec">{t('loads.inductive')}</h2>
               <span className="label">
                 {profile.inductive.length} lignes
                 {filter && ` · ${visibleInductive.length} filtrées`} · coefficient de
@@ -291,15 +293,15 @@ export function SectionBesoins() {
               <table className="tbl t-induct">
                 <thead>
                   <tr>
-                    <th>Nom</th>
-                    <th>Qté</th>
-                    <th>P. unit.<span className="unit">W</span></th>
-                    <th>Rend.</th>
-                    <th>Coef. dém.</th>
-                    <th>Heures</th>
-                    <th className="derived">P. totale<span className="unit">W</span></th>
-                    <th className="derived">P. réelle<span className="unit">W</span></th>
-                    <th className="derived">E. totale<span className="unit">Wh</span></th>
+                    <th>{t('loads.name')}</th>
+                    <th>{t('loads.quantity')}</th>
+                    <th>{t('loads.unitPower')}<span className="unit">W</span></th>
+                    <th>{t('loads.efficiency')}</th>
+                    <th>{t('loads.startingCoefficient')}</th>
+                    <th>{t('loads.hours')}</th>
+                    <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
+                    <th className="derived">{t('loads.realPower')}<span className="unit">W</span></th>
+                    <th className="derived">{t('loads.totalEnergy')}<span className="unit">Wh</span></th>
                     <th aria-label="Actions" />
                   </tr>
                 </thead>
@@ -346,14 +348,14 @@ export function SectionBesoins() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={6}>Sous-total inductifs</td>
+                    <td colSpan={6}>{t('loads.inductiveSubtotal')}</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td />
                   </tr>
                   <tr>
-                    <td colSpan={6}>Total besoins</td>
+                    <td colSpan={6}>{t('loads.total')}</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
@@ -390,7 +392,7 @@ export function SectionBesoins() {
       {profile.source === 'hourly' && (
         <section>
           <div className="tbl-title">
-            <h2 className="h-sec">Profil horaire saisi</h2>
+            <h2 className="h-sec">{t('loads.hourly')}</h2>
             <span className="label">puissance nominale, kW · 24 valeurs</span>
             <span className="sep" />
             <button className="btn" onClick={() => notify({ kind: 'info', title: 'Édition en masse', detail: 'Appliquer une valeur de telle heure à telle heure — à venir.' })}>
@@ -428,7 +430,7 @@ export function SectionBesoins() {
           </div>
           <div className="form-rows">
             <label>
-              <span>Énergie mensuelle</span>
+              <span>{t('loads.monthlyEnergy')}</span>
               <span className="uf">
                 <input value={profile.meter.monthlyEnergy}
                   onChange={(e) => mutateProfile((p) => { p.meter!.monthlyEnergy = num(e.target.value); })} />
@@ -436,7 +438,7 @@ export function SectionBesoins() {
               </span>
             </label>
             <label>
-              <span>Ampérage du compteur</span>
+              <span>{t('loads.meterAmperage')}</span>
               <span className="uf">
                 <input value={profile.meter.meterAmperage}
                   onChange={(e) => mutateProfile((p) => { p.meter!.meterAmperage = num(e.target.value); })} />
@@ -444,7 +446,7 @@ export function SectionBesoins() {
               </span>
             </label>
             <label>
-              <span>Type de réseau</span>
+              <span>{t('loads.networkType')}</span>
               <select
                 value={profile.meter.networkType}
                 onChange={(e) =>
@@ -453,12 +455,12 @@ export function SectionBesoins() {
                   })
                 }
               >
-                <option value="single_phase">Monophasé</option>
-                <option value="three_phase">Triphasé</option>
+                <option value="single_phase">{t('loads.singlePhase')}</option>
+                <option value="three_phase">{t('loads.threePhase')}</option>
               </select>
             </label>
             <label>
-              <span>Pointe du matin</span>
+              <span>{t('loads.morningPeak')}</span>
               <span className="rf">
                 <input value={profile.meter.morningPeakStart}
                   onChange={(e) => mutateProfile((p) => { p.meter!.morningPeakStart = e.target.value; })} />
@@ -468,7 +470,7 @@ export function SectionBesoins() {
               </span>
             </label>
             <label>
-              <span>Pointe du soir</span>
+              <span>{t('loads.eveningPeak')}</span>
               <span className="rf">
                 <input value={profile.meter.eveningPeakStart}
                   onChange={(e) => mutateProfile((p) => { p.meter!.eveningPeakStart = e.target.value; })} />
@@ -478,12 +480,12 @@ export function SectionBesoins() {
               </span>
             </label>
             <label>
-              <span>Importance de la pointe</span>
+              <span>{t('loads.peakImportance')}</span>
               <input value={fmt(profile.meter.peakImportance, 2)}
                 onChange={(e) => mutateProfile((p) => { p.meter!.peakImportance = num(e.target.value); })} />
             </label>
             <label>
-              <span>Facteur de qualité cible</span>
+              <span>{t('loads.qualityTarget')}</span>
               <input value={fmt(profile.meter.targetQualityFactor, 2)}
                 onChange={(e) => mutateProfile((p) => { p.meter!.targetQualityFactor = num(e.target.value); })} />
             </label>
@@ -494,7 +496,7 @@ export function SectionBesoins() {
       {showGranularity && (
         <div className="scrim" onClick={() => setShowGranularity(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <header>Granularité des profils</header>
+            <header>{t('loads.granularity')}</header>
             <div className="body">
               <div className="proj-list">
                 {GRANULARITIES.map((g) => (
@@ -521,7 +523,7 @@ export function SectionBesoins() {
             </div>
             <footer>
               <button className="btn btn-ghost" onClick={() => setShowGranularity(false)}>
-                Fermer
+                {t('g.close')}
               </button>
             </footer>
           </div>

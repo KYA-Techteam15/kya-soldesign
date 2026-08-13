@@ -6,6 +6,7 @@ import { StepHead } from '../../ui/Flow';
 import { Dialog } from '../../ui/Dialog';
 import { useCalculationState } from '../../app/CalculationProvider';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
+import { useT } from '../../i18n';
 
 const FAMILIES = [
   { key: 'tech', label: 'Technique', hint: 'rendements, seuils, tension du parc' },
@@ -19,6 +20,7 @@ function PendingValue({ label, unit, lead = false }: { readonly label: string; r
 }
 
 export function SectionHypotheses() {
+  const t = useT();
   const project = useProject();
   const update = useProjects((state) => state.update);
   const assumptions = project.assumptions;
@@ -28,24 +30,24 @@ export function SectionHypotheses() {
   const set = (key: keyof typeof assumptions) => (value: number) => update((draft) => { (draft.assumptions[key] as number) = value; });
 
   return <div className="sheet">
-    <StepHead slug="hypotheses" aside={<button className="btn" onClick={() => setOpen(true)}>Hypothèses de calcul…</button>} />
+    <StepHead slug="hypotheses" aside={<button className="btn" onClick={() => setOpen(true)}>{t('presizing.assumptions')}</button>} />
     <section><h2 className="h-sec">Critères de l’étude</h2><div className="form-rows">
       <NumField label="LPSP maximale" unit="%" value={assumptions.lpspMax} onChange={set('lpspMax')} decimals={1} />
       <NumField label="LOLP maximale" unit="%" value={assumptions.lolpMax} onChange={set('lolpMax')} decimals={1} />
       <NumField label="Tarif réseau de référence" unit="FCFA/kWh" value={assumptions.lcoeGrid} onChange={set('lcoeGrid')} />
     </div></section>
-    <div className="runbar is-stale"><button className="btn btn-ok btn-run" disabled>Prédimensionnement indisponible</button><span className="runbar-note">Aucun moteur n’est chargé dans l’application de production.</span></div>
+    <div className="runbar is-stale"><button className="btn btn-ok btn-run" disabled>{t('presizing.unavailable')}</button><span className="runbar-note">Aucun moteur n’est chargé dans l’application de production.</span></div>
     <CapabilityNotice capability="presizing" state={state} compact />
-    <section className="out is-stale"><div className="out-head"><span className="out-tag">indisponible</span><h2 className="h-sec">Système minimal à installer</h2></div><div className="out-grid">
+    <section className="out is-stale"><div className="out-head"><span className="out-tag">{t('g.unavailable')}</span><h2 className="h-sec">{t('presizing.minimumSystem')}</h2></div><div className="out-grid">
       <PendingValue label="Puissance crête du champ PV" unit="kWc" lead />
       <PendingValue label="Puissance onduleur minimale" unit="kW" lead />
       <PendingValue label="Énergie stockée minimale" unit="kWh" lead />
       <PendingValue label="Production annuelle" unit="kWh/an" />
     </div></section>
-    <section className="out is-stale"><div className="out-head"><span className="out-tag">indisponible</span><h2 className="h-sec">Fiabilité &amp; économie</h2></div><div className="out-grid">
+    <section className="out is-stale"><div className="out-head"><span className="out-tag">{t('g.unavailable')}</span><h2 className="h-sec">Fiabilité &amp; économie</h2></div><div className="out-grid">
       {['LPSP', 'LOLP', 'SRI', 'Coût du kWh produit', 'SVI', 'CO₂ évité'].map((label) => <PendingValue key={label} label={label} />)}
     </div></section>
-    {open && <Dialog title="Hypothèses de calcul" lead={FAMILIES.find((item) => item.key === family)?.hint} wide onClose={() => setOpen(false)} footer={<button className="btn-primary" onClick={() => setOpen(false)}>Fermer</button>}>
+    {open && <Dialog title="Hypothèses de calcul" lead={FAMILIES.find((item) => item.key === family)?.hint} wide onClose={() => setOpen(false)} footer={<button className="btn-primary" onClick={() => setOpen(false)}>{t('g.close')}</button>}>
       <div className="seg" role="tablist" style={{ marginBottom: 'var(--sp-4)' }}>{FAMILIES.map((item) => <button key={item.key} role="tab" aria-selected={family === item.key} onClick={() => setFamily(item.key)}>{item.label}</button>)}</div>
       {family === 'tech' && <div className="form-rows">
         <NumField label="Performance ratio" unit="%" value={assumptions.systemPr} onChange={set('systemPr')} decimals={1} />

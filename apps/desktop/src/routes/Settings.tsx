@@ -28,10 +28,10 @@ export function SettingsRoute() {
 
           <div className="kpis">
             <div className="kpi kpi-head">
-              <span className="h-sec">Interface</span>
+              <span className="h-sec">{t('settings.interface')}</span>
             </div>
             <div className="kpi">
-              <span>Thème</span>
+              <span>{t('settings.theme')}</span>
               <span className="seg">
                 <button
                   aria-selected={theme === 'light'}
@@ -66,7 +66,7 @@ export function SettingsRoute() {
               </span>
             </div>
             <div className="kpi">
-              <span>Langue</span>
+              <span>{t('settings.language')}</span>
               <span className="seg">
                 <button aria-selected={lang === 'fr'} onClick={() => setLang('fr')}>
                   Français
@@ -79,7 +79,7 @@ export function SettingsRoute() {
           </div>
 
           <div className="stub">
-            <b>Sections à venir en phase 4</b>
+            <b>{t('settings.upcoming')}</b>
             <ul>
               <li>Société : nom, adresse, téléphone, e-mail, logo des rapports</li>
               <li>
@@ -94,7 +94,7 @@ export function SettingsRoute() {
               </li>
               <li>Licence : activation, édition, expiration, désactivation</li>
               <li>Devise d’entrée et de sortie, taux de change</li>
-              <li>À propos et version</li>
+              <li>{t('settings.about')}</li>
             </ul>
             <span className="tag">registre 94–102 · settings_page.py</span>
           </div>

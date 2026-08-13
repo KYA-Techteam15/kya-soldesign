@@ -149,7 +149,7 @@ export function Home() {
             </div>
             {recent.length === 0 ? (
               <div className="empty">
-                <b>Aucun projet</b>
+                <b>{t('home.noProject')}</b>
                 Créez votre premier projet pour démarrer.
               </div>
             ) : (

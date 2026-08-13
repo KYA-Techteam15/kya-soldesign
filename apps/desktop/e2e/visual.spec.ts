@@ -10,7 +10,7 @@ const viewports: readonly Viewport[] = [
 const locales: readonly Locale[] = ['fr', 'en'];
 
 async function setLocale(page: Page, locale: Locale) {
-  if (locale === 'en') await page.getByRole('button', { name: 'Switch to English' }).click();
+  if (locale === 'en') await page.locator('.topbar button[title="Langue"]').click();
 }
 
 async function openDraft(page: Page, locale: Locale) {
@@ -30,7 +30,7 @@ for (const viewport of viewports) {
         await page.goto(route);
         await setLocale(page, locale);
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-        if (route === '/catalogue') await expect(page.locator('.catalog-card').first()).toBeVisible();
+        if (route === '/catalogue') await expect(page.locator('.tbl tbody tr').first()).toBeVisible();
         await expect(page).toHaveScreenshot(`${name}-${locale}-${viewport.label}.png`, { fullPage: route !== '/catalogue', animations: 'disabled', timeout: 15_000 });
       }
     });
@@ -45,7 +45,7 @@ for (const viewport of viewports) {
       ] as const;
       for (const [stepIndex, name] of surfaces) {
         await page.locator('.nav-item').nth(stepIndex).click();
-        await expect(page.locator('.work-card')).toBeVisible();
+        await expect(page.locator('.sheet')).toBeVisible();
         await expect(page).toHaveScreenshot(`${name}-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled', maxDiffPixels: 250 });
       }
     });
@@ -55,14 +55,14 @@ for (const viewport of viewports) {
       await page.goto('/accueil');
       await setLocale(page, locale);
       await page.getByRole('button', { name: locale === 'fr' ? /Rechercher une action/ : /Search an action/ }).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
+      await expect(page.locator('.palette')).toBeVisible();
       await expect(page).toHaveScreenshot(`palette-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: locale === 'fr' ? 'Nouveau projet' : 'New project', exact: true }).click();
-      await page.getByRole('button', { name: locale === 'fr' ? '← Retour' : '← Back', exact: true }).click();
-      await page.getByRole('button', { name: locale === 'fr' ? 'Projets →' : 'Projects →', exact: true }).click();
-      await page.getByRole('button', { name: locale === 'fr' ? 'Supprimer' : 'Remove' }).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.locator('.wordmark').click();
+      await page.getByRole('button', { name: locale === 'fr' ? 'Tous les projets →' : 'All projects →', exact: true }).click();
+      await page.locator('.proj-row > .btn').click();
+      await expect(page.locator('.modal')).toBeVisible();
       await expect(page).toHaveScreenshot(`dialog-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });
     });
   }

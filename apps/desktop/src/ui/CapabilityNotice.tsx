@@ -1,4 +1,5 @@
 import type { CapabilityId, CapabilityState } from '../app/contracts.js';
+import { useT } from '../i18n';
 
 const CAPABILITY_LABEL: Readonly<Record<CapabilityId, string>> = {
   presizing: 'Prédimensionnement',
@@ -10,6 +11,12 @@ const CAPABILITY_LABEL: Readonly<Record<CapabilityId, string>> = {
   dossier: 'Dossier calculé',
 };
 
+const CAPABILITY_LABEL_EN: Readonly<Record<CapabilityId, string>> = {
+  presizing: 'Pre-sizing', sizing: 'Sizing', reliability: 'Reliability',
+  'equipment-compatibility': 'Equipment compatibility', protections: 'Protections and cables',
+  finance: 'Calculated costing', dossier: 'Calculated file',
+};
+
 export function CapabilityNotice({
   capability,
   state,
@@ -19,23 +26,25 @@ export function CapabilityNotice({
   readonly state: CapabilityState<unknown>;
   readonly compact?: boolean;
 }) {
+  const t = useT();
+  const english = t('app.back') === 'Back';
   const className = `cap-notice ${compact ? 'is-compact' : ''}`;
-  const label = CAPABILITY_LABEL[capability];
+  const label = (english ? CAPABILITY_LABEL_EN : CAPABILITY_LABEL)[capability];
 
   if (state.status === 'loading') {
-    return <div className={className} role="status"><b>{label}</b><span>Lecture de l’état…</span></div>;
+    return <div className={className} role="status"><b>{label}</b><span>{t('capability.loading')}</span></div>;
   }
   if (state.status === 'error') {
-    return <div className={`${className} is-error`} role="alert"><b>{label} indisponible</b><span>Échec de lecture · {state.code}</span></div>;
+    return <div className={`${className} is-error`} role="alert"><b>{label} {t('g.unavailable')}</b><span>{t('capability.readError')} · {state.code}</span></div>;
   }
   if (state.status === 'stale') {
-    return <div className={`${className} is-stale`} role="status"><b>Résultat périmé</b><span>Les entrées ont changé depuis le dernier calcul.</span></div>;
+    return <div className={`${className} is-stale`} role="status"><b>{t('capability.stale')}</b><span>{t('capability.staleHelp')}</span></div>;
   }
   if (state.status === 'empty') {
-    return <div className={className} role="status"><b>Aucun résultat</b><span>{label} non exécuté pour ce dossier.</span></div>;
+    return <div className={className} role="status"><b>{t('g.none')}</b><span>{label} {t('capability.notRun')}</span></div>;
   }
   if (state.status === 'unavailable') {
-    return <div className={`${className} is-unavailable`} role="status"><b>{label} indisponible</b><span>Intégration prévue par {state.roadmapOwner}. Aucun résultat n’est simulé.</span></div>;
+    return <div className={`${className} is-unavailable`} role="status"><b>{label} {t('g.unavailable')}</b><span>{t('capability.planned')} {state.roadmapOwner}. {t('capability.noSimulation')}</span></div>;
   }
   return null;
 }

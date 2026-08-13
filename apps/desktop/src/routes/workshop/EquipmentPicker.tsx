@@ -9,6 +9,7 @@ import { useCatalog } from '../../app/CatalogProvider';
 import { fmt } from '../../domain/format';
 import { Dialog } from '../../ui/Dialog';
 import type { ProjectViewModel } from '../../app/models/projectView';
+import { useT } from '../../i18n';
 
 export type Kind = 'module' | 'battery' | 'inverter';
 
@@ -54,6 +55,7 @@ export function EquipmentPicker({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const { equipment } = useCatalog();
   const current = kind === 'module'
@@ -83,7 +85,7 @@ export function EquipmentPicker({
       footer={
         <>
           <span className="label">Aucune compatibilité ni quantité n’est déduite dans cette étape.</span>
-          <button className="btn btn-ghost" onClick={onClose}>Fermer</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t('g.close')}</button>
         </>
       }
     >
@@ -95,7 +97,7 @@ export function EquipmentPicker({
         onChange={(event) => setQuery(event.target.value)}
       />
       <div className="pick-list">
-        {rows.length === 0 && <div className="empty"><b>Aucune référence trouvée</b></div>}
+        {rows.length === 0 && <div className="empty"><b>{t('equipment.noneFound')}</b></div>}
         {rows.map((item) => {
           const itemDetails = details(item);
           return (

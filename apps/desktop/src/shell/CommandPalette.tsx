@@ -155,7 +155,7 @@ export function CommandPalette() {
           }}
         />
         <div className="palette-list">
-          {shown.length === 0 && <div className="palette-empty">Aucune commande</div>}
+          {shown.length === 0 && <div className="palette-empty">{t('palette.none')}</div>}
           {shown.map((c, i) => (
             <button
               key={c.id}

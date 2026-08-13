@@ -8,7 +8,7 @@ export function ConfirmDialog() {
   if (!confirm) return null;
   return (
     <div className="scrim" onClick={close}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <header>{confirm.title}</header>
         <div className="body">{confirm.message}</div>
         <footer>
