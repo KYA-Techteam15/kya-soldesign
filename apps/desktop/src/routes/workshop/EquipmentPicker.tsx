@@ -8,7 +8,7 @@ import type { Equipment } from '@ksd/catalog';
 import { useCatalog } from '../../app/CatalogProvider';
 import { fmt } from '../../domain/format';
 import { Dialog } from '../../ui/Dialog';
-import type { Project } from '../../domain/types';
+import type { ProjectViewModel } from '../../app/models/projectView';
 
 export type Kind = 'module' | 'battery' | 'inverter';
 
@@ -50,7 +50,7 @@ export function EquipmentPicker({
   onClose,
 }: {
   kind: Kind;
-  project: Project;
+  project: ProjectViewModel;
   onPick: (id: string) => void;
   onClose: () => void;
 }) {

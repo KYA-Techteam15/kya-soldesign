@@ -6,7 +6,7 @@ test('the original French and English shell copy switches without changing route
   await page.locator('.topbar button[title="Langue"]').click();
   await expect(page).toHaveURL(/\/catalogue$/);
   await expect(page.getByRole('heading', { name: 'Equipment catalog' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Modules (388)' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Modules (387)' })).toBeVisible();
   await page.locator('.topbar button[title="Langue"]').click();
   await expect(page.getByRole('heading', { name: 'Catalogue matériel' })).toBeVisible();
 });

@@ -22,7 +22,10 @@ test('the original command palette opens, focuses search, and closes on Escape',
 });
 
 test('the original confirmation dialog remains keyboard reachable', async ({ page }) => {
-  await page.goto('/accueil/projets');
+  await page.goto('/accueil');
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
+  await page.locator('.wordmark').click();
+  await page.getByRole('button', { name: 'Tous les projets →', exact: true }).click();
   await page.getByRole('button', { name: 'Supprimer' }).first().click();
   await expect(page.locator('.modal')).toBeVisible();
   await page.locator('.modal').getByRole('button', { name: 'Annuler' }).focus();
@@ -32,7 +35,8 @@ test('the original confirmation dialog remains keyboard reachable', async ({ pag
 });
 
 test('the copied workshop introduces no accessibility defects beyond the source baseline', async ({ page }) => {
-  await page.goto('/projet/p-2026-041/atelier/projet');
+  await page.goto('/accueil');
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
   const results = await new AxeBuilder({ page }).disableRules(sourceBaselineRules).analyze();
   expect(results.violations).toEqual([]);
 });

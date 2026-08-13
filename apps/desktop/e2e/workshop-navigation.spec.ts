@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 test('preserves all eight original workshop routes, labels, and browser navigation', async ({ page }) => {
-  await page.goto('/projet/p-2026-041/atelier/projet');
+  await page.goto('/accueil');
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
   await expect(page.locator('.nav-item')).toHaveCount(8);
   const steps = [
     ['projet', 'Identification du projet'], ['site', 'Choix du site'], ['besoins', 'Bilan des consommations'],

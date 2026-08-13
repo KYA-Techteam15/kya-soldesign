@@ -5,7 +5,7 @@ import { useT } from '../i18n';
 import { useProjects } from '../store/project';
 import { useUi } from '../store/ui';
 import { relativeFr } from '../domain/format';
-import type { SystemType } from '../domain/types';
+import type { SystemType } from '../app/models/projectView';
 import schemaAllInOne from '../assets/systems/standalone-all-in-one.png';
 import schemaInverterController from '../assets/systems/standalone-inverter-controller.png';
 import schemaGridTied from '../assets/systems/grid-tied.png';

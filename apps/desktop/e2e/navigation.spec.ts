@@ -1,20 +1,22 @@
 import { expect, test } from '@playwright/test';
 
-test('restores the validated home with its six systems and three complete fixture projects', async ({ page }) => {
+test('restores the validated home with six systems and an empty production session', async ({ page }) => {
   await page.goto('/accueil');
   await expect(page.getByRole('heading', { name: 'Bienvenue' })).toBeVisible();
   await expect(page.locator('.sys-card')).toHaveCount(6);
   await expect(page.locator('.sys-card:disabled')).toHaveCount(5);
-  await expect(page.locator('.proj-row')).toHaveCount(3);
-  await expect(page.getByText('Électrification centre de santé')).toBeVisible();
+  await expect(page.getByText('Aucun projet')).toBeVisible();
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
-  await expect(page).toHaveURL(/\/projet\/p-[^/]+\/atelier\/projet$/);
+  await expect(page).toHaveURL(/\/projet\/[0-9a-f-]{36}\/atelier\/projet$/);
   await expect(page.locator('.stephead .h-page')).toHaveText('Identification du projet');
 });
 
-test('projects can be filtered and a fixture can be removed through the original dialog', async ({ page }) => {
-  await page.goto('/accueil/projets');
-  await expect(page.locator('.proj-row')).toHaveCount(3);
+test('a created project can be filtered and removed through the original dialog', async ({ page }) => {
+  await page.goto('/accueil');
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
+  await page.getByLabel('Nom du projet').fill('Projet Bombouaka');
+  await page.locator('.wordmark').click();
+  await page.getByRole('button', { name: 'Tous les projets →', exact: true }).click();
   await page.locator('.hdr-search').fill('Bombouaka');
   await expect(page.locator('.proj-row')).toHaveCount(1);
   await page.getByRole('button', { name: 'Supprimer' }).click();

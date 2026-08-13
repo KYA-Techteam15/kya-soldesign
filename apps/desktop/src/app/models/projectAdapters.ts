@@ -1,8 +1,7 @@
 import type { SystemKind } from '@ksd/domain';
 import { parseProjectFile, type ProjectFileV1 } from '@ksd/project-format';
-import type { Project, SystemType } from '../../domain/types.js';
 import { parseProjectInputsV1, type ProjectInputsV1 } from './projectInputs.js';
-import type { ProjectViewModel } from './projectView.js';
+import type { ProjectViewModel, SystemType } from './projectView.js';
 
 const systemToCanonical: Readonly<Record<Exclude<SystemType, 'undefined'>, SystemKind>> = {
   standalone_all_in_one: 'standalone-all-in-one',
@@ -210,12 +209,12 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       inverterId: selected[2] ?? null,
     },
     cables: input.cableChoices.map((choice) => ({
-      segment: choice.segment.replaceAll('-', '_') as Project['cables'][number]['segment'],
+      segment: choice.segment.replaceAll('-', '_') as ProjectViewModel['cables'][number]['segment'],
       length: valueOrZero(choice.lengthM), material: choice.material,
-      installation: choice.installation.replace('-', '_') as Project['cables'][number]['installation'],
+      installation: choice.installation.replace('-', '_') as ProjectViewModel['cables'][number]['installation'],
     })),
     protections: input.protectionChoices.map((choice) => ({
-      segment: choice.segment.replaceAll('-', '_') as Project['protections'][number]['segment'],
+      segment: choice.segment.replaceAll('-', '_') as ProjectViewModel['protections'][number]['segment'],
       caliberA: choice.ratingA,
     })),
     costing: {

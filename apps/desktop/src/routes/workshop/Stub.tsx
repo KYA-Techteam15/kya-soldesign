@@ -1,5 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
-import type { Project } from '../../domain/types';
+import type { ProjectViewModel } from '../../app/models/projectView';
 
 /**
  * Ébauche honnête d'une section (phase 2). Elle dit ce qu'elle contiendra et
@@ -36,4 +36,4 @@ export function Stub({
   );
 }
 
-export const useProject = (): Project => useOutletContext<Project>();
+export const useProject = (): ProjectViewModel => useOutletContext<ProjectViewModel>();

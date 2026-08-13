@@ -7,8 +7,7 @@ import {
   projectViewToFile,
   systemTypeToCanonical,
 } from './models/projectAdapters.js';
-import type { ProjectViewModel } from './models/projectView.js';
-import type { SystemType } from '../domain/types.js';
+import type { ProjectViewModel, SystemType } from './models/projectView.js';
 
 type ProjectMutation = (draft: ProjectViewModel) => void;
 

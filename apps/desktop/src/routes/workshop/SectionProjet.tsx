@@ -2,7 +2,7 @@ import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { Group, SelectField, TextField } from '../../ui/Field';
 import { StepHead } from '../../ui/Flow';
-import type { ApplicationType } from '../../domain/types';
+import type { ApplicationType } from '../../app/models/projectView';
 
 const APPLICATIONS: { value: ApplicationType; label: string }[] = [
   { value: 'residential', label: 'Résidentiel' },

@@ -2,10 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useT } from '../i18n';
 import { useUi } from '../store/ui';
 import { useProjects } from '../store/project';
-import type { Project } from '../domain/types';
+import type { ProjectViewModel } from '../app/models/projectView';
 
 interface Props {
-  project?: Project | null;
+  project?: ProjectViewModel | null;
   /** Action principale à droite. */
   primary?: { label: string; onClick: () => void };
   back?: string;
