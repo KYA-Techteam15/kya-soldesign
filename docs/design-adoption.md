@@ -26,6 +26,15 @@ Preserve the approved information architecture, visual hierarchy, spacing, typog
 
 The temporary foundation screen in `apps/desktop` is not a competing design. It exists only to prove the autonomous build and must be replaced during `UI-BASE-001`.
 
+## Autonomous integration baseline
+
+Commit `9e945de` is the first autonomous direct-copy integration baseline. It is
+the visual and interaction authority for the model-convergence work that follows.
+Its copied prototype models, fixtures, reference JSON, stores, and mock engine are
+temporary migration inputs, not approved production architecture. They must be
+replaced behind the preserved interface according to
+`specs/002-validated-ui-foundation/contracts/model-convergence.md`.
+
 ## Required acceptance evidence
 
 - route and component inventory mapped from the approved source to the new application;
