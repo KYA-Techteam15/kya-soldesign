@@ -2,7 +2,7 @@ import { pvgisTmyJsonSchema, weatherFileRecordSchema, type PvgisTmyJson, type We
 import type { CanonicalWeatherFile, WeatherAcquisitionPort } from '../contracts.js';
 
 export class WeatherAcquisitionError extends Error {
-  public constructor(public readonly code: 'PVGIS_TIMEOUT' | 'PVGIS_HTTP' | 'PVGIS_INVALID_JSON' | 'PVGIS_ABORTED', cause?: unknown) {
+  public constructor(public readonly code: 'PVGIS_TIMEOUT' | 'PVGIS_HTTP' | 'PVGIS_INVALID_JSON' | 'PVGIS_ABORTED' | 'PVGIS_UNAVAILABLE', cause?: unknown) {
     super(code, { cause });
     this.name = 'WeatherAcquisitionError';
   }
@@ -10,26 +10,28 @@ export class WeatherAcquisitionError extends Error {
 
 export class PvgisClient implements WeatherAcquisitionPort {
   public constructor(
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
     private readonly now: () => string = () => new Date().toISOString(),
     private readonly timeoutMs = 30_000,
   ) {}
 
   public async downloadTmy(request: { readonly latitudeDeg: number; readonly longitudeDeg: number; readonly timezoneIana: string; readonly signal?: AbortSignal }): Promise<{ readonly file: CanonicalWeatherFile; readonly locator: string }> {
     const locator = `https://re.jrc.ec.europa.eu/api/v5_3/tmy?lat=${encodeURIComponent(request.latitudeDeg)}&lon=${encodeURIComponent(request.longitudeDeg)}&outputformat=json&usehorizon=1`;
+    const requestUrl = `/external/pvgis/tmy?lat=${encodeURIComponent(request.latitudeDeg)}&lon=${encodeURIComponent(request.longitudeDeg)}&outputformat=json&usehorizon=1`;
     const controller = new AbortController();
     const forwardAbort = () => controller.abort('caller');
     request.signal?.addEventListener('abort', forwardAbort, { once: true });
     const timeout = setTimeout(() => controller.abort('timeout'), this.timeoutMs);
     try {
-      const response = await this.fetcher(locator, { signal: controller.signal });
+      const response = await this.fetcher(requestUrl, { signal: controller.signal });
       if (!response.ok) throw new WeatherAcquisitionError('PVGIS_HTTP');
       const text = await response.text();
+      if (text.trimStart().startsWith('<')) throw new WeatherAcquisitionError('PVGIS_HTTP');
       return { file: await this.parse(text, locator, request.timezoneIana), locator };
     } catch (cause) {
       if (cause instanceof WeatherAcquisitionError) throw cause;
       if (controller.signal.aborted) throw new WeatherAcquisitionError(controller.signal.reason === 'timeout' ? 'PVGIS_TIMEOUT' : 'PVGIS_ABORTED', cause);
-      throw new WeatherAcquisitionError('PVGIS_INVALID_JSON', cause);
+      throw new WeatherAcquisitionError('PVGIS_UNAVAILABLE', cause);
     } finally {
       clearTimeout(timeout);
       request.signal?.removeEventListener('abort', forwardAbort);

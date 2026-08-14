@@ -21,6 +21,32 @@ describe('PVGIS acquisition port', () => {
     await expect(client.downloadTmy({ latitudeDeg: 10.703, longitudeDeg: 0.2099, timezoneIana: 'Africa/Lome' })).rejects.toEqual(expect.objectContaining<Partial<WeatherAcquisitionError>>({ code: 'PVGIS_HTTP' }));
   });
 
+  it('downloads through the same-origin gateway while preserving the public PVGIS locator', async () => {
+    const text = await readFile(weatherPath, 'utf8');
+    const fetcher = vi.fn(async () => new Response(text, { status: 200 })) as typeof fetch;
+    const result = await new PvgisClient(fetcher).downloadTmy({
+      latitudeDeg: 13.51366, longitudeDeg: 2.1098, timezoneIana: 'Africa/Niamey',
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      '/external/pvgis/tmy?lat=13.51366&lon=2.1098&outputformat=json&usehorizon=1',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(result.locator).toBe('https://re.jrc.ec.europa.eu/api/v5_3/tmy?lat=13.51366&lon=2.1098&outputformat=json&usehorizon=1');
+  });
+
+  it('reports a network outage separately from invalid PVGIS JSON', async () => {
+    const client = new PvgisClient(vi.fn(async () => { throw new TypeError('offline'); }) as typeof fetch);
+    await expect(client.downloadTmy({ latitudeDeg: 13.51366, longitudeDeg: 2.1098, timezoneIana: 'Africa/Niamey' }))
+      .rejects.toMatchObject({ code: 'PVGIS_UNAVAILABLE' });
+  });
+
+  it('reports a rejected HTML response as an upstream refusal', async () => {
+    const client = new PvgisClient(vi.fn(async () => new Response('<html>Request Rejected</html>', { status: 200 })) as typeof fetch);
+    await expect(client.downloadTmy({ latitudeDeg: 13.51366, longitudeDeg: 2.1098, timezoneIana: 'Africa/Niamey' }))
+      .rejects.toMatchObject({ code: 'PVGIS_HTTP' });
+  });
+
   it('supports cancellation', async () => {
     const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))))) as typeof fetch;
     const controller = new AbortController();

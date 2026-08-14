@@ -1767,6 +1767,51 @@ table.tbl select.cell-in {
   color: var(--text);
 }
 
+/* L'aperçu du fichier reprend la grammaire du graphe mensuel de la page Site,
+   dans une bande compacte qui garde les douze mois lisibles dans le dialogue. */
+.weather-preview {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--border);
+}
+.weather-bars {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--sp-2);
+  align-items: end;
+  min-height: 104px;
+}
+.weather-bars > div {
+  display: grid;
+  grid-template-rows: 72px auto auto;
+  align-items: end;
+  min-width: 0;
+  text-align: center;
+}
+.weather-bars i {
+  display: block;
+  place-self: end center;
+  width: min(24px, 72%);
+  border-radius: 2px 2px 0 0;
+  background: var(--accent-fill);
+}
+.weather-bars span,
+.weather-bars b {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weather-bars span {
+  color: var(--text-faint);
+}
+.weather-bars b {
+  color: var(--text);
+}
+
 /* Ouverture d'un fichier : un geste et ce qui a été lu, sur une rangée. */
 .file-drop {
   display: flex;

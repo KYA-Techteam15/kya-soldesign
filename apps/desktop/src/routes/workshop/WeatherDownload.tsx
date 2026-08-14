@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { analyzeSolarResource } from '@ksd/engine';
 import type { Locality } from '@ksd/domain';
 import { canonicalWeatherFileToProjectPayload, type ProjectWeatherPayload } from '../../app/adapters/weatherFiles';
-import { GeocodingClient, type GeocodedSite } from '../../app/adapters/geocodingClient';
+import { GeocodingClient, GeocodingError, type GeocodedSite } from '../../app/adapters/geocodingClient';
 import { useCatalog } from '../../app/CatalogProvider';
 import { countryName } from '../../app/models/catalogView';
 import { fmt } from '../../domain/format';
@@ -68,6 +68,10 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     setError(null);
     setOpenedFileName(null);
   };
+  const close = () => {
+    abortRef.current?.abort();
+    onClose();
+  };
 
   const search = async () => {
     const lat = parseNumber(latitude);
@@ -107,11 +111,11 @@ export function WeatherDownload({ lang, onClose, onSave }: {
       setLatitude(String(found.latitudeDeg));
       setLongitude(String(found.longitudeDeg));
       setTimezoneIana(found.timezoneIana);
-    } catch {
+    } catch (cause) {
       setHit(null);
-      setError(mode === 'town'
-        ? `Aucune position réelle trouvée pour « ${town.trim()} » dans ce pays. Vérifiez le nom ou utilisez les coordonnées GPS.`
-        : 'La position GPS n’a pas pu être identifiée. Vérifiez la connexion ou utilisez la recherche par nom.');
+      if (!(cause instanceof GeocodingError && cause.code === 'GEOCODING_ABORTED')) {
+        setError(geocodingErrorMessage(cause, mode, town.trim()));
+      }
     } finally {
       setBusy(false);
       abortRef.current = null;
@@ -176,8 +180,8 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     }
   };
 
-  return <Dialog title="Télécharger les données d’irradiance d’une localité" lead="PVGIS 5.3 · année type · JSON réel" wide onClose={onClose} footer={<>
-    <button className="btn btn-ghost" onClick={onClose}>{t('g.cancel')}</button>
+  return <Dialog title="Télécharger les données d’irradiance d’une localité" lead="PVGIS 5.3 · année type · JSON réel" wide onClose={close} footer={<>
+    <button className="btn btn-ghost" onClick={close}>{t('g.cancel')}</button>
     <button className="btn btn-ok" disabled={preview === null || busy} onClick={() => preview && onSave(preview)}>{t('weather.save')}</button>
   </>}>
     <div className="dlg-step"><span className="dlg-num">1</span><span className="dlg-step-t">{mode === 'file' ? 'Ouvrir un export PVGIS' : 'Localiser le site'}</span><span className="sep" /><span className="seg">
@@ -192,7 +196,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     </> : <>
       <div className="form-rows">
         {mode === 'town' ? <><label><span>{t('weather.country')}</span><select value={countryCode} onChange={(event) => { setCountryCode(event.target.value); setHit(null); setPreview(null); }}>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></label><label><span>{t('weather.city')}</span><input placeholder="ex. Bombouaka" value={town} onChange={(event) => { setTown(event.target.value); setHit(null); setPreview(null); }} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} /></label></> : <><label><span>{t('site.latitude')}</span><input placeholder="10,7030" value={latitude} onChange={(event) => { setLatitude(event.target.value); setHit(null); setPreview(null); }} /></label><label><span>{t('site.longitude')}</span><input placeholder="0,2099" value={longitude} onChange={(event) => { setLongitude(event.target.value); setHit(null); setPreview(null); }} /></label></>}
-        <label><span aria-hidden="true">&nbsp;</span><button className="btn btn-field" disabled={busy || (mode === 'town' ? !town.trim() : !latitude.trim() || !longitude.trim())} onClick={() => void search()}>{busy ? 'Recherche…' : 'Rechercher'}</button></label>
+        <label><span aria-hidden="true">&nbsp;</span><button aria-label="Rechercher" className="btn btn-field" disabled={busy || (mode === 'town' ? !town.trim() : !latitude.trim() || !longitude.trim())} onClick={() => void search()}>{busy ? 'Recherche…' : 'Rechercher'}</button></label>
       </div>
       {hit && <div className="form-rows" style={{ marginTop: 'var(--sp-3)' }}><label><span>{t('weather.siteName')}</span><input value={siteName} onChange={(event) => { setSiteName(event.target.value); setPreview(null); }} /></label><label><span>{t('weather.foundCoordinates')}</span><input readOnly value={`${fmt(hit.latitudeDeg, 4)}° / ${fmt(hit.longitudeDeg, 4)}°`} /></label><label><span>{t('weather.foundTimezone')}</span><input readOnly value={hit.timezoneIana} /></label></div>}
     </>}
@@ -201,7 +205,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
 
     {mode !== 'file' && <div className={`dlg-step ${hit ? '' : 'is-off'}`}><span className="dlg-num">2</span><span className="dlg-step-t">{t('weather.downloadPreview')}</span><span className="sep" /><span className="label">rien n’est écrit à cette étape</span><button className="btn" disabled={!hit || busy} onClick={() => void download()}>{busy ? 'Téléchargement…' : preview ? 'Retélécharger' : 'Télécharger'}</button></div>}
 
-    {preview && <><div className="weather-preview" style={{ marginTop: 'var(--sp-3)' }}><div className="weather-bars" aria-label="Irradiation mensuelle calculée depuis le fichier">{preview.monthly.map((value, month) => <div key={month}><i style={{ height: `${Math.max(2, value / max * 72)}px` }} /><span>{MONTHS[month]}</span><b>{fmt(value, 1)}</b></div>)}</div><div className="daily-note"><span>{preview.siteName} · {preview.countryCode}</span><span>· {fmt(preview.latitude, 4)}° / {fmt(preview.longitude, 4)}°</span><span className="sep" /><span className="label">SHA-256 {preview.payload.sourceSha256.slice(0, 12)}…</span></div></div><div className="dlg-step"><span className="dlg-num">{mode === 'file' ? '2' : '3'}</span><span className="dlg-step-t">{t('weather.save')}</span><span className="sep" /><span className="label">8 760 heures et leur preuve seront conservées en mémoire</span></div></>}
+    {preview && <><div className="weather-preview"><div className="weather-bars" aria-label="Irradiation mensuelle calculée depuis le fichier">{preview.monthly.map((value, month) => <div key={month}><i aria-hidden="true" style={{ height: `${Math.max(2, value / max * 72)}px` }} /><span>{MONTHS[month]}</span><b>{fmt(value, 1)}</b></div>)}</div><div className="daily-note"><span>{preview.siteName} · {preview.countryCode}</span><span>· {fmt(preview.latitude, 4)}° / {fmt(preview.longitude, 4)}°</span><span className="sep" /><span className="label">SHA-256 {preview.payload.sourceSha256.slice(0, 12)}…</span></div></div><div className="dlg-step"><span className="dlg-num">{mode === 'file' ? '2' : '3'}</span><span className="dlg-step-t">{t('weather.save')}</span><span className="sep" /><span className="label">8 760 heures et leur preuve seront conservées en mémoire</span></div></>}
   </Dialog>;
 }
 
@@ -246,5 +250,17 @@ function weatherErrorMessage(cause: unknown): string {
   if (cause.code === 'PVGIS_TIMEOUT') return 'PVGIS n’a pas répondu en 30 secondes. Réessayez.';
   if (cause.code === 'PVGIS_ABORTED') return 'Le téléchargement PVGIS a été annulé.';
   if (cause.code === 'PVGIS_HTTP') return 'PVGIS a refusé la requête. Vérifiez les coordonnées puis réessayez.';
+  if (cause.code === 'PVGIS_UNAVAILABLE') return 'PVGIS est momentanément inaccessible. Vérifiez la connexion puis réessayez.';
   return 'PVGIS n’a pas fourni un JSON TMY 5.3 valide.';
+}
+function geocodingErrorMessage(cause: unknown, mode: 'town' | 'gps' | 'file', town: string): string {
+  if (!(cause instanceof GeocodingError)) return 'Le service de localisation est momentanément inaccessible. Vérifiez la connexion puis réessayez.';
+  if (cause.code === 'GEOCODING_NOT_FOUND') {
+    return mode === 'town'
+      ? `Aucune position trouvée pour « ${town} » dans ce pays. Vérifiez l’orthographe ou utilisez les coordonnées GPS.`
+      : 'Aucune localité n’a été trouvée à cette position. Vérifiez les coordonnées ou utilisez la recherche par nom.';
+  }
+  if (cause.code === 'GEOCODING_TIMEOUT') return 'Le service de localisation n’a pas répondu dans le délai prévu. Réessayez.';
+  if (cause.code === 'GEOCODING_INVALID') return 'Le service de localisation a renvoyé une réponse inutilisable. Réessayez ou saisissez les coordonnées GPS.';
+  return 'Le service de localisation est momentanément inaccessible. Vérifiez la connexion puis réessayez.';
 }
