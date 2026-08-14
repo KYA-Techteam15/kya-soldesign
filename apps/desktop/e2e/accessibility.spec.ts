@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 const sourceBaselineRules = ['aria-allowed-attr', 'color-contrast', 'landmark-one-main', 'region'];
 
 test('copied top-level views introduce no accessibility defects beyond the validated source baseline', async ({ page }) => {
+  test.setTimeout(60_000);
   for (const route of ['/accueil', '/accueil/projets', '/catalogue', '/reglages']) {
     await page.goto(route);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

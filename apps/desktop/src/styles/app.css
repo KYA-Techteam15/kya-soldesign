@@ -1684,6 +1684,64 @@ table.tbl select.cell-in {
   font-size: var(--fs-xs);
   color: var(--text-faint);
 }
+
+/* Page 1 — même langage graphique que la journée solaire du design validé,
+   avec les trois séries calculées sur un seul axe temporel. */
+.load-chart-wrap {
+  padding: var(--sp-3) var(--sp-4);
+}
+.load-chart {
+  display: block;
+  width: 100%;
+  min-height: 190px;
+}
+.load-chart polyline {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.load-chart text {
+  fill: var(--text-faint);
+  font: 10px var(--font-mono);
+}
+.chart-gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.curve-load { stroke: var(--accent-fill); stroke-width: 2.5; }
+.curve-peak { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 5 3; }
+.curve-poa { stroke: var(--text); stroke-width: 1.5; opacity: .58; }
+.curve-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  padding-top: var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.curve-legend > span:not(.sep)::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: transparent;
+}
+.curve-legend .legend-load::before { background: var(--accent-fill); }
+.curve-legend .legend-peak::before { background: var(--danger); }
+.curve-legend .legend-poa::before { background: var(--text); opacity: .58; }
+.inline-setting {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.inline-setting .uf { width: 118px; }
 .daily-note {
   display: flex;
   align-items: baseline;

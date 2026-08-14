@@ -20,13 +20,14 @@ TruthRail / bilan Page 1
 
 ## Ordre
 
-1. Étendre le modèle et écrire les migrations/création vide.
-2. Tester puis implémenter les normalisateurs Page 1.
-3. Tester puis implémenter l'adaptateur projet/AIO et le port de calcul.
-4. Compléter le composant actif Site/Météo copié du design, sans logique prototype.
-5. Compléter le composant actif Besoins, ses trois modes et le dialogue des horaires.
-6. Brancher bilan, stale, warnings, contraintes et provenance.
-7. Gates, tests navigateur, comparaison visuelle, commit et push.
+1. Figer le JSON PVGIS réel, le manifeste et les tests de qualité; supprimer les sources sans fichier.
+2. Tester puis implémenter parseur TMY, position solaire, POA Klucher et agrégations.
+3. Étendre le modèle autoportant et tester `γ` dans l'enveloppe Page 1.
+4. Raccorder téléchargement/import au port app, sans réseau dans le moteur.
+5. Restaurer Site/Météo depuis le design validé avec graphes réels et états durcis.
+6. Finaliser Besoins, ses trois modes, le dialogue des horaires et le graphe charge/soleil.
+7. Brancher bilan, stale, warnings, contraintes, provenance et sauvegarde en mémoire.
+8. Gates, simulation navigateur, comparaison visuelle bornée, convergence, commit et push.
 
 ## Constitution check
 

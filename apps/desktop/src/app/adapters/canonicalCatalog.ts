@@ -1,11 +1,13 @@
-import { validateEquipment, type Equipment } from '@ksd/catalog';
+import { pvgisTmyJsonSchema, validateEquipment, weatherFileManifestSchema, type Equipment } from '@ksd/catalog';
 import { localitySchema, normalizedHourlyProfileSchema, weatherSourceSchema, type Locality, type NormalizedHourlyProfile, type WeatherSource } from '@ksd/domain';
 import equipmentSnapshot from '../../../../../packages/catalog/data/equipment.json';
 import localitySnapshot from '../../../../../packages/catalog/data/localities.json';
 import weatherSourceSnapshot from '../../../../../packages/catalog/data/weather-sources.json';
+import weatherFileManifestSnapshot from '../../../../../packages/catalog/data/weather-files.json';
+import bombouakaTmySnapshot from '../../../../../packages/catalog/data/weather/pvgis-5.3-tmy-bombouaka-tg-10.7030-0.2099.json';
 import loadProfileSnapshot from '../../../../../packages/catalog/data/load-profiles.json';
 import qualitySnapshot from '../../../../../packages/catalog/data/quality-report.json';
-import type { CatalogQuery, CatalogQueryPort, CatalogSummary } from '../contracts.js';
+import type { CanonicalWeatherFile, CatalogQuery, CatalogQueryPort, CatalogSummary } from '../contracts.js';
 
 interface SnapshotDocument {
   readonly schemaVersion: number;
@@ -49,6 +51,7 @@ export class CanonicalCatalog implements CatalogQueryPort {
   private readonly equipment = parseSnapshot(equipmentSnapshot);
   private readonly localities = parseLocalities(localitySnapshot);
   private readonly weatherSources = parseWeatherSources(weatherSourceSnapshot);
+  private readonly weatherFiles = parseWeatherFiles();
   private readonly loadProfiles = parseLoadProfiles(loadProfileSnapshot);
 
   public async list(query: CatalogQuery = {}): Promise<readonly Equipment[]> {
@@ -66,6 +69,10 @@ export class CanonicalCatalog implements CatalogQueryPort {
 
   public async listWeatherSources(localityId?: string): Promise<readonly WeatherSource[]> {
     return localityId === undefined ? this.weatherSources : this.weatherSources.filter((source) => source.localityId === localityId);
+  }
+
+  public async listWeatherFiles(): Promise<readonly CanonicalWeatherFile[]> {
+    return this.weatherFiles;
   }
 
   public async listLoadProfiles(): Promise<readonly NormalizedHourlyProfile[]> {
@@ -98,4 +105,16 @@ export class CanonicalCatalog implements CatalogQueryPort {
       weatherSources: this.weatherSources.length,
     };
   }
+}
+
+function parseWeatherFiles(): readonly CanonicalWeatherFile[] {
+  const manifest = weatherFileManifestSchema.parse(weatherFileManifestSnapshot);
+  const documentsByPath = new Map<string, unknown>([
+    ['weather/pvgis-5.3-tmy-bombouaka-tg-10.7030-0.2099.json', bombouakaTmySnapshot],
+  ]);
+  return manifest.records.map((metadata) => {
+    const document = documentsByPath.get(metadata.relativePath);
+    if (document === undefined) throw new Error('CATALOG_WEATHER_FILE_MISSING');
+    return { metadata, document: pvgisTmyJsonSchema.parse(document) };
+  });
 }

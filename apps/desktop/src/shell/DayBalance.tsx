@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ProjectViewModel } from '../app/models/projectView';
 import { useCalculationState } from '../app/CalculationProvider';
 import { CapabilityNotice } from '../ui/CapabilityNotice';
-import type { AioOutputValue, AioSizingOutputV1 } from '@ksd/engine';
+import type { AioOutputValue, AioSizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 
 export function DayBalance({
   project,
@@ -14,6 +14,7 @@ export function DayBalance({
   readonly pinned?: boolean;
 }) {
   const state = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
+  const solarState = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
   const [collapsed, setCollapsed] = useState(!defaultOpen);
   useEffect(() => setCollapsed(!defaultOpen), [defaultOpen]);
   const open = pinned || !collapsed;
@@ -39,7 +40,7 @@ export function DayBalance({
         <BalanceValue value={state.status === 'ready' ? state.envelope.output.dailyAcEnergyWh : null} unit="Wh/j" />
         <BalanceValue value={state.status === 'ready' ? state.envelope.output.peakCoincidentAcPowerW : null} unit="W moyen max" />
         <BalanceValue value={state.status === 'ready' ? state.envelope.output.minimumInverterSurgeAcPowerW : null} unit="W démarrage" />
-        <span><b>—</b><i>γ · SIM-001</i></span>
+        <span><b>{solarState.status === 'ready' && solarState.envelope.output.gamma.status === 'available' ? solarState.envelope.output.gamma.value.toLocaleString('fr-FR', { maximumFractionDigits: 3 }) : '—'}</b><i>γ · Page 1</i></span>
       </div>
     </div>
   );

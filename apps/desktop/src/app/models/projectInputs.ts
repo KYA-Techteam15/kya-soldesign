@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { solarIrradianceObservationV1Schema } from '@ksd/domain';
 
 const nullableFinite = z.number().finite().nullable();
 const nullableNonNegative = z.number().finite().min(0).nullable();
@@ -51,6 +52,11 @@ export const siteInputV1Schema = z.object({
     arrayTiltDeg: z.number().finite().min(0).max(90),
     arrayAzimuthDeg: z.number().finite().min(0).lt(360),
     qualityFlags: z.array(z.string().min(1)),
+    weatherFileId: z.string().min(1).optional(),
+    sourceSha256: z.string().regex(/^[a-f0-9]{64}$/u).optional(),
+    timezoneOffsetMinutes: z.number().int().min(-840).max(840).optional(),
+    albedo: z.number().finite().min(0).max(1).optional(),
+    hourlyIrradiance: z.array(solarIrradianceObservationV1Schema).length(8_760).optional(),
   }).strict().nullable(),
 }).strict();
 

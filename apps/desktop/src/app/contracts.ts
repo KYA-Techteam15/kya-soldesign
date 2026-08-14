@@ -1,10 +1,10 @@
-import type { Equipment } from '@ksd/catalog';
+import type { Equipment, PvgisTmyJson, WeatherFileRecord } from '@ksd/catalog';
 import type { CalculationEnvelope, Locality, NormalizedHourlyProfile, SystemKind, WeatherSource } from '@ksd/domain';
 import type { ProjectFileV1 } from '@ksd/project-format';
 
 export type UiLocale = 'fr' | 'en';
 export type RoadmapFeatureId = 'AIO-001' | 'SIM-001' | 'EQP-001' | 'SAFE-001' | 'FIN-001' | 'DOC-001';
-export type CapabilityId = 'presizing' | 'sizing' | 'reliability' | 'equipment-compatibility' | 'protections' | 'finance' | 'dossier';
+export type CapabilityId = 'presizing' | 'sizing' | 'solar-resource' | 'reliability' | 'equipment-compatibility' | 'protections' | 'finance' | 'dossier';
 export type MessageKey = string;
 
 export interface ProjectSessionPort {
@@ -24,8 +24,19 @@ export interface CatalogQueryPort {
   list(query?: CatalogQuery): Promise<readonly Equipment[]>;
   listLocalities(): Promise<readonly Locality[]>;
   listWeatherSources(localityId?: string): Promise<readonly WeatherSource[]>;
+  listWeatherFiles(): Promise<readonly CanonicalWeatherFile[]>;
   listLoadProfiles(): Promise<readonly NormalizedHourlyProfile[]>;
   summary(): Promise<CatalogSummary>;
+}
+
+export interface CanonicalWeatherFile {
+  readonly metadata: WeatherFileRecord;
+  readonly document: PvgisTmyJson;
+}
+
+export interface WeatherAcquisitionPort {
+  downloadTmy(request: { readonly latitudeDeg: number; readonly longitudeDeg: number; readonly timezoneIana: string; readonly signal?: AbortSignal }): Promise<{ readonly file: CanonicalWeatherFile; readonly locator: string }>;
+  parseTmyJson(request: { readonly text: string; readonly filename: string; readonly timezoneIana: string }): Promise<{ readonly file: CanonicalWeatherFile; readonly locator: string }>;
 }
 
 export interface CatalogSummary {

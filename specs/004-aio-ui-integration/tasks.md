@@ -38,3 +38,36 @@
 ## Dépendances
 
 `T001-T003 → T004-T008 → T009-T012 → T013-T017 → T018-T020`.
+
+## Phase 6 — Météo réelle et qualité des données
+
+- [x] T021 Enregistrer le goal A2, étendre spec/recherche/modèle/plan et auditer la nouvelle portée.
+- [x] T022 Ajouter le JSON PVGIS 5.3 Bombouaka, son manifeste/hash et les tests de structure 8 760 pas.
+- [x] T023 Supprimer du catalogue accepté toute source météo sans fichier et mettre à jour les rapports déterministes.
+- [x] T024 Exécuter `pnpm test:data` puis `pnpm verify:phase`.
+
+## Phase 7 — Moteur météo et γ
+
+- [x] T025 Écrire les tests unitaires/propriétés du parseur, de la position solaire, de la POA et des agrégations.
+- [x] T026 Écrire une comparaison pvlib documentée sur la fixture Bombouaka sans promouvoir le legacy en golden.
+- [x] T027 Implémenter les contrats et calculs purs `DATA-P1-001`, `CALC-P1-008..011`.
+- [x] T028 Étendre projet → AIO/Page 1 avec météo horaire, `γ`, traces, indisponibilité et stale.
+- [x] T029 Exécuter les tests unitaires/propriétés/golden puis `pnpm verify:phase`.
+
+## Phase 8 — Interface Site et Besoins finie
+
+- [x] T030 Implémenter le port PVGIS 5.3 et l'import JSON avec timeout, annulation, erreurs et prévisualisation.
+- [x] T031 Restaurer fidèlement le dialogue et les graphes Site/Météo de `design-proposition` avec données réelles.
+- [x] T032 Finaliser les trois modes Besoins, horaires, graphes moyen/pointe/POA et états d'erreur/vides.
+- [x] T033 Compléter FR/EN, clavier, focus, texte 200 %, responsive et provenance visible.
+- [x] T034 Exécuter le détecteur UI une fois puis `pnpm verify:phase`.
+
+## Phase 9 — Simulation et acceptation
+
+- [x] T035 Ajouter intégration et E2E pour import/téléchargement, orientation, trois modes, graphes et `γ`.
+- [x] T036 Simuler Bombouaka de bout en bout dans le navigateur intégré en desktop et fenêtre contrainte; corriger une passe.
+- [x] T037 Exécuter `pnpm verify`, converger la spec, fermer les tâches ajoutées, commit et push.
+
+## Dépendances A2
+
+`T021-T024 → T025-T029 → T030-T034 → T035-T037`.

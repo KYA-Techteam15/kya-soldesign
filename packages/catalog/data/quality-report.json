@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "transformationVersion": "1.0.0",
+  "transformationVersion": "1.1.0",
   "reports": {
     "pvModules": {
       "sourceId": "reference-modules",
@@ -63,21 +63,18 @@
       ]
     },
     "weatherSources": {
-      "sourceId": "reference-weather-sources",
-      "sourceSha256": "31c12b1a8d9e0e194a7a49923f77c69aaf1258e94e16cece81ada5153cd7ba89",
-      "inputRecordCount": 16,
-      "acceptedRecordCount": 16,
+      "sourceId": "weather-file_pvgis53_bombouaka",
+      "sourceSha256": "05dffc44112ac96fecf01143abc63d2d32faf88df069fb15485229a999ebb3a6",
+      "inputRecordCount": 1,
+      "acceptedRecordCount": 1,
       "quarantinedRecordCount": 0,
       "warningCount": 0,
       "duplicateCanonicalIds": [],
-      "duplicateCanonicalIdentities": [
-        "weather-source|locality_46805acf18f59388f7ee2226|pvgis|kaboul pvgis-tmy",
-        "weather-source|locality_dfa41bc412f8738c82d161ad|pvgis|alger pvgis-tmy"
-      ],
+      "duplicateCanonicalIdentities": [],
       "conflicts": [],
       "transformations": [
-        "identity-v1",
-        "reference-weather-source-v1"
+        "pvgis-tmy-json-v1",
+        "weather-file-policy-v1"
       ]
     },
     "loadProfiles": {
@@ -97,8 +94,8 @@
     }
   },
   "totals": {
-    "inputRecords": 870,
-    "acceptedRecords": 866,
+    "inputRecords": 855,
+    "acceptedRecords": 851,
     "quarantinedRecords": 4,
     "warnings": 37,
     "conflicts": 0
@@ -277,37 +274,37 @@
       },
       "timezone": {
         "present": 14,
-        "known": 0
+        "known": 1
       }
     },
     "weatherSources": {
       "defaultAzimuthDeg": {
-        "present": 16,
-        "known": 16
+        "present": 1,
+        "known": 1
       },
       "defaultTiltDeg": {
-        "present": 16,
-        "known": 16
+        "present": 1,
+        "known": 1
       },
       "id": {
-        "present": 16,
-        "known": 16
+        "present": 1,
+        "known": 1
       },
       "localityId": {
-        "present": 16,
-        "known": 16
+        "present": 1,
+        "known": 1
       },
       "provenance": {
-        "present": 16,
-        "known": 16
+        "present": 1,
+        "known": 1
       },
       "provider": {
-        "present": 16,
-        "known": 16
+        "present": 1,
+        "known": 1
       },
       "sourceName": {
-        "present": 16,
-        "known": 16
+        "present": 1,
+        "known": 1
       }
     },
     "loadProfiles": {

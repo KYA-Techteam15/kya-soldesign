@@ -13,7 +13,13 @@
 
 `SolarResourceInputV1` contient : 12 valeurs mensuelles POA positives ou nulles, orientation de calcul, période/dataset, fournisseur, locator, date de récupération, drapeaux qualité et provenance canonique. `designMonth` est un champ utilisateur séparé `1..12 | null`.
 
+La ressource contient aussi la `WeatherSeries` canonique ayant produit ces valeurs, son identifiant de fichier/source, 8 760 POA horaires dérivées et les 24 profils moyens annuel/mensuels. Ces données sont sérialisables et autoportantes avant la persistance Tauri. Le JSON PVGIS brut reste dans le catalogue ou est fourni par l'utilisateur; le projet ne conserve jamais une référence vers le parent.
+
 La ressource est fraîche uniquement si son orientation et sa source correspondent aux champs courants. Une ressource périmée reste visible comme preuve antérieure mais n'alimente pas AIO.
+
+## Analyse météo
+
+`WeatherAnalysisV1` contient : orientation, albédo, `hourlyPoaIrradianceWPerM2[8760]`, `monthlyDailyPoaKWhPerM2[12]`, `annualMeanHourlyPoaWPerM2[24]`, `monthlyMeanHourlyPoaWPerM2[12][24]`, recommandation d'orientation et provenance de calcul. Toute longueur, valeur négative/non finie ou association source/localité invalide bloque l'analyse.
 
 ## Profils de charge
 

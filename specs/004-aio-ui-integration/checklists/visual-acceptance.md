@@ -7,3 +7,5 @@
 - [x] États vide, invalide, chargement, erreur, stale, partiel et prêt lisibles sans dépendre de la couleur.
 - [x] FR/EN, texte 200 %, 1440×1000 et 1024×768 vérifiés.
 - [x] Une seule passe de correction visuelle puis confirmation finale.
+- [x] Bouton météo, dialogue en trois temps, mensuelles et journée moyenne sont revenus à la dernière composition validée.
+- [x] Le graphe Besoins affiche moyenne, pointe et POA réelles avec unités et légendes accessibles.

@@ -3,6 +3,7 @@ import type { CalculationCapabilityPort, CapabilityId, CapabilityState, RoadmapF
 const owners: Readonly<Record<CapabilityId, RoadmapFeatureId>> = {
   presizing: 'AIO-001',
   sizing: 'AIO-001',
+  'solar-resource': 'AIO-001',
   reliability: 'SIM-001',
   'equipment-compatibility': 'EQP-001',
   protections: 'SAFE-001',

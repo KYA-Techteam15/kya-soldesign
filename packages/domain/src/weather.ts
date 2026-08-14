@@ -54,10 +54,39 @@ export const weatherSeriesSchema = z.object({
   provenance: provenanceSchema,
 }).strict();
 
+export const solarIrradianceObservationV1Schema = z.object({
+  timestampUtcIso: z.iso.datetime({ offset: true }),
+  ghiWm2: z.number().finite().nonnegative(),
+  dniWm2: z.number().finite().nonnegative(),
+  dhiWm2: z.number().finite().nonnegative(),
+}).strict().superRefine((value, context) => {
+  if (value.dhiWm2 > value.ghiWm2 && value.ghiWm2 > 0) {
+    context.addIssue({ code: 'custom', path: ['dhiWm2'], message: 'DHI must not exceed GHI for the Klucher model' });
+  }
+});
+
+export const solarResourceAnalysisInputV1Schema = z.object({
+  latitudeDeg: z.number().finite().min(-90).max(90),
+  longitudeDeg: z.number().finite().min(-180).max(180),
+  surfaceTiltDeg: z.number().finite().min(0).max(90),
+  surfaceAzimuthDeg: z.number().finite().min(0).lt(360),
+  albedo: z.number().finite().min(0).max(1),
+  intervalMinutes: z.literal(60),
+  timestampConvention: z.literal('interval-center'),
+  timezoneOffsetMinutes: z.number().int().min(-840).max(840),
+  observations: z.array(solarIrradianceObservationV1Schema).min(1),
+  loadHourlyEnergyWh: z.array(z.number().finite().nonnegative()).length(24).optional(),
+  loadHourlyPeakPowerW: z.array(z.number().finite().nonnegative()).length(24).optional(),
+  minimumOperationalIrradianceWm2: z.number().finite().nonnegative(),
+  provenance: provenanceSchema,
+}).strict();
+
 export type Locality = z.infer<typeof localitySchema>;
 export type WeatherSource = z.infer<typeof weatherSourceSchema>;
 export type WeatherSeries = z.infer<typeof weatherSeriesSchema>;
 export type Provenance = z.infer<typeof provenanceSchema>;
+export type SolarIrradianceObservationV1 = z.infer<typeof solarIrradianceObservationV1Schema>;
+export type SolarResourceAnalysisInputV1 = z.infer<typeof solarResourceAnalysisInputV1Schema>;
 
 export function validateWeatherSeries(series: WeatherSeries): readonly DataIssue[] {
   const issues: DataIssue[] = [];

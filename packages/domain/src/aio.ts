@@ -49,7 +49,7 @@ export const technicalProjectContextV1Schema = z.object({
 }).strict();
 
 export const solarDesignResourceV1Schema = z.object({
-  selectionMethod: z.literal('declared-critical-month'),
+  selectionMethod: z.enum(['declared-critical-month', 'minimum-month-from-tmy']),
   referencePeriod: z.object({ yearOrTypicalPeriod: z.string().min(1), month: z.number().int().min(1).max(12) }).strict(),
   planeOfArrayIrradiationKWhPerM2PerDay: z.number().finite().gt(0),
   arrayTiltDeg: z.number().finite().min(0).max(90),

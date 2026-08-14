@@ -57,7 +57,7 @@ export function createEmptyProjectInputs(): ProjectInputsV1 {
     },
     load: {
       granularity: 'annual', activeProfileId: 'profile-1',
-      minimumOperatingIrradianceWPerM2: null,
+      minimumOperatingIrradianceWPerM2: 10,
       profiles: [{
         id: 'profile-1', name: 'Profil annuel', displayColor: '#F99D32',
         source: 'equipment', items: [],
@@ -184,6 +184,11 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
         locator: input.site.solarResource.locator,
         retrievedAtIso: input.site.solarResource.retrievedAtIso,
         qualityFlags: input.site.solarResource.qualityFlags,
+        ...(input.site.solarResource.weatherFileId === undefined ? {} : { weatherFileId: input.site.solarResource.weatherFileId }),
+        ...(input.site.solarResource.sourceSha256 === undefined ? {} : { sourceSha256: input.site.solarResource.sourceSha256 }),
+        ...(input.site.solarResource.timezoneOffsetMinutes === undefined ? {} : { timezoneOffsetMinutes: input.site.solarResource.timezoneOffsetMinutes }),
+        ...(input.site.solarResource.albedo === undefined ? {} : { albedo: input.site.solarResource.albedo }),
+        ...(input.site.solarResource.hourlyIrradiance === undefined ? {} : { hourlyIrradiance: input.site.solarResource.hourlyIrradiance }),
       },
     },
     load: {
@@ -304,6 +309,11 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
         arrayTiltDeg: view.site.irradiationBasis?.tilt ?? view.site.tilt,
         arrayAzimuthDeg: view.site.irradiationBasis?.azimuth ?? view.site.azimuth,
         qualityFlags: view.site.downloadedSource.qualityFlags,
+        ...(view.site.downloadedSource.weatherFileId === undefined ? {} : { weatherFileId: view.site.downloadedSource.weatherFileId }),
+        ...(view.site.downloadedSource.sourceSha256 === undefined ? {} : { sourceSha256: view.site.downloadedSource.sourceSha256 }),
+        ...(view.site.downloadedSource.timezoneOffsetMinutes === undefined ? {} : { timezoneOffsetMinutes: view.site.downloadedSource.timezoneOffsetMinutes }),
+        ...(view.site.downloadedSource.albedo === undefined ? {} : { albedo: view.site.downloadedSource.albedo }),
+        ...(view.site.downloadedSource.hourlyIrradiance === undefined ? {} : { hourlyIrradiance: view.site.downloadedSource.hourlyIrradiance }),
       },
     },
     load: {

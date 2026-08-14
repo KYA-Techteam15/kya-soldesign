@@ -2,12 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Equipment } from '@ksd/catalog';
 import type { Locality, NormalizedHourlyProfile, WeatherSource } from '@ksd/domain';
 import { CanonicalCatalog } from './adapters/canonicalCatalog.js';
-import type { CatalogQueryPort, CatalogSummary } from './contracts.js';
+import type { CanonicalWeatherFile, CatalogQueryPort, CatalogSummary } from './contracts.js';
 
 interface CatalogContextValue {
   readonly equipment: readonly Equipment[];
   readonly localities: readonly Locality[];
   readonly weatherSources: readonly WeatherSource[];
+  readonly weatherFiles: readonly CanonicalWeatherFile[];
   readonly loadProfiles: readonly NormalizedHourlyProfile[];
   readonly summary: CatalogSummary | null;
   readonly status: 'loading' | 'ready' | 'error';
@@ -33,6 +34,7 @@ export function CatalogProvider({
   const [equipment, setEquipment] = useState<readonly Equipment[]>([]);
   const [localities, setLocalities] = useState<readonly Locality[]>([]);
   const [weatherSources, setWeatherSources] = useState<readonly WeatherSource[]>([]);
+  const [weatherFiles, setWeatherFiles] = useState<readonly CanonicalWeatherFile[]>([]);
   const [loadProfiles, setLoadProfiles] = useState<readonly NormalizedHourlyProfile[]>([]);
   const [summary, setSummary] = useState<CatalogSummary | null>(null);
   const [status, setStatus] = useState<CatalogContextValue['status']>('loading');
@@ -46,13 +48,15 @@ export function CatalogProvider({
       catalog.list(),
       catalog.listLocalities(),
       catalog.listWeatherSources(),
+      catalog.listWeatherFiles(),
       catalog.listLoadProfiles(),
       catalog.summary(),
-    ]).then(([nextEquipment, nextLocalities, nextWeatherSources, nextLoadProfiles, nextSummary]) => {
+    ]).then(([nextEquipment, nextLocalities, nextWeatherSources, nextWeatherFiles, nextLoadProfiles, nextSummary]) => {
       if (!active) return;
       setEquipment(nextEquipment);
       setLocalities(nextLocalities);
       setWeatherSources(nextWeatherSources);
+      setWeatherFiles(nextWeatherFiles);
       setLoadProfiles(nextLoadProfiles);
       setSummary(nextSummary);
       setStatus('ready');
@@ -66,8 +70,8 @@ export function CatalogProvider({
 
   const retry = useCallback(() => setRevision((value) => value + 1), []);
   const value = useMemo<CatalogContextValue>(() => ({
-    equipment, localities, weatherSources, loadProfiles, summary, status, errorCode, retry,
-  }), [equipment, errorCode, loadProfiles, localities, retry, status, summary, weatherSources]);
+    equipment, localities, weatherSources, weatherFiles, loadProfiles, summary, status, errorCode, retry,
+  }), [equipment, errorCode, loadProfiles, localities, retry, status, summary, weatherFiles, weatherSources]);
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 }
 

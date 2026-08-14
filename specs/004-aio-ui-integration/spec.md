@@ -1,7 +1,7 @@
 # Spécification — UI AIO, tranche Page 1
 
 **Roadmap** : `UI-AIO-001`
-**Tranche d'exécution** : `UI-AIO-001A-PAGE1`
+**Tranche d'exécution** : `UI-AIO-001A2-WEATHER-NEEDS-E2E`
 **Statut** : en cours de convergence
 
 ## But
@@ -10,9 +10,9 @@ Faire de Site/Météo et Besoins une frontière d'entrée fiable pour le moteur 
 
 ## Scénarios d'acceptation
 
-### US1 — Définir une ressource solaire traçable
+### US1 — Télécharger ou importer une TMY réelle
 
-L'ingénieur sélectionne une localité et une source, saisit ou importe douze irradiations POA journalières mensuelles avec leur période et provenance, fixe l'orientation et déclare le mois critique. Une orientation ou une source modifiée rend la ressource précédente périmée.
+L'ingénieur localise un site, télécharge une TMY JSON depuis le port PVGIS versionné ou importe un JSON PVGIS déjà obtenu, vérifie les 8 760 pas et la provenance, puis l'enregistre explicitement. Le logiciel calcule la POA, les douze irradiations journalières mensuelles et les profils moyens sous l'orientation courante. Une source sans fichier contrôlé n'est jamais proposée.
 
 ### US2 — Recenser les appareils et leurs horaires
 
@@ -30,6 +30,10 @@ L'ingénieur saisit l'énergie observée, les dates ou le nombre exact de jours 
 
 Le mode actif est normalisé en `CanonicalDailyLoadV1`, adapté en requête AIO et calculé hors React. L'UI affiche énergie AC journalière, pic coïncident et puissance de démarrage lorsqu'ils sont disponibles, sinon les contraintes correspondantes.
 
+### US6 — Comparer besoins et soleil
+
+L'ingénieur voit sur la même journée les puissances moyenne et de pointe et l'irradiance POA moyenne. Le moteur calcule `γ`, part de l'énergie demandée pendant les heures dont la POA atteint le seuil déclaré. Sans série réelle alignée, `γ` reste indisponible et n'est jamais remplacé par zéro.
+
 ## Exigences
 
 - **FR-P1-001** — Utiliser `ProjectInputsV1` comme unique état éditable et supprimer les écritures parallèles `inputs.localityId` et `inputs.loads`.
@@ -42,14 +46,22 @@ Le mode actif est normalisé en `CanonicalDailyLoadV1`, adapté en requête AIO 
 - **FR-P1-008** — Le bilan public vient exclusivement de `AioSizingEnvelopeV1` avec version, hash, warnings, contraintes et traces.
 - **FR-P1-009** — Toute modification technique rend l'ancien résultat `stale`; une réponse asynchrone obsolète ne remplace jamais le projet courant.
 - **FR-P1-010** — Les composants, la navigation, le clavier, FR/EN et le responsive du design validé sont préservés.
+- **FR-P1-011** — Un fichier PVGIS JSON est accepté seulement si sa structure, ses coordonnées, ses 8 760 pas, ses variables GHI/DNI/DHI et son hash sont valides; chaque rejet est explicite.
+- **FR-P1-012** — La transposition produit `POA = direct + diffuse Klucher + réflexion sol` depuis la TMY réelle, la position solaire NOAA, l'orientation et l'albédo explicitement sourcé.
+- **FR-P1-013** — Les 12 mensuelles sont `Σ POA_h × 1 h / jours / 1000`; les profils moyens horaires sont agrégés depuis les mêmes 8 760 valeurs sans reconstruction synthétique.
+- **FR-P1-014** — `γ = Σ E_h[POA_h ≥ Ir_min] / Σ E_h`; le ratio est borné `[0,1]`, non arrondi dans le moteur et indisponible si charge ou météo manque.
+- **FR-P1-015** — Le graphe Besoins superpose uniquement des séries issues des enveloppes courantes : puissance moyenne, pointe et POA; ses légendes, unités et états vides correspondent au design validé.
+- **FR-P1-016** — Le téléchargement utilise un port réseau PVGIS 5.3 explicite avec timeout, annulation, erreurs HTTP et prévisualisation; l'import fichier demeure la voie hors ligne.
+- **FR-P1-017** — L'albédo de transposition vaut `0,20` sous l'hypothèse sourcée `ASSUMP-P1-001`, reste visible dans la preuve et pourra être remplacé par une entrée explicite dans une tranche approuvée; il n'est jamais présenté comme une mesure du site.
+- **FR-P1-018** — L'alignement charge/soleil exige un fuseau IANA sourcé. La ressource Bombouaka déclare `Africa/Lome`; un import sans fuseau reste analysable en UTC mais ne produit pas `γ` avant déclaration du fuseau.
 
 ## Frontières
 
-- `Ir_min` est stocké pour `SIM-001` mais n'influence pas AIO-001.
-- `yEn`, LPSP, LOLP, SRI, simulation TMY/SOC, sélection d'équipements, finance et documents restent hors tranche.
-- Le téléchargement météo live n'est pas simulé. Tant qu'un port réseau approuvé n'existe pas, l'utilisateur fournit/importera les valeurs et leur preuve.
+- `Ir_min` alimente seulement `CALC-P1-011` (`γ`) dans cette tranche.
+- LPSP, LOLP, SRI, simulation SOC, sélection d'équipements, finance et documents restent hors tranche `SIM-001` ou ultérieure.
+- Le téléchargement météo live et l'import utilisent le même parseur strict; aucun mode simulé n'existe.
 - `UI-AIO-001B-PRESIZING` affichera les autres sorties PV, batterie et onduleur après convergence de cette tranche.
 
 ## Définition de fini
 
-Les cinq scénarios fonctionnent après sauvegarde/rechargement en mémoire, les résultats changent avec les entrées attendues, les inconnues bloquent sans fallback, les tests couvrent les trois modes et la validation navigateur correspond au design approuvé.
+Les six scénarios fonctionnent après sauvegarde/rechargement en mémoire, les résultats changent avec l'orientation, les horaires et le mode attendu, les inconnues bloquent sans fallback, les tests couvrent la TMY réelle et les trois modes, et la validation navigateur correspond au design approuvé.

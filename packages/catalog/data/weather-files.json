@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "id": "weather-file_pvgis53_bombouaka",
+      "weatherSourceId": "weather-source_9faa02cbef2e7ec6b4c3840d",
+      "localityId": "locality_3ccfd4b6c85531370d327e8a",
+      "format": "pvgis-tmy-json",
+      "relativePath": "weather/pvgis-5.3-tmy-bombouaka-tg-10.7030-0.2099.json",
+      "sourceSha256": "05dffc44112ac96fecf01143abc63d2d32faf88df069fb15485229a999ebb3a6",
+      "apiVersion": "5.3",
+      "providerEndpoint": "https://re.jrc.ec.europa.eu/api/v5_3/tmy",
+      "latitudeDeg": 10.703,
+      "longitudeDeg": 0.2099,
+      "timezoneIana": "Africa/Lome",
+      "radiationDatabase": "PVGIS-SARAH3",
+      "yearMin": 2005,
+      "yearMax": 2023,
+      "hourlyRecordCount": 8760,
+      "retrievedAtIso": "2026-08-14T05:39:20.864Z"
+    }
+  ]
+}

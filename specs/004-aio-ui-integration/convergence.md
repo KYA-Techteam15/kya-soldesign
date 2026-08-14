@@ -23,3 +23,16 @@
 - Une pointe directe supérieure à la moyenne est conservée comme avertissement, mais le surge reste bloqué tant qu'AIO v1 ne porte pas sa magnitude.
 - Une ressource solaire incomplète ou dont l'orientation a changé n'alimente aucun calcul solaire.
 - Les hypothèses de prédimensionnement et leur provenance appartiennent au goal suivant `UI-AIO-001B-PRESIZING`.
+
+## Complément A2 — météo réelle et besoins finalisés
+
+**Statut** : convergé
+
+- Le catalogue accepté ne contient plus qu'une source météo adossée à un fichier : Bombouaka PVGIS 5.3 TMY, 8 760 pas, SHA-256 `05dffc44112ac96fecf01143abc63d2d32faf88df069fb15485229a999ebb3a6`.
+- Le parseur strict, le port PVGIS, l'import JSON et la prévisualisation partagent les mêmes contrats; un import sans fuseau reste analysable en UTC mais ne produit pas `γ`.
+- La POA est calculée avec la position NOAA et la transposition Klucher depuis GHI/DNI/DHI; la comparaison indépendante pvlib est documentée dans `research.md`.
+- Le mois critique minimal reste une recommandation visible; le mois de dimensionnement n'est transmis à AIO qu'après confirmation explicite de l'utilisateur.
+- Les écrans Site/Météo et Besoins conservent la composition validée et affichent mensuelles, journée moyenne, charge, pointe, POA et `γ` depuis les enveloppes courantes.
+- Simulation Bombouaka : 6,15 kWh/m²/j à 15°/180°, mois recommandé août, puis 2 400 Wh/j, pointe 100 W et `γ = 0,500` pour une charge de 100 W active 24 h.
+- Gates finaux : 92 tests unitaires, 14 propriétés, 7 qualité des données, 2 golden, 18 intégration, 131 sous couverture (95,13 % des lignes), 19 E2E, 14 visuels et build production.
+- `pnpm verify`, `pnpm test:visual` et la simulation dans le navigateur intégré sont verts.

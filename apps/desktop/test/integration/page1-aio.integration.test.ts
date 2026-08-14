@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { AioSizingOutputV1 } from '@ksd/engine';
+import type { AioSizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { AioCalculations } from '../../src/app/adapters/aioCalculations.js';
 import { CanonicalCatalog } from '../../src/app/adapters/canonicalCatalog.js';
 import { InMemoryProjects } from '../../src/app/adapters/inMemoryProjects.js';
 import { projectFileToView, projectViewToFile } from '../../src/app/models/projectAdapters.js';
 import { projectToAioInput } from '../../src/app/adapters/projectToAio.js';
+import { canonicalWeatherFileToProjectPayload } from '../../src/app/adapters/weatherFiles.js';
 
 describe('Page 1 project to AIO integration', () => {
   it('calculates the load summary from the canonical project and blocks dependent assumptions only', async () => {
@@ -84,12 +85,13 @@ describe('Page 1 project to AIO integration', () => {
     expect(state.envelope.output.minimumInverterSurgeAcPowerW.status).toBe('blocked');
   });
 
-  it('includes complete fresh solar evidence and omits it after an orientation change', async () => {
+  it('derives the solar resource from the verified hourly file and recomputes after an orientation change', async () => {
     const projects = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000105');
     const catalog = new CanonicalCatalog();
     const localities = await catalog.listLocalities();
     const weatherSources = await catalog.listWeatherSources();
     const loadProfiles = await catalog.listLoadProfiles();
+    const weatherFiles = await catalog.listWeatherFiles();
     const locality = localities.find((candidate) => weatherSources.some((source) => source.localityId === candidate.id))!;
     const weatherSource = weatherSources.find((candidate) => candidate.localityId === locality.id)!;
     const view = projectFileToView(projects.create('standalone-all-in-one', 'fr'));
@@ -99,26 +101,71 @@ describe('Page 1 project to AIO integration', () => {
     view.site.longitude = locality.longitudeDeg;
     view.site.timezoneIana = 'Africa/Lome';
     view.site.weatherSourceId = weatherSource.id;
-    view.site.designMonth = 1;
-    view.site.tilt = 10;
+    view.site.designMonth = null;
+    view.site.tilt = 15;
     view.site.azimuth = 180;
-    view.site.irradiationBasis = { tilt: 10, azimuth: 180 };
-    view.site.monthlyIrradiation = [4.8, ...Array.from<null>({ length: 11 }).fill(null)];
+    const weatherFile = weatherFiles.find((candidate) => candidate.metadata.weatherSourceId === weatherSource.id)!;
+    const payload = canonicalWeatherFileToProjectPayload(weatherFile);
     view.site.downloadedSource = {
-      name: 'Document solaire contrôlé', provider: weatherSource.provider, versionOrDate: 'TMY 2005–2020',
-      locator: 'document:test-resource', retrievedAtIso: '2026-08-14T04:00:00.000Z', qualityFlags: ['user-declared-monthly-poa'],
+      name: weatherSource.sourceName, provider: weatherSource.provider, versionOrDate: `TMY ${weatherFile.metadata.yearMin}–${weatherFile.metadata.yearMax}`,
+      locator: weatherFile.metadata.relativePath, retrievedAtIso: weatherFile.metadata.retrievedAtIso, qualityFlags: ['pvgis-hourly-file-verified'],
+      ...payload,
     };
     const file = projectViewToFile(view);
-    const ready = await projectToAioInput(file, { localities, weatherSources, loadProfiles });
+    const recommendationOnly = await projectToAioInput(file, { localities, weatherSources, loadProfiles });
+    expect(recommendationOnly.status).toBe('ready');
+    if (recommendationOnly.status !== 'ready') return;
+    expect(recommendationOnly.solarAnalysis?.output.designMonth).toBe(8);
+    expect(recommendationOnly.input.solarDesignResource).toBeUndefined();
+
+    view.site.designMonth = 8;
+    const ready = await projectToAioInput(projectViewToFile(view), { localities, weatherSources, loadProfiles });
     expect(ready.status).toBe('ready');
     if (ready.status !== 'ready') return;
-    expect(ready.input.solarDesignResource?.planeOfArrayIrradiationKWhPerM2PerDay).toBe(4.8);
-    expect(ready.input.solarDesignResource?.provenance.sourceSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(ready.input.solarDesignResource?.planeOfArrayIrradiationKWhPerM2PerDay).toBeCloseTo(4.55, 1);
+    expect(ready.input.solarDesignResource?.selectionMethod).toBe('declared-critical-month');
+    expect(ready.input.solarDesignResource?.provenance.sourceSha256).toBe(weatherFile.metadata.sourceSha256);
 
-    view.site.tilt = 11;
-    const stale = await projectToAioInput(projectViewToFile(view), { localities, weatherSources, loadProfiles });
-    expect(stale.status).toBe('ready');
-    if (stale.status !== 'ready') return;
-    expect(stale.input.solarDesignResource).toBeUndefined();
+    view.site.tilt = 25;
+    const recomputed = await projectToAioInput(projectViewToFile(view), { localities, weatherSources, loadProfiles });
+    expect(recomputed.status).toBe('ready');
+    if (recomputed.status !== 'ready') return;
+    expect(recomputed.solarAnalysis?.inputHash).not.toBe(ready.solarAnalysis?.inputHash);
+    expect(recomputed.input.solarDesignResource).toBeDefined();
+
+    const projectsWithWeather = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000106', [file]);
+    const calculations = new AioCalculations((id) => projectsWithWeather.get(id), { localities, weatherSources, loadProfiles });
+    const solarState = await calculations.read<SolarResourceAnalysisOutputV1>(view.id, 'solar-resource');
+    expect(solarState.status).toBe('ready');
+    if (solarState.status === 'ready') expect(solarState.envelope.output.hourlyPoaWm2).toHaveLength(8_760);
+  }, 20_000);
+
+  it('analyzes an imported weather file in UTC but keeps gamma unavailable until a project timezone is declared', async () => {
+    const projects = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000107');
+    const catalog = new CanonicalCatalog();
+    const weatherFiles = await catalog.listWeatherFiles();
+    const weatherFile = weatherFiles[0]!;
+    const payload = canonicalWeatherFileToProjectPayload(weatherFile);
+    const view = projectFileToView(projects.create('standalone-all-in-one', 'fr'));
+    view.site.latitude = weatherFile.document.inputs.location.latitude;
+    view.site.longitude = weatherFile.document.inputs.location.longitude;
+    view.site.tilt = 15;
+    view.site.azimuth = 180;
+    view.site.timezoneIana = null;
+    view.site.weatherSourceId = 'pvgis-import:bombouaka';
+    view.site.downloadedSource = {
+      name: 'Import UTC', provider: 'PVGIS', versionOrDate: 'TMY 2005–2023', locator: 'import://bombouaka.json',
+      retrievedAtIso: weatherFile.metadata.retrievedAtIso, qualityFlags: ['pvgis-hourly-file-verified'],
+      ...payload, timezoneOffsetMinutes: 0,
+    };
+    projects.replace(projectViewToFile(view));
+    const calculations = new AioCalculations((id) => projects.get(id), {
+      localities: await catalog.listLocalities(), weatherSources: await catalog.listWeatherSources(), loadProfiles: await catalog.listLoadProfiles(),
+    });
+    const state = await calculations.read<SolarResourceAnalysisOutputV1>(view.id, 'solar-resource');
+    expect(state.status).toBe('ready');
+    if (state.status !== 'ready') return;
+    expect(state.envelope.output.hourlyPoaWm2).toHaveLength(8_760);
+    expect(state.envelope.output.gamma.status).toBe('unavailable');
   });
 });

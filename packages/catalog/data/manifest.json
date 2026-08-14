@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "transformationVersion": "1.0.0",
+  "transformationVersion": "1.1.0",
   "sources": [
     {
       "sourceId": "legacy-profiles",
@@ -23,8 +23,8 @@
       "sourceSha256": "85946df1f7bd4b61d1cde73fe9e64511b5dcc0dce08db8717831b5013176cc97"
     },
     {
-      "sourceId": "reference-weather-sources",
-      "sourceSha256": "31c12b1a8d9e0e194a7a49923f77c69aaf1258e94e16cece81ada5153cd7ba89"
+      "sourceId": "weather-file_pvgis53_bombouaka",
+      "sourceSha256": "05dffc44112ac96fecf01143abc63d2d32faf88df069fb15485229a999ebb3a6"
     }
   ],
   "artifacts": [
@@ -38,19 +38,27 @@
     },
     {
       "filename": "localities.json",
-      "sha256": "227d47fbcf5893d7b04febd83114460e30fb5e2e425523e86eca64a1071c1508"
+      "sha256": "7df52fcf86e51c94eaaaf8fc988d633eaf16422a0705dfbdaa70bacef8c8a7bd"
     },
     {
       "filename": "quality-report.json",
-      "sha256": "a05b4309a8fa30384d1c260ae6ed38ef42c6a1af9dc386b0d05ea244f87b0835"
+      "sha256": "4fdb8b8b37ab119a7fb270bbbfd91ef1642f93d2f81e81d034ea9c28b541f1fd"
     },
     {
       "filename": "quarantine.json",
       "sha256": "6838f798f144e78573d06608c6ad3bca1e7dbdb1db77d8f239659d6d888930b9"
     },
     {
+      "filename": "weather-files.json",
+      "sha256": "3107d29301b0702518285d7186907514e51cc7c352a54be6db25250cda9bf920"
+    },
+    {
       "filename": "weather-sources.json",
-      "sha256": "f143c11008b4d7718fbd8f08d63d2b42ec401fb54ec69d8ba922f325a2542079"
+      "sha256": "dd30365bb55fe80ca3c760aea0b37bf0a14fe747fdc61e9b71e4c06982e2957c"
+    },
+    {
+      "filename": "weather/pvgis-5.3-tmy-bombouaka-tg-10.7030-0.2099.json",
+      "sha256": "05dffc44112ac96fecf01143abc63d2d32faf88df069fb15485229a999ebb3a6"
     }
   ]
 }

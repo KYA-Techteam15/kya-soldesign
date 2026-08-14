@@ -88,7 +88,7 @@ describe('generated canonical snapshots', () => {
   });
 
   it('contains no parent-relative path or local source path in production snapshots', async () => {
-    const filenames = ['equipment.json', 'localities.json', 'weather-sources.json', 'load-profiles.json', 'quarantine.json', 'quality-report.json', 'manifest.json'];
+    const filenames = ['equipment.json', 'localities.json', 'weather-sources.json', 'weather-files.json', 'load-profiles.json', 'quarantine.json', 'quality-report.json', 'manifest.json'];
     for (const filename of filenames) {
       const content = await readFile(resolve(dataDirectory, filename), 'utf8');
       expect(content).not.toMatch(/(?:\.\.\\|\.\.\/|[A-Za-z]:\\)/u);

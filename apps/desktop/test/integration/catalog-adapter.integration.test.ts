@@ -24,6 +24,10 @@ describe('canonical catalog adapter', () => {
     const sources = await catalog.listWeatherSources(locality.id);
     expect(sources.length).toBeGreaterThan(0);
     expect(sources.every((source) => source.localityId === locality.id)).toBe(true);
+    const files = await catalog.listWeatherFiles();
+    expect(files).toHaveLength(1);
+    expect(files[0]?.document.outputs.tmy_hourly).toHaveLength(8_760);
+    expect(files[0]?.metadata.weatherSourceId).toBe(sources[0]?.id);
     expect(sources[0]?.provenance.sourceId).toBeTruthy();
   });
 });

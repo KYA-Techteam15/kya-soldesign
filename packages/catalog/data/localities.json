@@ -53,12 +53,12 @@
       "latitudeDeg": 10.703,
       "longitudeDeg": 0.2099,
       "elevationM": null,
-      "timezone": null,
+      "timezone": "Africa/Lome",
       "provenance": {
         "sourceId": "reference-localities",
         "sourceRecordId": "cfbab7f2-2992-4739-aebc-e5385306f447",
         "sourceSha256": "5d8ed4d4885f9e55aefcd94421b038a4b3da61c789da154ebd045be58d921b39",
-        "transformationVersion": "1.0.0"
+        "transformationVersion": "1.1.0"
       }
     },
     {

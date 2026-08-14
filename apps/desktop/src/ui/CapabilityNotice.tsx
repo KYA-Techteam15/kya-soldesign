@@ -4,6 +4,7 @@ import { useT } from '../i18n';
 const CAPABILITY_LABEL: Readonly<Record<CapabilityId, string>> = {
   presizing: 'Prédimensionnement',
   sizing: 'Dimensionnement',
+  'solar-resource': 'Ressource solaire',
   reliability: 'Fiabilité',
   'equipment-compatibility': 'Compatibilité du matériel',
   protections: 'Protections et câbles',
@@ -12,7 +13,7 @@ const CAPABILITY_LABEL: Readonly<Record<CapabilityId, string>> = {
 };
 
 const CAPABILITY_LABEL_EN: Readonly<Record<CapabilityId, string>> = {
-  presizing: 'Pre-sizing', sizing: 'Sizing', reliability: 'Reliability',
+  presizing: 'Pre-sizing', sizing: 'Sizing', 'solar-resource': 'Solar resource', reliability: 'Reliability',
   'equipment-compatibility': 'Equipment compatibility', protections: 'Protections and cables',
   finance: 'Calculated costing', dossier: 'Calculated file',
 };
