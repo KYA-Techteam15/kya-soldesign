@@ -1,8 +1,8 @@
 # Spécification — AIO Core
 
 **Feature**: `003-aio-core`  
-**Statut**: spécification prête à implémenter par Terra  
-**Périmètre roadmap**: `AIO-001` (reste `planned`)
+**Statut**: convergé et approuvé
+**Périmètre roadmap**: `AIO-001` (`done`)
 
 ## But
 

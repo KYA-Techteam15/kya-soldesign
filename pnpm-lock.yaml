@@ -50,6 +50,9 @@ importers:
       '@ksd/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@ksd/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@ksd/project-format':
         specifier: workspace:*
         version: link:../../packages/project-format

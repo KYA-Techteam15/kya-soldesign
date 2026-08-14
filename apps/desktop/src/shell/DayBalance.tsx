@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ProjectViewModel } from '../app/models/projectView';
 import { useCalculationState } from '../app/CalculationProvider';
 import { CapabilityNotice } from '../ui/CapabilityNotice';
+import type { AioOutputValue, AioSizingOutputV1 } from '@ksd/engine';
 
 export function DayBalance({
   project,
@@ -12,7 +13,7 @@ export function DayBalance({
   readonly defaultOpen?: boolean;
   readonly pinned?: boolean;
 }) {
-  const state = useCalculationState(project.id, 'reliability', project.updatedAt);
+  const state = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
   const [collapsed, setCollapsed] = useState(!defaultOpen);
   useEffect(() => setCollapsed(!defaultOpen), [defaultOpen]);
   const open = pinned || !collapsed;
@@ -33,12 +34,17 @@ export function DayBalance({
           </button>
         )}
       </div>
-      {open && <CapabilityNotice capability="reliability" state={state} compact />}
-      <div className="dayb-stats" aria-label="Indicateurs en attente de calcul">
-        {['kWh/j', 'kW total', 'kW pointe', 'γ'].map((unit) => (
-          <span key={unit}><b>—</b><i>{unit}</i></span>
-        ))}
+      {open && <CapabilityNotice capability="sizing" state={state} compact />}
+      <div className="dayb-stats" aria-label="Bilan énergétique de la Page 1">
+        <BalanceValue value={state.status === 'ready' ? state.envelope.output.dailyAcEnergyWh : null} unit="Wh/j" />
+        <BalanceValue value={state.status === 'ready' ? state.envelope.output.peakCoincidentAcPowerW : null} unit="W moyen max" />
+        <BalanceValue value={state.status === 'ready' ? state.envelope.output.minimumInverterSurgeAcPowerW : null} unit="W démarrage" />
+        <span><b>—</b><i>γ · SIM-001</i></span>
       </div>
     </div>
   );
+}
+
+function BalanceValue({ value, unit }: { readonly value: AioOutputValue | null; readonly unit: string }) {
+  return <span><b>{value?.status === 'available' ? value.value.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : '—'}</b><i>{unit}</i></span>;
 }

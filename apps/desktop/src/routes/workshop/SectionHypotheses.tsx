@@ -36,7 +36,7 @@ export function SectionHypotheses() {
       <NumField label="LOLP maximale" unit="%" value={assumptions.lolpMax} onChange={set('lolpMax')} decimals={1} />
       <NumField label="Tarif réseau de référence" unit="FCFA/kWh" value={assumptions.lcoeGrid} onChange={set('lcoeGrid')} />
     </div></section>
-    <div className="runbar is-stale"><button className="btn btn-ok btn-run" disabled>{t('presizing.unavailable')}</button><span className="runbar-note">Aucun moteur n’est chargé dans l’application de production.</span></div>
+    <div className="runbar is-stale"><button className="btn btn-ok btn-run" disabled>{t('presizing.unavailable')}</button><span className="runbar-note">{t('presizing.page1Active')}</span></div>
     <CapabilityNotice capability="presizing" state={state} compact />
     <section className="out is-stale"><div className="out-head"><span className="out-tag">{t('g.unavailable')}</span><h2 className="h-sec">{t('presizing.minimumSystem')}</h2></div><div className="out-grid">
       <PendingValue label="Puissance crête du champ PV" unit="kWc" lead />

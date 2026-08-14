@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { summarizeEquipmentRow, type AioOutputValue, type AioSizingOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { useUi } from '../../store/ui';
@@ -9,6 +10,8 @@ import type { Granularity, LoadSource, NamedProfile } from '../../app/models/pro
 import { useCalculationState } from '../../app/CalculationProvider';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
 import { useT } from '../../i18n';
+import { useCatalog } from '../../app/CatalogProvider';
+import { OperatingHoursDialog } from './OperatingHoursDialog';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -33,13 +36,15 @@ export function SectionBesoins() {
   const project = useProject();
   const update = useProjects((s) => s.update);
   const notify = useUi((s) => s.notify);
+  const { loadProfiles } = useCatalog();
   const [showGranularity, setShowGranularity] = useState(false);
   const [filter, setFilter] = useState('');
+  const [hoursEditor, setHoursEditor] = useState<{ readonly kind: 'classic' | 'inductive'; readonly index: number } | null>(null);
 
   const profile = project.load.profiles.find(
     (p) => p.id === project.load.activeProfileId,
   )!;
-  const calculation = useCalculationState(project.id, 'sizing', project.updatedAt);
+  const calculation = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
 
   const mutateProfile = (fn: (p: NamedProfile) => void) =>
     update((draft) => {
@@ -51,6 +56,7 @@ export function SectionBesoins() {
     const parsed = Number.parseFloat(v.replace(',', '.').replace(/\s/g, ''));
     return Number.isFinite(parsed) ? parsed : 0;
   };
+  const nullableNum = (value: string): number | null => value.trim() === '' ? null : num(value);
 
   /**
    * Un seul mode pilote le calcul à la fois. Basculer sans le dire ferait croire
@@ -60,6 +66,21 @@ export function SectionBesoins() {
     if (next === profile.source) return;
     mutateProfile((p) => {
       p.source = next;
+      if (next === 'meter' && p.meter === null) {
+        p.meter = {
+          observedEnergy: 0,
+          observedDays: null,
+          normalizedProfileId: null,
+          meterAmperage: 0,
+          networkType: 'single_phase',
+          morningPeakStart: '',
+          morningPeakEnd: '',
+          eveningPeakStart: '',
+          eveningPeakEnd: '',
+          peakImportance: 0,
+          targetQualityFactor: 0,
+        };
+      }
     });
     const said: Record<LoadSource, string> = {
       equipments: 'La liste d’appareils pilote désormais le calcul.',
@@ -73,28 +94,32 @@ export function SectionBesoins() {
     mutateProfile((p) =>
       p.classic.push({
         id: `c-${Date.now()}`,
-        name: 'Nouvel appareil',
+        name: '',
         qty: 1,
-        unitPower: 100,
-        yield: 0.9,
-        opHours: 4,
+        unitPower: 0,
+        yield: null,
+        simultaneity: null,
+        operatingFractions: Array.from({ length: 24 }, () => 0),
+        opHours: 0,
       }),
     );
   const addInductive = () =>
     mutateProfile((p) =>
       p.inductive.push({
         id: `i-${Date.now()}`,
-        name: 'Nouveau moteur',
+        name: '',
         qty: 1,
-        unitPower: 500,
-        yield: 0.85,
-        startupCoef: 3,
-        opHours: 2,
+        unitPower: 0,
+        yield: null,
+        simultaneity: null,
+        startupCoef: null,
+        operatingFractions: Array.from({ length: 24 }, () => 0),
+        opHours: 0,
       }),
     );
 
-  const CLASSIC_COLS = ['name', 'qty', 'unitPower', 'yield', 'opHours'] as const;
-  const INDUCT_COLS = ['name', 'qty', 'unitPower', 'yield', 'startupCoef', 'opHours'] as const;
+  const CLASSIC_COLS = ['name', 'qty', 'unitPower', 'yield', 'simultaneity'] as const;
+  const INDUCT_COLS = ['name', 'qty', 'unitPower', 'yield', 'simultaneity', 'startupCoef'] as const;
 
   const classicGrid = useGridNav({
     rowCount: profile.classic.length,
@@ -107,6 +132,7 @@ export function SectionBesoins() {
         if (!row) return;
         const key = CLASSIC_COLS[c];
         if (key === 'name') row.name = v;
+        else if (key === 'yield' || key === 'simultaneity') row[key] = nullableNum(v);
         else (row[key] as number) = num(v);
       }),
   });
@@ -122,6 +148,7 @@ export function SectionBesoins() {
         if (!row) return;
         const key = INDUCT_COLS[c];
         if (key === 'name') row.name = v;
+        else if (key === 'yield' || key === 'simultaneity' || key === 'startupCoef') row[key] = nullableNum(v);
         else (row[key] as number) = num(v);
       }),
   });
@@ -206,6 +233,7 @@ export function SectionBesoins() {
                     <th>{t('loads.quantity')}</th>
                     <th>{t('loads.unitPower')}<span className="unit">W</span></th>
                     <th>{t('loads.efficiency')}</th>
+                    <th>{t('loads.simultaneity')}</th>
                     <th>{t('loads.hours')}</th>
                     <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
                     <th className="derived">{t('loads.realPower')}<span className="unit">W</span></th>
@@ -215,6 +243,7 @@ export function SectionBesoins() {
                 </thead>
                 <tbody>
                   {visibleClassic.map(({ e, i }) => {
+                    const line = summarizeEquipmentRow({ id: e.id, label: e.name, quantity: e.qty, usefulPowerW: e.unitPower, efficiencyRatio: e.yield, simultaneityRatio: e.simultaneity, hourlyOperatingFractions: e.operatingFractions, startupPowerMultiplier: null });
                     return (
                       <tr key={e.id}>
                         <td className="name">
@@ -230,16 +259,17 @@ export function SectionBesoins() {
                             onChange={(ev) => mutateProfile((p) => { p.classic[i].unitPower = num(ev.target.value); })} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={3} aria-label="Rendement" value={fmt(e.yield, 2)}
-                            onChange={(ev) => mutateProfile((p) => { p.classic[i].yield = num(ev.target.value); })} />
+                          <input className="cell-in" data-r={i} data-c={3} aria-label="Rendement" value={e.yield === null ? '' : fmt(e.yield, 2)}
+                            onChange={(ev) => mutateProfile((p) => { p.classic[i].yield = nullableNum(ev.target.value); })} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={4} aria-label="Heures d'usage" value={fmt(e.opHours, e.opHours % 1 ? 1 : 0)}
-                            onChange={(ev) => mutateProfile((p) => { p.classic[i].opHours = num(ev.target.value); })} />
+                          <input className="cell-in" data-r={i} data-c={4} aria-label="Simultanéité" value={e.simultaneity === null ? '' : fmt(e.simultaneity, 2)}
+                            onChange={(ev) => mutateProfile((p) => { p.classic[i].simultaneity = nullableNum(ev.target.value); })} />
                         </td>
-                        <td className="derived num">—</td>
-                        <td className="derived num">—</td>
-                        <td className="derived num">—</td>
+                        <td><button className="btn btn-field" onClick={() => setHoursEditor({ kind: 'classic', index: i })}>{fmt(e.opHours, e.opHours % 1 ? 1 : 0)} h</button></td>
+                        <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
+                        <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
+                        <td className="derived num">{line === null ? '—' : fmt(line.dailyEnergyWh, 0)}</td>
                         <td>
                           <button className="rowdel" title="Supprimer la ligne"
                             onClick={() => mutateProfile((p) => { p.classic.splice(i, 1); })}>
@@ -252,7 +282,7 @@ export function SectionBesoins() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={5}>{t('loads.classicSubtotal')}</td>
+                    <td colSpan={6}>{t('loads.classicSubtotal')}</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
@@ -297,6 +327,7 @@ export function SectionBesoins() {
                     <th>{t('loads.quantity')}</th>
                     <th>{t('loads.unitPower')}<span className="unit">W</span></th>
                     <th>{t('loads.efficiency')}</th>
+                    <th>{t('loads.simultaneity')}</th>
                     <th>{t('loads.startingCoefficient')}</th>
                     <th>{t('loads.hours')}</th>
                     <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
@@ -307,6 +338,7 @@ export function SectionBesoins() {
                 </thead>
                 <tbody>
                   {visibleInductive.map(({ e, i }) => {
+                    const line = summarizeEquipmentRow({ id: e.id, label: e.name, quantity: e.qty, usefulPowerW: e.unitPower, efficiencyRatio: e.yield, simultaneityRatio: e.simultaneity, hourlyOperatingFractions: e.operatingFractions, startupPowerMultiplier: e.startupCoef });
                     return (
                       <tr key={e.id}>
                         <td className="name">
@@ -322,20 +354,21 @@ export function SectionBesoins() {
                             onChange={(ev) => mutateProfile((p) => { p.inductive[i].unitPower = num(ev.target.value); })} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={3} aria-label="Rendement" value={fmt(e.yield, 2)}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].yield = num(ev.target.value); })} />
+                          <input className="cell-in" data-r={i} data-c={3} aria-label="Rendement" value={e.yield === null ? '' : fmt(e.yield, 2)}
+                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].yield = nullableNum(ev.target.value); })} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={4} aria-label="Coefficient de démarrage" value={fmt(e.startupCoef, 1)}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].startupCoef = num(ev.target.value); })} />
+                          <input className="cell-in" data-r={i} data-c={4} aria-label="Simultanéité" value={e.simultaneity === null ? '' : fmt(e.simultaneity, 2)}
+                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].simultaneity = nullableNum(ev.target.value); })} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={5} aria-label="Heures d'usage" value={e.opHours}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].opHours = num(ev.target.value); })} />
+                          <input className="cell-in" data-r={i} data-c={5} aria-label="Coefficient de démarrage" value={e.startupCoef === null ? '' : fmt(e.startupCoef, 1)}
+                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].startupCoef = nullableNum(ev.target.value); })} />
                         </td>
-                        <td className="derived num">—</td>
-                        <td className="derived num">—</td>
-                        <td className="derived num">—</td>
+                        <td><button className="btn btn-field" onClick={() => setHoursEditor({ kind: 'inductive', index: i })}>{fmt(e.opHours, e.opHours % 1 ? 1 : 0)} h</button></td>
+                        <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
+                        <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
+                        <td className="derived num">{line === null ? '—' : fmt(line.dailyEnergyWh, 0)}</td>
                         <td>
                           <button className="rowdel" title="Supprimer la ligne"
                             onClick={() => mutateProfile((p) => { p.inductive.splice(i, 1); })}>
@@ -348,14 +381,14 @@ export function SectionBesoins() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={6}>{t('loads.inductiveSubtotal')}</td>
+                    <td colSpan={7}>{t('loads.inductiveSubtotal')}</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td />
                   </tr>
                   <tr>
-                    <td colSpan={6}>{t('loads.total')}</td>
+                    <td colSpan={7}>{t('loads.total')}</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
                     <td className="num">—</td>
@@ -381,7 +414,7 @@ export function SectionBesoins() {
                     })
                   }
                 >
-                  Ajuster les heures…
+                  Ajuster une ligne avec son bouton d'heures
                 </button>
               </div>
             </div>
@@ -393,7 +426,7 @@ export function SectionBesoins() {
         <section>
           <div className="tbl-title">
             <h2 className="h-sec">{t('loads.hourly')}</h2>
-            <span className="label">puissance nominale, kW · 24 valeurs</span>
+            <span className="label">puissance moyenne et pointe, kW · 24 valeurs</span>
             <span className="sep" />
             <button className="btn" onClick={() => notify({ kind: 'info', title: 'Édition en masse', detail: 'Appliquer une valeur de telle heure à telle heure — à venir.' })}>
               Édition en masse…
@@ -412,13 +445,19 @@ export function SectionBesoins() {
                     aria-label={`Puissance à ${h.hour} h`}
                     value={fmt(h.realPower, 2)}
                     onChange={(ev) =>
-                      mutateProfile((p) => { p.hourly[h.hour].realPower = num(ev.target.value); })
+                      mutateProfile((p) => {
+                        const next = num(ev.target.value);
+                        p.hourly[h.hour].realPower = next;
+                        if (p.hourly[h.hour].peakPower < next) p.hourly[h.hour].peakPower = next;
+                      })
                     }
                   />
                 </div>
               ))}
             </div>
           ))}
+          <div className="tbl-title" style={{ marginTop: 'var(--sp-4)' }}><h2 className="h-sec">{t('loads.hourlyPeak')}</h2><span className="label">kW · chaque valeur doit être ≥ à la puissance moyenne</span></div>
+          {[0, 12].map((offset) => <div className="hourgrid" key={`peak-${offset}`} style={{ marginBottom: 'var(--sp-3)' }}>{profile.hourly.slice(offset, offset + 12).map((h) => <div key={h.hour}><span>{String(h.hour).padStart(2, '0')}</span><input className="cell-in" aria-label={`Puissance de pointe à ${h.hour} h`} value={fmt(h.peakPower, 2)} onChange={(event) => mutateProfile((p) => { p.hourly[h.hour].peakPower = num(event.target.value); })} /></div>)}</div>)}
           <CapabilityNotice capability="sizing" state={calculation} compact />
         </section>
       )}
@@ -430,13 +469,15 @@ export function SectionBesoins() {
           </div>
           <div className="form-rows">
             <label>
-              <span>{t('loads.monthlyEnergy')}</span>
+              <span>{t('loads.observedEnergy')}</span>
               <span className="uf">
-                <input value={profile.meter.monthlyEnergy}
-                  onChange={(e) => mutateProfile((p) => { p.meter!.monthlyEnergy = num(e.target.value); })} />
+                <input value={profile.meter.observedEnergy}
+                  onChange={(e) => mutateProfile((p) => { p.meter!.observedEnergy = num(e.target.value); })} />
                 <span className="uf-unit">kWh</span>
               </span>
             </label>
+            <label><span>{t('loads.observedDays')}</span><input inputMode="numeric" value={profile.meter.observedDays ?? ''} onChange={(event) => mutateProfile((p) => { p.meter!.observedDays = nullableNum(event.target.value); })} /></label>
+            <label><span>{t('loads.sourcedProfile')}</span><select value={profile.meter.normalizedProfileId ?? ''} onChange={(event) => mutateProfile((p) => { p.meter!.normalizedProfileId = event.target.value || null; })}><option value="">{t('loads.chooseProfile')}</option>{loadProfiles.map((item) => <option key={item.id} value={item.id}>{item.displayName} · {item.provenance.sourceRecordId}</option>)}</select></label>
             <label>
               <span>{t('loads.meterAmperage')}</span>
               <span className="uf">
@@ -534,6 +575,18 @@ export function SectionBesoins() {
         <CapabilityNotice capability="sizing" state={calculation} compact />
       )}
 
+      {calculation.status === 'ready' && <section className="out"><div className="out-head"><span className="out-tag">{t('loads.page1Owner')}</span><h2 className="h-sec">{t('loads.page1Balance')}</h2></div><div className="out-grid"><AioCell label="Énergie AC journalière" value={calculation.envelope.output.dailyAcEnergyWh} /><AioCell label="Puissance coïncidente" value={calculation.envelope.output.peakCoincidentAcPowerW} /><AioCell label="Puissance de démarrage" value={calculation.envelope.output.minimumInverterSurgeAcPowerW} /></div><details className="aio-audit"><summary>{t('loads.audit')} · AIO {calculation.envelope.engineVersion} · {calculation.envelope.inputHash.slice(0, 20)}…</summary><div><span>{calculation.envelope.trace.length} {t('loads.traces')}</span><span>{calculation.envelope.issues.length} {t('loads.diagnostics')}</span></div>{calculation.envelope.issues.length > 0 && <ul>{calculation.envelope.issues.map((issue, index) => <li key={`${issue.code}-${index}`}><code>{issue.code}</code> · {issue.message}</li>)}</ul>}</details></section>}
+
+      {hoursEditor !== null && (() => {
+        const row = hoursEditor.kind === 'classic' ? profile.classic[hoursEditor.index] : profile.inductive[hoursEditor.index];
+        if (!row) return null;
+        return <OperatingHoursDialog equipmentName={row.name || 'Appareil sans nom'} values={row.operatingFractions} onClose={() => setHoursEditor(null)} onChange={(values) => mutateProfile((p) => { const target = hoursEditor.kind === 'classic' ? p.classic[hoursEditor.index] : p.inductive[hoursEditor.index]; if (target) { target.operatingFractions = values; target.opHours = values.reduce((sum, value) => sum + value, 0); } })} />;
+      })()}
+
     </div>
   );
+}
+
+function AioCell({ label, value }: { readonly label: string; readonly value: AioOutputValue }) {
+  return <div className={`out-cell ${value.status === 'blocked' ? 'is-pending' : ''}`}><span className="out-lbl">{label}</span><span className="out-val"><b>{value.status === 'available' ? value.value.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : 'Bloqué'}</b>{value.status === 'available' && <small>{value.unit}</small>}</span></div>;
 }

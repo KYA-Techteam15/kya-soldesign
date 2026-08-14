@@ -17,7 +17,7 @@ test('creates and edits a canonical project through the preserved workshop', asy
   await page.locator('.nav-item').nth(2).click();
   await expect(page.locator('.stephead .h-page')).toHaveText('Bilan des consommations');
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
-  await expect(page.getByLabel('Nom').first()).toHaveValue('Nouvel appareil');
+  await expect(page.getByLabel('Nom').first()).toHaveValue('');
 
   await page.locator('.nav-item').first().click();
   await expect(page.getByLabel('Nom du projet')).toHaveValue('Centre de santé de test');

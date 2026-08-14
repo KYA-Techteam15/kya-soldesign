@@ -7,12 +7,12 @@ export function StatusBar({ currency = 'XOF' }: { currency?: string }) {
 
   return (
     <footer className="statusbar">
-      <span className="simbanner" title="Aucun moteur de calcul n’est chargé">
-        {t('status.calculationsUnavailable')} · AIO-001
+      <span className="simbanner" title={t('status.aioReadyTitle')}>
+        {t('status.aioReady')} · AIO-001
       </span>
       <span className="live">{t('status.sessionMemory')}</span>
       <span>·</span>
-      <span>{t('status.noSimulation')}</span>
+      <span>{t('status.page1Calculations')}</span>
       <span className="sep" />
       <span>FCFA ({currency})</span>
       <span>·</span>

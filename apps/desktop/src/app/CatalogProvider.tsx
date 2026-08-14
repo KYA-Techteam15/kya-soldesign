@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Equipment } from '@ksd/catalog';
-import type { Locality, WeatherSource } from '@ksd/domain';
+import type { Locality, NormalizedHourlyProfile, WeatherSource } from '@ksd/domain';
 import { CanonicalCatalog } from './adapters/canonicalCatalog.js';
 import type { CatalogQueryPort, CatalogSummary } from './contracts.js';
 
@@ -8,6 +8,7 @@ interface CatalogContextValue {
   readonly equipment: readonly Equipment[];
   readonly localities: readonly Locality[];
   readonly weatherSources: readonly WeatherSource[];
+  readonly loadProfiles: readonly NormalizedHourlyProfile[];
   readonly summary: CatalogSummary | null;
   readonly status: 'loading' | 'ready' | 'error';
   readonly errorCode: string | null;
@@ -32,6 +33,7 @@ export function CatalogProvider({
   const [equipment, setEquipment] = useState<readonly Equipment[]>([]);
   const [localities, setLocalities] = useState<readonly Locality[]>([]);
   const [weatherSources, setWeatherSources] = useState<readonly WeatherSource[]>([]);
+  const [loadProfiles, setLoadProfiles] = useState<readonly NormalizedHourlyProfile[]>([]);
   const [summary, setSummary] = useState<CatalogSummary | null>(null);
   const [status, setStatus] = useState<CatalogContextValue['status']>('loading');
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -44,12 +46,14 @@ export function CatalogProvider({
       catalog.list(),
       catalog.listLocalities(),
       catalog.listWeatherSources(),
+      catalog.listLoadProfiles(),
       catalog.summary(),
-    ]).then(([nextEquipment, nextLocalities, nextWeatherSources, nextSummary]) => {
+    ]).then(([nextEquipment, nextLocalities, nextWeatherSources, nextLoadProfiles, nextSummary]) => {
       if (!active) return;
       setEquipment(nextEquipment);
       setLocalities(nextLocalities);
       setWeatherSources(nextWeatherSources);
+      setLoadProfiles(nextLoadProfiles);
       setSummary(nextSummary);
       setStatus('ready');
     }).catch((error: unknown) => {
@@ -62,8 +66,8 @@ export function CatalogProvider({
 
   const retry = useCallback(() => setRevision((value) => value + 1), []);
   const value = useMemo<CatalogContextValue>(() => ({
-    equipment, localities, weatherSources, summary, status, errorCode, retry,
-  }), [equipment, errorCode, localities, retry, status, summary, weatherSources]);
+    equipment, localities, weatherSources, loadProfiles, summary, status, errorCode, retry,
+  }), [equipment, errorCode, loadProfiles, localities, retry, status, summary, weatherSources]);
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 }
 

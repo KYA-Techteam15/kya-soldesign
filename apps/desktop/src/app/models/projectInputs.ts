@@ -5,6 +5,7 @@ const nullableNonNegative = z.number().finite().min(0).nullable();
 const nullablePositive = z.number().finite().positive().nullable();
 const nullableRatio = z.number().finite().min(0).max(1).nullable();
 const nullableInteger = z.number().int().min(0).nullable();
+const timezoneIana = z.string().regex(/^[A-Za-z_+-]+(?:\/[A-Za-z_+-]+)+$/);
 const localTime = z.string().regex(/^$|^(?:[01]\d|2[0-3]):[0-5]\d$/);
 const calendarDate = z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/);
 
@@ -37,17 +38,31 @@ export const siteInputV1Schema = z.object({
   arrayTiltDeg: z.number().finite().min(0).max(90).nullable(),
   arrayAzimuthDeg: z.number().finite().min(0).lt(360).nullable(),
   weatherSourceId: z.string().min(1).nullable(),
+  timezoneIana: timezoneIana.nullable(),
+  designMonth: z.number().int().min(1).max(12).nullable(),
+  solarResource: z.object({
+    weatherSourceId: z.string().min(1),
+    provider: z.string().min(1),
+    datasetOrDocument: z.string(),
+    versionOrDate: z.string(),
+    locator: z.string(),
+    retrievedAtIso: z.union([z.literal(''), z.string().datetime({ offset: true })]),
+    monthlyPlaneOfArrayIrradiationKWhPerM2PerDay: z.array(nullableNonNegative).length(12),
+    arrayTiltDeg: z.number().finite().min(0).max(90),
+    arrayAzimuthDeg: z.number().finite().min(0).lt(360),
+    qualityFlags: z.array(z.string().min(1)),
+  }).strict().nullable(),
 }).strict();
 
 export const projectLoadItemV1Schema = z.object({
   id: z.string().min(1),
-  label: z.string().min(1),
+  label: z.string(),
   quantity: z.number().int().positive(),
-  activePowerW: z.number().finite().min(0),
+  usefulPowerW: z.number().finite().min(0),
   powerFactor: z.number().finite().gt(0).max(1).nullable(),
   simultaneityRatio: nullableRatio,
   efficiencyRatio: z.number().finite().gt(0).max(1).nullable(),
-  operatingHoursPerDay: z.number().finite().min(0).max(24),
+  hourlyOperatingFractions: z.array(z.number().finite().min(0).max(1)).length(24),
   startupPowerMultiplier: z.number().finite().min(1).nullable(),
 }).strict();
 
@@ -58,7 +73,9 @@ export const hourlyLoadPointV1Schema = z.object({
 }).strict();
 
 export const meterLoadInputV1Schema = z.object({
-  monthlyEnergyWh: nullableNonNegative,
+  observedEnergyWh: nullableNonNegative,
+  observedDays: z.number().int().positive().nullable(),
+  normalizedProfileId: z.string().min(1).nullable(),
   meterCurrentA: nullablePositive,
   networkType: z.enum(['single-phase', 'three-phase']),
   morningPeak: z.object({ startLocalTime: localTime, endLocalTime: localTime }).strict(),

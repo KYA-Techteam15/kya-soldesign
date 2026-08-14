@@ -12,6 +12,7 @@
   "dependencies": {
     "@ksd/catalog": "workspace:*",
     "@ksd/domain": "workspace:*",
+    "@ksd/engine": "workspace:*",
     "@ksd/project-format": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8",

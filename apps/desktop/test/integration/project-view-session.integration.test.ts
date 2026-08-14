@@ -15,7 +15,10 @@ describe('canonical project/view adapters', () => {
     expect(view.load.profiles[0]?.classic).toEqual([]);
     expect(file.inputs).toMatchObject({
       schemaVersion: 1,
-      site: { latitudeDeg: null, longitudeDeg: null },
+      site: { latitudeDeg: null, longitudeDeg: null, arrayTiltDeg: null, arrayAzimuthDeg: null },
+    });
+    expect(projectViewToFile(view).inputs).toMatchObject({
+      site: { latitudeDeg: null, longitudeDeg: null, arrayTiltDeg: null, arrayAzimuthDeg: null },
     });
   });
 
@@ -33,14 +36,16 @@ describe('canonical project/view adapters', () => {
     view.site.longitude = 0.2099;
     view.load.profiles[0]?.classic.push({
       id: 'lighting', name: 'Éclairage', qty: 4,
-      unitPower: 18, yield: 0.9, opHours: 6,
+      unitPower: 18, yield: 0.9, simultaneity: 1,
+      operatingFractions: Array.from({ length: 24 }, (_, hour) => hour >= 18 ? 1 : 0),
+      opHours: 6,
     });
     const checked = projectViewToFile(view);
     expect(checked.lastCalculation).toBeNull();
     expect(checked.inputs).toMatchObject({
       details: { clientName: 'District sanitaire' },
       site: { countryCode: 'TG', latitudeDeg: 10.703 },
-      load: { profiles: [{ items: [{ label: 'Éclairage', activePowerW: 18, simultaneityRatio: null }] }] },
+      load: { profiles: [{ items: [{ label: 'Éclairage', usefulPowerW: 18, simultaneityRatio: 1 }] }] },
     });
     const again = projectFileToView(checked);
     expect(again.details.clientName).toBe(view.details.clientName);

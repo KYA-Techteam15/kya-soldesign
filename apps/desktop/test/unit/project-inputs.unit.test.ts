@@ -17,7 +17,8 @@ const validInput = {
   site: {
     countryCode: null, localityId: null, regionLabel: '', latitudeDeg: null,
     longitudeDeg: null, arrayTiltDeg: null, arrayAzimuthDeg: null,
-    weatherSourceId: null,
+    weatherSourceId: null, timezoneIana: null, designMonth: null,
+    solarResource: null,
   },
   load: {
     granularity: 'annual', activeProfileId: 'profile-1',

@@ -1,19 +1,19 @@
 import { expect, test } from '@playwright/test';
 
-test('keeps calculated surfaces truthful when production capabilities are unavailable', async ({ page }) => {
+test('keeps Page 1 active and future calculated surfaces explicitly unavailable', async ({ page }) => {
   await page.goto('/accueil');
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
-  await expect(page.locator('.statusbar')).toContainText('Calculs indisponibles · AIO-001');
-  await expect(page.locator('.statusbar')).toContainText('Aucun résultat simulé');
+  await expect(page.locator('.statusbar')).toContainText('Moteur Page 1 actif · AIO-001');
+  await expect(page.locator('.statusbar')).toContainText('Calculs AIO traçables');
 
   await page.locator('.nav-item').nth(2).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
-  await expect(page.locator('.pane-center')).toContainText('Dimensionnement indisponible');
+  await expect(page.locator('.pane-center')).toContainText('Aucun résultat');
   await expect(page.locator('.t-classic tbody .derived').first()).toHaveText('—');
 
   await page.locator('.nav-item').nth(3).click();
   await expect(page.getByRole('button', { name: 'Prédimensionnement indisponible' })).toBeDisabled();
-  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par AIO-001');
+  await expect(page.locator('.pane-center')).toContainText('UI-AIO-001B');
 
   await page.locator('.nav-item').nth(4).click();
   await expect(page.locator('.pane-center')).toContainText('Intégration prévue par EQP-001');

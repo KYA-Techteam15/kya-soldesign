@@ -1,5 +1,5 @@
 import type { Equipment } from '@ksd/catalog';
-import type { CalculationEnvelope, Locality, SystemKind, WeatherSource } from '@ksd/domain';
+import type { CalculationEnvelope, Locality, NormalizedHourlyProfile, SystemKind, WeatherSource } from '@ksd/domain';
 import type { ProjectFileV1 } from '@ksd/project-format';
 
 export type UiLocale = 'fr' | 'en';
@@ -24,6 +24,7 @@ export interface CatalogQueryPort {
   list(query?: CatalogQuery): Promise<readonly Equipment[]>;
   listLocalities(): Promise<readonly Locality[]>;
   listWeatherSources(localityId?: string): Promise<readonly WeatherSource[]>;
+  listLoadProfiles(): Promise<readonly NormalizedHourlyProfile[]>;
   summary(): Promise<CatalogSummary>;
 }
 

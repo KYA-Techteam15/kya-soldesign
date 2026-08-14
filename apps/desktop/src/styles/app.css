@@ -1590,10 +1590,45 @@ table.tbl select.cell-in {
   margin-top: 4px;
   gap: 2px;
 }
-.month-grid > div {
+.month-grid > div,
+.month-grid > label {
   min-width: 0;
   text-align: center;
 }
+.month-grid > label > span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+.month-grid > label > input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.prov-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--sp-2) var(--sp-3);
+  overflow-wrap: anywhere;
+}
+.prov-grid > span { color: var(--text-faint); }
+.aio-audit {
+  border-top: 1px solid var(--border);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.aio-audit summary { cursor: pointer; font-family: var(--font-mono); }
+.aio-audit > div { display: flex; gap: var(--sp-4); margin-top: var(--sp-2); }
+.aio-audit ul { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); }
+.aio-audit code { color: var(--text); }
 .month-grid .cell-in {
   padding: 0 2px;
   font-size: var(--fs-xs);

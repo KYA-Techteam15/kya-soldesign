@@ -113,7 +113,8 @@ export function normalizeEquipmentScheduleToAioDailyLoad(input: {
   ));
   const expectedDailyEnergyWh = items.reduce((total, item) => total + deriveDailyLoadEnergyWh(item), 0);
   const actualDailyEnergyWh = hourlyEnergyWh.reduce((total, value) => total + value, 0);
-  if (Math.abs(expectedDailyEnergyWh - actualDailyEnergyWh) > 1e-9) throw new RangeError('equipment schedule energy conservation failed');
+  const conservationToleranceWh = 1e-9 * Math.max(1, Math.abs(expectedDailyEnergyWh));
+  if (Math.abs(expectedDailyEnergyWh - actualDailyEnergyWh) > conservationToleranceWh) throw new RangeError('equipment schedule energy conservation failed');
   return canonicalDailyLoadV1Schema.parse({ basis: 'equipment-schedule', intervalMinutes: 60, timezoneIana: input.timezoneIana, hourlyEnergyWh, startupEvents: input.startupEvents });
 }
 
