@@ -18,7 +18,7 @@ export function StatusBar({ currency = 'XOF' }: { currency?: string }) {
       <span>·</span>
       <span>{lang === 'fr' ? 'Français' : 'English'}</span>
       <span>·</span>
-      <span>{t('status.noPersistence')}</span>
+      <span>{t('status.weatherLocal')}</span>
     </footer>
   );
 }

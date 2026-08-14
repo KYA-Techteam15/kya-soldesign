@@ -8,6 +8,7 @@ import { countryName } from '../../app/models/catalogView';
 import { useCatalog } from '../../app/CatalogProvider';
 import { useCalculationState } from '../../app/CalculationProvider';
 import { canonicalWeatherFileToProjectPayload as canonicalPayload } from '../../app/adapters/weatherFiles';
+import { createSavedWeatherRecord } from '../../app/adapters/weatherLibrary';
 import { Group, NumField, ReadField } from '../../ui/Field';
 import { StepHead } from '../../ui/Flow';
 import { Dialog } from '../../ui/Dialog';
@@ -31,7 +32,7 @@ export function SectionSite() {
   const update = useProjects((s) => s.update);
   const notify = useUi((s) => s.notify);
   const lang = useUi((s) => s.lang);
-  const { localities, weatherSources, weatherFiles } = useCatalog();
+  const { localities, weatherSources, weatherFiles, saveWeather } = useCatalog();
   const [pickLocality, setPickLocality] = useState(false);
   const [q, setQ] = useState('');
   const [askDownload, setAskDownload] = useState(false);
@@ -79,9 +80,10 @@ export function SectionSite() {
   const annualKwh = solar === null ? 0 : solar.annualPoaKWhM2 / 365;
 
   const needle = q.trim().toLowerCase();
+  const sortedLocalities = [...localities].sort((left, right) => left.name.localeCompare(right.name, lang));
   const hits = needle
-    ? localities.filter((l) => l.name.toLowerCase().includes(needle)).slice(0, 8)
-    : localities.slice(0, 8);
+    ? sortedLocalities.filter((l) => l.name.toLowerCase().includes(needle)).slice(0, 8)
+    : sortedLocalities.slice(0, 8);
 
 
   return (
@@ -90,7 +92,7 @@ export function SectionSite() {
         slug="site"
         aside={
           <span className="label">
-            {localities.length} localités · {weatherSources.length} sources météo en base
+            {localities.length} {localities.length > 1 ? 'localités vérifiées' : 'localité vérifiée'} · {weatherFiles.length} {weatherFiles.length > 1 ? 'fichiers météo' : 'fichier météo'}
           </span>
         }
       />
@@ -541,9 +543,20 @@ export function SectionSite() {
         <WeatherDownload
           lang={lang}
           onClose={() => setAskDownload(false)}
-          onSave={(result) => {
+          onSave={async (result) => {
             // Enregistrer, c'est écrire la localité, la série et l'orientation
-            // par défaut d'un seul tenant — comme `save_weather_source`.
+            // par défaut d'un seul tenant — comme `save_weather_source`. La
+            // bibliothèque locale garde le fichier original après rechargement.
+            await saveWeather(createSavedWeatherRecord({
+              siteName: result.siteName,
+              countryCode: result.countryCode,
+              sourceName: result.sourceName,
+              locator: result.locator,
+              optimalTilt: result.optimalTilt,
+              optimalAzimuth: result.optimalAzimuth,
+              timezoneIana: result.timezoneIana,
+              file: result.file,
+            }));
             update((p) => {
               p.site.region = result.siteName;
               p.site.countryCode = result.countryCode;
@@ -551,12 +564,7 @@ export function SectionSite() {
               p.site.latitude = result.latitude;
               p.site.longitude = result.longitude;
               p.site.timezoneIana = result.timezoneIana;
-              p.site.localityId =
-                localities.find(
-                  (l) =>
-                    l.countryCode === result.countryCode &&
-                    l.name.toLowerCase() === result.siteName.toLowerCase(),
-                )?.id ?? null;
+              p.site.localityId = result.file.metadata.localityId;
               p.site.monthlyIrradiation = [...result.monthly];
               p.site.irradiation = result.monthly.reduce((sum, value) => sum + value, 0) / 12;
               p.site.tilt = result.optimalTilt;

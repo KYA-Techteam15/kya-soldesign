@@ -323,6 +323,7 @@ export const messages: Dict = {
   'status.page1Calculations': { fr: 'Calculs AIO traçables', en: 'Traceable AIO calculations' },
   'status.sessionMemory': { fr: 'Session en mémoire', en: 'In-memory session' },
   'status.noPersistence': { fr: 'Aucune persistance', en: 'No persistence' },
+  'status.weatherLocal': { fr: 'Météo conservée localement', en: 'Weather saved locally' },
   'capability.stale': { fr: 'Résultat périmé', en: 'Stale result' },
   'capability.staleHelp': { fr: 'Les entrées ont changé depuis le dernier calcul.', en: 'Inputs changed since the last calculation.' },
   'capability.loading': { fr: 'Lecture de l’état…', en: 'Reading state…' },

@@ -34,6 +34,18 @@ export interface CanonicalWeatherFile {
   readonly document: PvgisTmyJson;
 }
 
+export interface SavedWeatherCatalogRecord {
+  readonly key: string;
+  readonly locality: Locality;
+  readonly source: WeatherSource;
+  readonly file: CanonicalWeatherFile;
+}
+
+export interface WeatherLibraryPort {
+  list(): Promise<readonly SavedWeatherCatalogRecord[]>;
+  save(record: SavedWeatherCatalogRecord): Promise<void>;
+}
+
 export interface WeatherAcquisitionPort {
   downloadTmy(request: { readonly latitudeDeg: number; readonly longitudeDeg: number; readonly timezoneIana: string; readonly signal?: AbortSignal }): Promise<{ readonly file: CanonicalWeatherFile; readonly locator: string }>;
   parseTmyJson(request: { readonly text: string; readonly filename: string; readonly timezoneIana: string }): Promise<{ readonly file: CanonicalWeatherFile; readonly locator: string }>;

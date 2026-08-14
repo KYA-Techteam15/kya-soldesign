@@ -30,12 +30,13 @@ export interface WeatherResult {
   readonly optimalTilt: number;
   readonly optimalAzimuth: number;
   readonly radiationDatabase: string;
+  readonly file: CanonicalWeatherFile;
 }
 
 export function WeatherDownload({ lang, onClose, onSave }: {
   readonly lang: 'fr' | 'en';
   readonly onClose: () => void;
-  readonly onSave: (result: WeatherResult) => void;
+  readonly onSave: (result: WeatherResult) => void | Promise<void>;
 }) {
   const t = useT();
   const { localities, weatherFiles, weatherSources } = useCatalog();
@@ -48,6 +49,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
   const [timezoneIana, setTimezoneIana] = useState('Africa/Lome');
   const [hit, setHit] = useState<GeocodedSite | null>(null);
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<WeatherResult | null>(null);
   const [openedFileName, setOpenedFileName] = useState<string | null>(null);
@@ -180,9 +182,22 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     }
   };
 
+  const save = async () => {
+    if (!preview || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(preview);
+    } catch {
+      setError('Impossible d’enregistrer ce fichier météo dans la bibliothèque locale. Réessayez.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return <Dialog title="Télécharger les données d’irradiance d’une localité" lead="PVGIS 5.3 · année type · JSON réel" wide onClose={close} footer={<>
     <button className="btn btn-ghost" onClick={close}>{t('g.cancel')}</button>
-    <button className="btn btn-ok" disabled={preview === null || busy} onClick={() => preview && onSave(preview)}>{t('weather.save')}</button>
+    <button className="btn btn-ok" disabled={preview === null || busy || saving} onClick={() => void save()}>{saving ? 'Enregistrement…' : t('weather.save')}</button>
   </>}>
     <div className="dlg-step"><span className="dlg-num">1</span><span className="dlg-step-t">{mode === 'file' ? 'Ouvrir un export PVGIS' : 'Localiser le site'}</span><span className="sep" /><span className="seg">
       <button aria-selected={mode === 'town'} onClick={() => reset('town')}>{t('weather.byName')}</button>
@@ -205,7 +220,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
 
     {mode !== 'file' && <div className={`dlg-step ${hit ? '' : 'is-off'}`}><span className="dlg-num">2</span><span className="dlg-step-t">{t('weather.downloadPreview')}</span><span className="sep" /><span className="label">rien n’est écrit à cette étape</span><button className="btn" disabled={!hit || busy} onClick={() => void download()}>{busy ? 'Téléchargement…' : preview ? 'Retélécharger' : 'Télécharger'}</button></div>}
 
-    {preview && <><div className="weather-preview"><div className="weather-bars" aria-label="Irradiation mensuelle calculée depuis le fichier">{preview.monthly.map((value, month) => <div key={month}><i aria-hidden="true" style={{ height: `${Math.max(2, value / max * 72)}px` }} /><span>{MONTHS[month]}</span><b>{fmt(value, 1)}</b></div>)}</div><div className="daily-note"><span>{preview.siteName} · {preview.countryCode}</span><span>· {fmt(preview.latitude, 4)}° / {fmt(preview.longitude, 4)}°</span><span className="sep" /><span className="label">SHA-256 {preview.payload.sourceSha256.slice(0, 12)}…</span></div></div><div className="dlg-step"><span className="dlg-num">{mode === 'file' ? '2' : '3'}</span><span className="dlg-step-t">{t('weather.save')}</span><span className="sep" /><span className="label">8 760 heures et leur preuve seront conservées en mémoire</span></div></>}
+    {preview && <><div className="weather-preview"><div className="weather-bars" aria-label="Irradiation mensuelle calculée depuis le fichier">{preview.monthly.map((value, month) => <div key={month}><i aria-hidden="true" style={{ height: `${Math.max(2, value / max * 72)}px` }} /><span>{MONTHS[month]}</span><b>{fmt(value, 1)}</b></div>)}</div><div className="daily-note"><span>{preview.siteName} · {preview.countryCode}</span><span>· {fmt(preview.latitude, 4)}° / {fmt(preview.longitude, 4)}°</span><span className="sep" /><span className="label">SHA-256 {preview.payload.sourceSha256.slice(0, 12)}…</span></div></div><div className="dlg-step"><span className="dlg-num">{mode === 'file' ? '2' : '3'}</span><span className="dlg-step-t">{t('weather.save')}</span><span className="sep" /><span className="label">8 760 heures et leur preuve seront conservées dans la bibliothèque locale</span></div></>}
   </Dialog>;
 }
 
@@ -217,7 +232,7 @@ function buildResult(input: { readonly file: CanonicalWeatherFile; readonly site
   const optimalAzimuth = latitude >= 0 ? 180 : 0;
   const provenance = { sourceId: input.file.metadata.id, sourceRecordId: input.locator, sourceSha256: input.file.metadata.sourceSha256, transformationVersion: '1.1.0' };
   const analysis = analyzeSolarResource({ latitudeDeg: latitude, longitudeDeg: longitude, surfaceTiltDeg: optimalTilt, surfaceAzimuthDeg: optimalAzimuth, albedo: payload.albedo, intervalMinutes: 60, timestampConvention: 'interval-center', timezoneOffsetMinutes: payload.timezoneOffsetMinutes, observations: [...payload.hourlyIrradiance], minimumOperationalIrradianceWm2: 10, provenance });
-  return { siteName: input.siteName, countryCode: input.countryCode, latitude, longitude, timezoneIana: input.projectTimezoneIana, sourceName: input.sourceName, weatherSourceId: input.weatherSourceId, versionOrDate: `TMY ${input.file.metadata.yearMin}–${input.file.metadata.yearMax}`, locator: input.locator, retrievedAtIso: input.file.metadata.retrievedAtIso, payload, monthly: analysis.output.monthlyAverageDailyPoaKWhM2Day, optimalTilt, optimalAzimuth, radiationDatabase: input.file.metadata.radiationDatabase };
+  return { siteName: input.siteName, countryCode: input.countryCode, latitude, longitude, timezoneIana: input.projectTimezoneIana, sourceName: input.sourceName, weatherSourceId: input.weatherSourceId, versionOrDate: `TMY ${input.file.metadata.yearMin}–${input.file.metadata.yearMax}`, locator: input.locator, retrievedAtIso: input.file.metadata.retrievedAtIso, payload, monthly: analysis.output.monthlyAverageDailyPoaKWhM2Day, optimalTilt, optimalAzimuth, radiationDatabase: input.file.metadata.radiationDatabase, file: input.file };
 }
 
 function parseNumber(value: string): number { return Number.parseFloat(value.replace(',', '.')); }

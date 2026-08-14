@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Equipment } from '@ksd/catalog';
 import type { Locality, NormalizedHourlyProfile, WeatherSource } from '@ksd/domain';
 import { CanonicalCatalog } from './adapters/canonicalCatalog.js';
-import type { CanonicalWeatherFile, CatalogQueryPort, CatalogSummary } from './contracts.js';
+import { IndexedDbWeatherLibrary } from './adapters/weatherLibrary.js';
+import type { CanonicalWeatherFile, CatalogQueryPort, CatalogSummary, SavedWeatherCatalogRecord, WeatherLibraryPort } from './contracts.js';
 
 interface CatalogContextValue {
   readonly equipment: readonly Equipment[];
@@ -14,6 +15,7 @@ interface CatalogContextValue {
   readonly status: 'loading' | 'ready' | 'error';
   readonly errorCode: string | null;
   readonly retry: () => void;
+  readonly saveWeather: (record: SavedWeatherCatalogRecord) => Promise<void>;
 }
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
@@ -25,11 +27,14 @@ function readErrorCode(error: unknown): string {
 export function CatalogProvider({
   children,
   catalog: providedCatalog,
+  weatherLibrary: providedWeatherLibrary,
 }: {
   readonly children: ReactNode;
   readonly catalog?: CatalogQueryPort;
+  readonly weatherLibrary?: WeatherLibraryPort;
 }) {
   const catalog = useMemo(() => providedCatalog ?? new CanonicalCatalog(), [providedCatalog]);
+  const weatherLibrary = useMemo(() => providedWeatherLibrary ?? new IndexedDbWeatherLibrary(), [providedWeatherLibrary]);
   const [revision, setRevision] = useState(0);
   const [equipment, setEquipment] = useState<readonly Equipment[]>([]);
   const [localities, setLocalities] = useState<readonly Locality[]>([]);
@@ -51,12 +56,18 @@ export function CatalogProvider({
       catalog.listWeatherFiles(),
       catalog.listLoadProfiles(),
       catalog.summary(),
-    ]).then(([nextEquipment, nextLocalities, nextWeatherSources, nextWeatherFiles, nextLoadProfiles, nextSummary]) => {
+      weatherLibrary.list(),
+    ]).then(([nextEquipment, nextLocalities, nextWeatherSources, nextWeatherFiles, nextLoadProfiles, nextSummary, savedWeather]) => {
       if (!active) return;
+      const combinedFiles = mergeById(nextWeatherFiles, savedWeather.map((record) => record.file), (file) => file.metadata.id);
+      const combinedLocalities = mergeById(nextLocalities, savedWeather.map((record) => record.locality), (locality) => locality.id);
+      const combinedSources = mergeById(nextWeatherSources, savedWeather.map((record) => record.source), (source) => source.id);
+      const backedLocalityIds = new Set(combinedFiles.map((file) => file.metadata.localityId));
+      const backedSourceIds = new Set(combinedFiles.map((file) => file.metadata.weatherSourceId));
       setEquipment(nextEquipment);
-      setLocalities(nextLocalities);
-      setWeatherSources(nextWeatherSources);
-      setWeatherFiles(nextWeatherFiles);
+      setLocalities(combinedLocalities.filter((locality) => backedLocalityIds.has(locality.id)));
+      setWeatherSources(combinedSources.filter((source) => backedSourceIds.has(source.id)));
+      setWeatherFiles(combinedFiles);
       setLoadProfiles(nextLoadProfiles);
       setSummary(nextSummary);
       setStatus('ready');
@@ -66,13 +77,25 @@ export function CatalogProvider({
       setStatus('error');
     });
     return () => { active = false; };
-  }, [catalog, revision]);
+  }, [catalog, revision, weatherLibrary]);
 
   const retry = useCallback(() => setRevision((value) => value + 1), []);
+  const saveWeather = useCallback(async (record: SavedWeatherCatalogRecord) => {
+    await weatherLibrary.save(record);
+    setLocalities((current) => mergeById(current, [record.locality], (locality) => locality.id));
+    setWeatherSources((current) => mergeById(current, [record.source], (source) => source.id));
+    setWeatherFiles((current) => mergeById(current, [record.file], (file) => file.metadata.id));
+  }, [weatherLibrary]);
   const value = useMemo<CatalogContextValue>(() => ({
-    equipment, localities, weatherSources, weatherFiles, loadProfiles, summary, status, errorCode, retry,
-  }), [equipment, errorCode, loadProfiles, localities, retry, status, summary, weatherFiles, weatherSources]);
+    equipment, localities, weatherSources, weatherFiles, loadProfiles, summary, status, errorCode, retry, saveWeather,
+  }), [equipment, errorCode, loadProfiles, localities, retry, saveWeather, status, summary, weatherFiles, weatherSources]);
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
+}
+
+function mergeById<Item>(base: readonly Item[], added: readonly Item[], id: (item: Item) => string): Item[] {
+  const merged = new Map(base.map((item) => [id(item), item]));
+  for (const item of added) merged.set(id(item), item);
+  return [...merged.values()];
 }
 
 export function useCatalog(): CatalogContextValue {
