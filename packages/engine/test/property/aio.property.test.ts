@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { calculateDailyDcEnergyWh, calculateLeadAcidNominalStorageWh, calculateMinimumPvStcPowerW, calculateMinimumUsableStorageWh, summarizeDailyLoad } from '../../src/index.js';
+import { calculateDailyDcEnergyWh, calculateLeadAcidNominalStorageWh, calculateMinimumPvStcPowerW, calculateMinimumUsableStorageWh, hashDiagnosticInput, summarizeDailyLoad } from '../../src/index.js';
 
 describe('AIO calculation properties', () => {
   it('conserves energy under permutation and stays non-negative', () => {
@@ -32,6 +32,16 @@ describe('AIO calculation properties', () => {
       (energy, efficiency, dod) => {
         expect(calculateDailyDcEnergyWh(energy, Math.min(1, efficiency + 0.01))).toBeLessThanOrEqual(calculateDailyDcEnergyWh(energy, efficiency));
         expect(calculateLeadAcidNominalStorageWh(energy, Math.min(1, dod + 0.01), 1)).toBeLessThanOrEqual(calculateLeadAcidNominalStorageWh(energy, dod, 1));
+      },
+    ));
+  });
+  it('assigns deterministic diagnostic identities to arbitrary non-canonical numbers', () => {
+    fc.assert(fc.property(
+      fc.array(fc.constantFrom(Number.NaN, Infinity, -Infinity, -1, 0, 1), { minLength: 1, maxLength: 24 }),
+      (values) => {
+        const payload = { values };
+        expect(hashDiagnosticInput(payload)).toBe(hashDiagnosticInput({ values: [...values] }));
+        expect(hashDiagnosticInput(payload)).toMatch(/^diagnostic-fnv1a64:/);
       },
     ));
   });

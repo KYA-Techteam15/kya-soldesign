@@ -26,15 +26,17 @@ Toutes les portes sont **PASS** au niveau de conception. Toute extension de chim
 
 ```text
 packages/domain/src/units.ts                étendre seulement les unités manquantes
-packages/domain/src/aio.ts                  composition DATA-001 et écarts AIO stricts
-packages/engine/src/aio/normalize.ts       adaptation des contrats DATA-001 et canonicalisation
-packages/engine/src/aio/calculations.ts    CALC-AIO-001..007 purs
+packages/domain/src/aio.ts                 composition/canonicalisation des contrats DATA-001 et écarts AIO stricts
+packages/engine/src/aio/calculations/      CALC-AIO-001..007 purs
 packages/engine/src/aio/engine.ts          orchestration, contraintes, traces, hash
 packages/engine/src/aio/index.ts           export public
-packages/engine/src/aio/__tests__/          tests unit/property/golden/legacy
+packages/engine/test/unit/                 contrats, frontières, calculs, sensibilité, scope, legacy
+packages/engine/test/property/             propriétés fast-check
+packages/engine/test/integration/          protocole public de bout en bout
+packages/engine/test/golden/               porte golden, vide pour AIO avant approbation humaine
 ```
 
-Le détail final des noms de fichiers peut suivre les conventions existantes, mais les responsabilités ci-dessus sont obligatoires. Aucun changement de `apps/desktop` ou format projet public ne fait partie du lot.
+Ces chemins sont les conventions réellement versionnées. Aucun changement de `apps/desktop` ou format projet public ne fait partie du lot.
 
 ## Phases
 

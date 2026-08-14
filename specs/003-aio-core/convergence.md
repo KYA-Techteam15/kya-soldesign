@@ -1,46 +1,68 @@
 # Convergence — AIO Core
 
-**Date**: 2026-08-13  
-**Statut**: ❌ non convergé — corrections de contrat/frontière T022–T027 et golden humain T021 requis
+**Date**: 2026-08-14
+**Statut**: ⚠️ code convergé — feature en attente d'approbation golden humain `T021`
 
-## Implémentation vérifiée
+## Résultat
 
-- Contrats AIO v1 stricts, unités canoniques, normaliseurs DATA-001 et hash stable.
-- Moteur synchrone, pur et sérialisable pour `CALC-AIO-001` à `CALC-AIO-007`.
-- Sorties partielles avec contraintes stables, warnings, provenance dédupliquée et traces formule/source/valeurs.
-- Aucun import UI, legacy ou parent; aucune sortie SIM/EQP/SAFE/FIN/DOC.
-- Les hypothèses et ressource POA absentes, invalides ou sans provenance bloquent seulement leurs dépendances; aucune valeur n'est inventée.
+Les écarts `T022` à `T027` sont fermés. Le protocole public générique est de nouveau exclusivement asynchrone; l'extension AIO conserve un cœur synchrone pur. Les entrées invalides sont classées par chemin et ne bloquent que les sorties dépendantes. Les payloads non canoniques produisent une enveloppe déterministe et sérialisable avec un identifiant `diagnostic-fnv1a64:*`, distinct du hash technique `fnv1a64:*`.
 
-## Audit KSD
+Le moteur reste limité à `CALC-AIO-001..007`. Aucun code UI, format projet public, catalogue, source scientifique, legacy ou golden n'a été modifié.
 
-| Audit | Résultat | Preuve |
-|---|---|---|
-| `ksd-calculation-test` | vert hors golden approuvé | unités, frontières, propriétés, déterminisme, legacy non normatif et registre `CALC-AIO-001..007` couverts |
-| `ksd-spec-audit` | vert avec une réserve | unités, sources, inconnus, out-of-scope et contrats observables; réserve `G-*` ci-dessous |
-| `pnpm verify:phase` | vert | lint, typecheck, contrôles UI invariants, 63 tests unitaires, 8 propriétés, 5 données |
-| `pnpm verify` | vert | 85 tests totaux sous couverture, build production et 18 tests navigateur |
-| `$speckit-converge` | 1 tâche ajoutée | T021 — baseline golden AIO indépendante et revue par un humain |
+## Matrice contrainte → sorties bloquées
 
-## Audit Sol High du commit `565d646`
+| Contrainte | Sorties bloquées |
+|---|---|
+| `AIO_INVALID_REQUEST_SHAPE`, `AIO_INVALID_PROVENANCE` | les 10 sorties |
+| `AIO_INVALID_HOURLY_SERIES` | toutes sauf `designPeakSunHoursHPerDay` |
+| `AIO_INVALID_STARTUP_EVENT`, `AIO_MISSING_STARTUP_MULTIPLIER` | `minimumInverterSurgeAcPowerW` |
+| `AIO_INVALID_SOLAR_RESOURCE`, `AIO_MISSING_SOLAR_RESOURCE` | `designPeakSunHoursHPerDay`, `minimumPvStcPowerW` |
+| `AIO_MISSING_INVERTER_EFFICIENCY` | DC, PV, stockage utile et nominal |
+| `AIO_MISSING_PV_PERFORMANCE_RATIO` | PV |
+| `AIO_MISSING_AUTONOMY_DAYS` | stockage utile et nominal |
+| DoD/rendement de décharge invalides ou absents | stockage nominal Wh et Ah |
+| tension nominale invalide ou absente | capacité nominale Ah seulement |
+| chimie batterie invalide/non-plomb | stockage nominal Wh et Ah |
+| `AIO_INVALID_TECHNICAL_CONTEXT` | aucune sortie si le champ est inutilisé; PSH/PV si l'orientation utilisée est invalide |
+| `AIO_MISSING_ASSUMPTION_SOURCE` | uniquement les descendants de l'hypothèse non sourcée |
 
-Les gates existantes sont vertes, mais elles ne prouvent pas encore la conformité complète. L'audit a reproduit les écarts suivants :
+## Assurance KSD
 
-| Gravité | Écart | Preuve observée |
-|---|---|---|
-| bloquant | contrat DATA-001 modifié sans autorisation | `CalculationEngine.calculate` a été élargi de `Promise<...>` vers sync-ou-async dans `packages/engine/src/engine.ts` |
-| majeur | mauvais code de contrainte et blocage excessif | latitude `91`, événement startup `hourIndex=24` et provenance SHA invalide deviennent tous `AIO_INVALID_HOURLY_SERIES` et bloquent les dix sorties |
-| majeur | récupération non exhaustive des entrées invalides | la classification dépend de quelques chemins supprimés manuellement au lieu d'une matrice de dépendances complète |
-| majeur | assurance incomplète | aucun golden AIO, tests `G-*` absents et T005–T007/T014 ouverts |
-| mineur | traçabilité des tâches | T020 avait disparu et les chemins de tests réels ne correspondent pas aux chemins annoncés dans les tâches |
+### `ksd-calculation-test`
 
-Les corrections normatives sont maintenant décrites dans `contracts/engine-api.md` et planifiées par T022–T027. `pnpm verify:phase` reste vert après ces corrections documentaires : 63 tests unitaires, 8 propriétés et 5 tests de données.
+- `US1..US3`, `FR-001..FR-010` et `CALC-AIO-001..007` sont reliés à des tests réels dans `contracts/calculation-register.md`.
+- Cas nominaux, zéro, bornes, valeurs absentes/négatives/non finies, dépendances croisées, déterminisme, unités, traces, provenance et comparaison legacy non normative couverts.
+- Propriétés fast-check : conservation, non-négativité, monotonicité/inverse-monotonicité et déterminisme des identifiants diagnostiques.
+- Incertitude scientifique restante : aucun cas golden AIO indépendant n'a encore été approuvé.
+
+### `ksd-spec-audit`
+
+- Un seul identifiant roadmap immuable : `AIO-001`.
+- Périmètre et exclusions SIM/EQP/SAFE/FIN/DOC explicites et testés.
+- Unknown/missing/null/zero/négatif/bornes/non-fini/timezone/doublons/chimie incompatible couverts par schémas, contraintes ou tests. Leap-year non applicable au contrat journalier canonique AIO v1.
+- Aucun défaut legacy, fallback métier ou hypothèse silencieuse préservé.
+- Finding restant : `T021`, baseline golden humaine, déjà tracé; aucune nouvelle tâche requise.
+
+### `$speckit-converge`
+
+- 10 exigences fonctionnelles, 9 critères d'acceptation, décisions du plan et 6 principes constitutionnels contrôlés.
+- Aucun écart de code `missing`, `partial`, `contradicts` ou `unrequested` non déjà tracé.
+- Aucune nouvelle phase/tâche ajoutée. `T021` reste la seule porte scientifique ouverte.
+
+## Gates exécutés
+
+| Commande | Résultat exact |
+|---|---|
+| `pnpm test:unit` | 22 fichiers, 82 tests passés |
+| `pnpm test:property` | 3 fichiers, 9 tests passés |
+| `pnpm test:golden` | 1 test structurel passé; 0 cas AIO dans le manifeste |
+| `pnpm verify:phase` | lint, typecheck, contrats UI, 82 unitaires, 9 propriétés, 5 data : vert |
+| `pnpm verify` | 33 fichiers / 105 tests sous couverture, 10 intégrations, build production et 18 tests navigateur : vert |
+
+Couverture globale : 92,45 % statements, 85,77 % branches, 94,85 % fonctions et 96,02 % lignes.
 
 ## Golden — décision humaine requise
 
-`test-data/golden/manifest.json` est structurellement valide mais ne contient aucun cas. La spécification exige au moins un cas AIO avec calcul manuel, sources `SRC-AIO-*`, hash, traces, identité et date du relecteur. Ajouter ou modifier ce jeu crée une baseline scientifique : la Constitution et le goal interdisent à l'agent de le faire sans approbation humaine explicite.
+`test-data/golden/manifest.json` reste inchangé avec `cases: []`. Son SHA-256 structurel actuel est `80c7f128eb23de932077af31c80846c6cf1b56d23ae6f38af92d58a99ddf3aa4`; ce hash n'est pas une preuve golden AIO.
 
-Le hash du manifeste actuel est donc non applicable à AIO : il ne contient pas de cas AIO. Après approbation et ajout, consigner ici le SHA-256 du fichier golden et du manifeste, le relecteur et la date.
-
-## Résultat de convergence
-
-La convergence de code n'est pas complète tant que T022–T027 restent ouvertes. Même après leur correction, la feature ne sera déclarée verte que lorsque `T014`/`T021` disposeront d'un golden approuvé. Aucune intégration UI ne doit démarrer depuis ce goal.
+Pour fermer `T021`, il faut approuver explicitement au moins un cas indépendant comprenant les entrées, le calcul manuel, les sources `SRC-AIO-*`, le relecteur et la date. Jusqu'à cette décision, le code est convergé mais la feature AIO-001 ne doit pas être déclarée scientifiquement verte ni servir de base à l'intégration UI.

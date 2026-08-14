@@ -13,12 +13,14 @@ const baseInput = () => ({
 });
 
 describe('AIO engine envelope', () => {
-  it('returns deterministic evidence with all authorized outputs and traces', () => {
+  it('returns deterministic evidence with all authorized outputs and traces', async () => {
     const engine = new AioSizingEngine('1.0.0');
     const request = { system: 'standalone-all-in-one' as const, input: baseInput() };
-    expect(engine.calculate(request)).not.toBeInstanceOf(Promise);
+    const asynchronous = engine.calculate(request);
+    expect(asynchronous).toBeInstanceOf(Promise);
     const first = engine.calculateSync(request);
     const second = engine.calculateSync(request);
+    await expect(asynchronous).resolves.toEqual(first);
     expect(first.inputHash).toBe(second.inputHash);
     expect(first.engineVersion).toBe('1.0.0');
     expect(first.violatedConstraints).toEqual([]);

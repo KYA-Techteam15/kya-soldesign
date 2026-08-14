@@ -15,7 +15,7 @@ describe('AIO integration', () => {
       provenance: [provenance],
     });
     const engine = new AioSizingEngine();
-    const envelope = engine.calculate({ system: 'standalone-all-in-one', input });
+    const envelope = await engine.calculate({ system: 'standalone-all-in-one', input });
     expect(envelope.output.dailyAcEnergyWh).toMatchObject({ status: 'available', value: 2_400, unit: 'Wh' });
     expect(envelope.output.minimumLeadAcidNominalCapacityAh).toMatchObject({ status: 'blocked', constraintIds: ['AIO_UNSUPPORTED_BATTERY_CHEMISTRY'] });
     expect(envelope.output.minimumPvStcPowerW.status).toBe('available');

@@ -21,3 +21,16 @@
 | `L-*` | comparaison legacy | écart documenté; jamais baseline normative |
 
 Tout changement d'un `G-*`, d'une source ou d'une règle passe par approbation humaine et met à jour ce registre avant le code.
+
+## Matrice de preuve réellement versionnée
+
+| Exigences / scénarios | Règles | Fichiers de preuve |
+|---|---|---|
+| `US1`, `FR-001`, `FR-007`, `FR-009` | frontières, validation, hash | `packages/domain/src/__tests__/aio.test.ts`; `packages/engine/test/unit/aio.input-hash.unit.test.ts`; `packages/engine/test/unit/aio.boundary.unit.test.ts` |
+| `US2`, `FR-002..FR-006` | `CALC-AIO-001..007` | `packages/engine/test/unit/aio.calculations.unit.test.ts`; `packages/engine/test/property/aio.property.test.ts` |
+| `US3`, `FR-007`, `FR-009`, `FR-010` | enveloppe, protocole async/sync, traces et provenance | `packages/engine/test/unit/aio.engine.unit.test.ts`; `packages/engine/test/integration/aio.integration.test.ts`; `packages/engine/test/unit/aio.boundary.unit.test.ts` |
+| `FR-008` | frontière de périmètre | `packages/engine/test/unit/aio.scope.unit.test.ts` |
+| comparaison informative | `L-*`, non normative | `packages/engine/test/unit/aio.legacy-comparison.unit.test.ts` |
+| `G-001..G-007` | golden scientifique | **absent — T014/T021 attendent l'approbation humaine** |
+
+Les anciens chemins indicatifs `packages/engine/src/aio/__tests__/*` ne sont pas utilisés. La convention réelle du dépôt sépare `packages/engine/test/unit`, `property`, `integration` et `golden`; les identifiants `G-*` restent volontairement non satisfaits.
