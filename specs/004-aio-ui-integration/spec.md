@@ -54,6 +54,10 @@ L'ingénieur voit sur la même journée les puissances moyenne et de pointe et l
 - **FR-P1-016** — Le téléchargement utilise un port réseau PVGIS 5.3 explicite avec timeout, annulation, erreurs HTTP et prévisualisation; l'import fichier demeure la voie hors ligne.
 - **FR-P1-017** — L'albédo de transposition vaut `0,20` sous l'hypothèse sourcée `ASSUMP-P1-001`, reste visible dans la preuve et pourra être remplacé par une entrée explicite dans une tranche approuvée; il n'est jamais présenté comme une mesure du site.
 - **FR-P1-018** — L'alignement charge/soleil exige un fuseau IANA sourcé. La ressource Bombouaka déclare `Africa/Lome`; un import sans fuseau reste analysable en UTC mais ne produit pas `γ` avant déclaration du fuseau.
+- **FR-P1-019** — Le dialogue météo conserve les parcours validés par nom de localité, par coordonnées GPS et par fichier. Les parcours nom et GPS convergent vers le même port PVGIS réel; un fichier embarqué ne remplace pas ces parcours.
+- **FR-P1-020** — La durée quotidienne est saisie directement dans la colonne `Heures`. Le dialogue global ne change que ses positions sur 24 h et doit conserver exactement la durée, y compris une éventuelle fraction décimale.
+- **FR-P1-021** — Une nouvelle charge reprend les valeurs validées de `design-proposition` et reçoit immédiatement un horaire cohérent : classique `Nouvel appareil / 1 / 100 W / 0,90 / 4 h`, inductive `Nouveau moteur / 1 / 500 W / 0,85 / coefficient 3 / 2 h`.
+- **FR-P1-022** — La bordure droite de Besoins affiche le graphe permanent validé depuis les enveloppes courantes : charge moyenne, dépassement de démarrage, POA, énergie, puissance, pointe et `γ`. Le bloc `Viabilité · SVI` garde sa composition sans valeur fabriquée.
 
 ## Frontières
 

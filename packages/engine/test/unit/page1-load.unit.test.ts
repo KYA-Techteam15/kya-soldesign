@@ -1,9 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading } from '../../src/load-profile/index.js';
+import { defaultOperatingFractions, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, operatingFractionsForSelectedHours, reconcileOperatingFractions } from '../../src/load-profile/index.js';
 
 const provenance = { sourceId: 'reviewed', sourceRecordId: 'profile', sourceSha256: 'a'.repeat(64), transformationVersion: '1.0.0' };
 
 describe('Page 1 load normalization', () => {
+  it('creates the validated business-hours defaults and preserves decimal energy exactly', () => {
+    expect(defaultOperatingFractions(4)).toEqual(Array.from({ length: 24 }, (_, hour) => hour >= 8 && hour < 12 ? 1 : 0));
+    const decimal = defaultOperatingFractions(2.5);
+    expect(decimal.slice(8, 11)).toEqual([1, 1, 0.5]);
+    expect(decimal.reduce((sum, value) => sum + value, 0)).toBe(2.5);
+  });
+
+  it('repositions a duration without allowing the selected positions to change its sum', () => {
+    expect(operatingFractionsForSelectedHours(2.5, [18, 19, 20]).slice(18, 21)).toEqual([1, 1, 0.5]);
+    expect(() => operatingFractionsForSelectedHours(2.5, [18, 19])).toThrow(/exactly 3/);
+    const current = operatingFractionsForSelectedHours(2.5, [18, 19, 20]);
+    expect(reconcileOperatingFractions(2.75, current).slice(18, 21)).toEqual([1, 1, 0.75]);
+    expect(reconcileOperatingFractions(4, current).slice(8, 12)).toEqual([1, 1, 1, 1]);
+  });
+
   it('normalizes equipment useful power, efficiency, simultaneity and schedules without losing energy', () => {
     const result = normalizeEquipmentRows({
       timezoneIana: 'Africa/Lome',

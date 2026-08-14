@@ -71,3 +71,16 @@
 ## Dépendances A2
 
 `T021-T024 → T025-T029 → T030-T034 → T035-T037`.
+
+## Phase 10 — Reprise fidèle après audit utilisateur
+
+- [x] T038 Restaurer le dialogue météo validé par nom/GPS/fichier autour du port PVGIS réel.
+- [x] T039 Ajouter les valeurs par défaut exactes et le générateur pur d'horaires entiers/décimaux.
+- [x] T040 Restaurer la saisie directe `Heures` et le dialogue global de positionnement de toutes les charges.
+- [x] T041 Restaurer le graphe charge/démarrage/POA et ses indicateurs dans la bordure droite.
+- [x] T042 Ajouter les tests unitaires, composants et E2E de non-régression.
+- [x] T043 Exécuter les gates, comparer au navigateur, documenter puis commit/push.
+
+## Dépendances de reprise
+
+`T038-T041 → T042 → T043`.

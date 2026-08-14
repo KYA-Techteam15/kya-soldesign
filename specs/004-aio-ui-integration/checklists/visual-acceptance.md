@@ -9,3 +9,11 @@
 - [x] Une seule passe de correction visuelle puis confirmation finale.
 - [x] Bouton météo, dialogue en trois temps, mensuelles et journée moyenne sont revenus à la dernière composition validée.
 - [x] Le graphe Besoins affiche moyenne, pointe et POA réelles avec unités et légendes accessibles.
+
+## Reprise A3
+
+- [x] Le dialogue météo reprend exactement les trois voies par nom, GPS et fichier de la référence.
+- [x] Les nouvelles charges sont préremplies avec les valeurs de la référence.
+- [x] `Heures` est une saisie directe et `Ajuster les heures…` est une action globale séparée.
+- [x] La bordure droite de Besoins affiche réellement le graphe et les quatre indicateurs de la référence.
+- [x] Les captures 1440×1000 et 1024×768 ne montrent aucune divergence non documentée.

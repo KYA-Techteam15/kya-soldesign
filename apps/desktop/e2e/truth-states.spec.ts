@@ -8,8 +8,10 @@ test('keeps Page 1 active and future calculated surfaces explicitly unavailable'
 
   await page.locator('.nav-item').nth(2).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
-  await expect(page.locator('.pane-center')).toContainText('Aucun résultat');
-  await expect(page.locator('.t-classic tbody .derived').first()).toHaveText('—');
+  await expect(page.locator('.t-classic tbody .derived').first()).toHaveText('100');
+  await expect(page.locator('.t-classic tbody .derived').nth(1)).toHaveText('111');
+  await expect(page.locator('.t-classic tbody .derived').nth(2)).toHaveText('444');
+  await expect(page.locator('.pane-right')).toContainText('Ajoutez des appareils à l’étape Besoins et chargez une série météo à l’étape Site.');
 
   await page.locator('.nav-item').nth(3).click();
   await expect(page.getByRole('button', { name: 'Prédimensionnement indisponible' })).toBeDisabled();

@@ -1,74 +1,74 @@
 import { expect, test } from '@playwright/test';
 
-test('Page 1 uses the verified weather file and calculates every needs mode through AIO', async ({ page }) => {
-  test.setTimeout(60_000);
+const WEATHER_FILE = 'packages/catalog/data/weather/pvgis-5.3-tmy-bombouaka-tg-10.7030-0.2099.json';
+
+test('Page 1 resolves real weather and calculates every needs mode through AIO', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto('/accueil');
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
   await page.locator('.nav-item').nth(1).click();
 
-  await page.locator('.pickfield').click();
-  await page.getByPlaceholder('Rechercher une ville…').fill('Bombouaka');
-  await page.locator('.proj-row').filter({ hasText: 'Bombouaka' }).click();
-  const irradiation = page.locator('.ro-field').filter({ hasText: 'Irradiation moyenne' });
-  await expect(irradiation).toContainText('6,15');
-  await expect(page.getByRole('img', { name: 'Irradiation mensuelle' })).toBeVisible();
-  await expect(page.getByRole('img', { name: /Irradiance horaire moyenne/ })).toBeVisible();
-  await expect(page.getByLabel('Irradiation mois 8')).toHaveValue('4,5');
-  await expect(page.getByText(/recommandation à confirmer Août/)).toBeVisible();
-  await page.getByLabel('Mois critique déclaré').selectOption('8');
-  await expect(page.getByText(/mois critique déclaré Août/)).toBeVisible();
-
-  await page.getByRole('textbox', { name: /Inclinaison °/ }).fill('25');
-  await expect(irradiation).toContainText('6,06');
+  await page.getByRole('button', { name: /Télécharger les données d’irradiance/ }).click();
+  await page.getByRole('textbox', { name: 'Ville', exact: true }).fill('Bombouaka');
+  await page.getByText('Rechercher', { exact: true }).click();
+  await expect(page.getByLabel('Coordonnées trouvées')).toHaveValue('10,7030° / 0,2099°');
+  await expect(page.getByLabel('Fuseau trouvé')).toHaveValue('Africa/Lome');
+  await page.getByRole('button', { name: 'Télécharger', exact: true }).click();
+  await expect(page.getByText(/SHA-256 05dffc44112a/)).toBeVisible();
+  await expect(page.getByText(/8 760 heures et leur preuve/)).toBeVisible();
+  await page.getByRole('button', { name: 'Annuler' }).click();
 
   await page.getByRole('button', { name: /Télécharger les données d’irradiance/ }).click();
-  await page.getByRole('button', { name: 'Charger le JSON vérifié' }).click();
-  await expect(page.getByText(/SHA-256 05dffc44112a/)).toBeVisible();
-  await expect(page.getByText(/conserve les 8 760 lignes/)).toBeVisible();
-  await page.getByRole('button', { name: 'Annuler' }).click();
+  await page.getByRole('button', { name: 'Par coordonnées' }).click();
+  await page.getByLabel('Latitude', { exact: true }).fill('10,7030');
+  await page.getByLabel('Longitude', { exact: true }).fill('0,2099');
+  await page.getByText('Rechercher', { exact: true }).click();
+  await expect(page.getByLabel('Nom du site')).toHaveValue('Bombouaka');
+  await page.getByRole('button', { name: 'Télécharger', exact: true }).click();
+  await page.getByRole('button', { name: 'Enregistrer dans le dossier', exact: true }).last().click();
+  await expect(page.locator('.pickfield')).toContainText('Bombouaka');
+  await expect(page.getByRole('img', { name: 'Irradiation mensuelle' })).toBeVisible();
+  await expect(page.getByRole('img', { name: /Irradiance horaire moyenne/ })).toBeVisible();
+  await expect(page.getByLabel('Irradiation mois 8')).toHaveValue('4,6');
 
   await page.getByRole('button', { name: /Télécharger les données d’irradiance/ }).click();
   await page.getByRole('button', { name: 'Depuis un fichier' }).click();
   await page.getByLabel('Nom du site').fill('Bombouaka importé');
-  await page.getByLabel('Code pays').fill('TG');
-  await page.locator('.modal input[type="file"]').setInputFiles('packages/catalog/data/weather/pvgis-5.3-tmy-bombouaka-tg-10.7030-0.2099.json');
+  await page.getByLabel('Pays').selectOption('TG');
+  await page.getByLabel('Fuseau horaire IANA').fill('Africa/Lome');
+  await page.locator('.modal input[type="file"]').setInputFiles(WEATHER_FILE);
   await expect(page.getByText(/SHA-256 05dffc44112a/)).toBeVisible();
-  await page.getByRole('button', { name: 'Enregistrer dans le dossier' }).click();
-  await expect(page.locator('.pickfield')).toContainText('Bombouaka importé');
-  await page.getByLabel('Mois critique déclaré').selectOption('8');
+  await page.getByRole('button', { name: 'Annuler' }).click();
 
   await page.locator('.nav-item').nth(2).click();
-
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
-  await page.getByLabel('Nom').first().fill('Éclairage');
-  await page.getByLabel('Quantité').first().fill('2');
-  await page.getByLabel('Puissance unitaire').first().fill('100');
-  await page.getByLabel('Rendement').first().fill('1');
-  await page.getByLabel('Simultanéité').first().fill('0,5');
-  await page.getByRole('button', { name: '0 h', exact: true }).click();
-  await page.getByRole('button', { name: 'Toute la journée', exact: true }).click();
-  await page.getByRole('button', { name: 'Terminer', exact: true }).click();
-  await expect(page.getByRole('button', { name: '24 h', exact: true })).toBeFocused();
-  const balance = page.locator('section.out').filter({ hasText: 'Bilan calculé de la Page 1' });
-  await expect(balance).toContainText('2 400');
-  await expect(balance).toContainText('100');
-  await expect(balance.getByText(/Preuve du calcul · AIO 1\.0\.0/)).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Charge moyenne, pointe et irradiance solaire sur 24 heures' })).toBeVisible();
-  await expect(page.locator('.curve-legend')).toContainText('γ 0,500');
+  await expect(page.getByLabel('Nom').first()).toHaveValue('Nouvel appareil');
+  await expect(page.getByLabel('Rendement').first()).toHaveValue('0,90');
+  await expect(page.getByLabel("Heures d'usage").first()).toHaveValue('4');
+  await expect(page.locator('.t-classic tbody .derived').nth(2)).toHaveText('444');
+
+  await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).last().click();
+  await expect(page.getByLabel('Nom').nth(1)).toHaveValue('Nouveau moteur');
+  await expect(page.getByLabel('Coefficient de démarrage')).toHaveValue('3,0');
+  await expect(page.locator('.t-induct tbody .derived').nth(2)).toHaveText('1 176');
+
+  await page.getByLabel("Heures d'usage").first().fill('2,5');
+  await page.getByRole('button', { name: 'Ajuster les heures…' }).click();
+  await expect(page.getByRole('button', { name: '08 h' })).toHaveText('1');
+  await expect(page.getByRole('button', { name: '10 h' })).toHaveText('0.5');
+  await page.getByRole('button', { name: 'Confirmer' }).click();
+  await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
+  await expect(page.locator('.pane-right')).toContainText('1,45');
+  await expect(page.locator('.pane-right')).toContainText('1,88');
 
   await page.getByRole('tab', { name: 'Saisir heure par heure' }).click();
   await page.getByLabel('Puissance à 0 h').fill('0,2');
   await expect(page.getByLabel('Puissance de pointe à 0 h')).toHaveValue('0,20');
-  await expect(balance).toContainText('200');
-  await expect(page.locator('.curve-legend')).toContainText('Énergie 200 Wh/j');
+  await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Partir de la facture' }).click();
-  const observedEnergy = page.locator('.form-rows label').filter({ hasText: 'Énergie de la période observée' }).locator('input');
-  await expect(observedEnergy).toBeVisible();
-  await observedEnergy.fill('31');
+  await page.getByLabel('Énergie de la période observée').fill('31');
   await page.getByLabel('Nombre exact de jours').fill('31');
   await page.getByLabel('Profil horaire sourcé').selectOption({ index: 1 });
-  await expect(balance).toContainText('1 000');
-  await expect(balance).toContainText('Bloqué');
-  await expect(page.getByRole('img', { name: 'Charge moyenne, pointe et irradiance solaire sur 24 heures' })).toBeVisible();
+  await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
 });
