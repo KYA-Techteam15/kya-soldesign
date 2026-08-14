@@ -15,6 +15,23 @@ describe('PVGIS acquisition port', () => {
     expect(result.locator).toBe('file:bombouaka.json');
   });
 
+  it('accepts an official Accra-like file without altering signed auxiliary evidence', async () => {
+    const document = JSON.parse(await readFile(weatherPath, 'utf8')) as {
+      outputs: { tmy_hourly: Array<Record<string, number | string>> };
+    };
+    document.outputs.tmy_hourly[0]!['IR(h)'] = -22.25;
+    document.outputs.tmy_hourly[0]!.WS10m = -2.87;
+    const client = new PvgisClient(fetch, () => '2026-08-14T06:00:00.000Z');
+    const result = await client.parseTmyJson({
+      text: JSON.stringify(document),
+      filename: 'accra.json',
+      timezoneIana: 'Africa/Accra',
+    });
+
+    expect(result.file.document.outputs.tmy_hourly).toHaveLength(8_760);
+    expect(result.file.document.outputs.tmy_hourly[0]).toMatchObject({ 'IR(h)': -22.25, WS10m: -2.87 });
+  });
+
   it('rejects malformed input and reports HTTP failures without inventing data', async () => {
     const client = new PvgisClient(vi.fn(async () => new Response('', { status: 503 })) as typeof fetch);
     await expect(client.parseTmyJson({ text: '{}', filename: 'bad.json', timezoneIana: 'Africa/Lome' })).rejects.toMatchObject({ code: 'PVGIS_INVALID_JSON' });

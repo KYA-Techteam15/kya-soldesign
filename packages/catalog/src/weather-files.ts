@@ -13,8 +13,11 @@ export const pvgisTmyHourlyRowSchema = z.object({
   'G(h)': z.number().finite().nonnegative(),
   'Gb(n)': z.number().finite().nonnegative(),
   'Gd(h)': z.number().finite().nonnegative(),
-  'IR(h)': z.number().finite().nonnegative(),
-  WS10m: z.number().finite().nonnegative(),
+  // PVGIS 5.3 can return negative net long-wave radiation and isolated
+  // negative wind-speed artefacts. Keep the signed source evidence intact;
+  // neither auxiliary field is used by the solar-resource calculation.
+  'IR(h)': z.number().finite(),
+  WS10m: z.number().finite(),
   WD10m: z.number().finite().min(0).max(360),
   SP: z.number().finite().positive(),
 }).strict();
