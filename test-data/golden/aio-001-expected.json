@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "caseId": "AIO-G-001",
+  "engineVersion": "1.0.0",
+  "inputHash": "fnv1a64:5c43514c9895d02a",
+  "reviewedBy": "Project owner — approved in Codex chat",
+  "reviewedAt": "2026-08-14T03:49:27.118Z",
+  "reviewRecordCanonical": "KSD-AIO-GOLDEN-001|2026-08-14|Eac=2160Wh|eta=0.9|Hpoa=5|PR=0.8|autonomy=2|DoD=0.5|etaDischarge=0.75|V=64|startup=200W*3",
+  "manualCalculations": [
+    { "outputId": "dailyAcEnergyWh", "formulaId": "CALC-AIO-001", "expression": "14 * 100 Wh + 600 Wh + 160 Wh", "expectedValue": 2160, "unit": "Wh" },
+    { "outputId": "peakCoincidentAcPowerW", "formulaId": "CALC-AIO-001", "expression": "max(hourlyEnergyWh) / 1 h", "expectedValue": 600, "unit": "W" },
+    { "outputId": "dailyDcEnergyWh", "formulaId": "CALC-AIO-002", "expression": "2160 Wh / 0.9", "expectedValue": 2400, "unit": "Wh" },
+    { "outputId": "designPeakSunHoursHPerDay", "formulaId": "CALC-AIO-003", "expression": "5 kWh/m2/day / 1 kW/m2", "expectedValue": 5, "unit": "h/day" },
+    { "outputId": "minimumPvStcPowerW", "formulaId": "CALC-AIO-004", "expression": "2400 Wh / (5 h/day * 0.8)", "expectedValue": 600, "unit": "W" },
+    { "outputId": "minimumUsableStorageWh", "formulaId": "CALC-AIO-005", "expression": "2400 Wh/day * 2 days", "expectedValue": 4800, "unit": "Wh" },
+    { "outputId": "minimumLeadAcidNominalStorageWh", "formulaId": "CALC-AIO-006", "expression": "4800 Wh / (0.5 * 0.75)", "expectedValue": 12800, "unit": "Wh" },
+    { "outputId": "minimumLeadAcidNominalCapacityAh", "formulaId": "CALC-AIO-006", "expression": "12800 Wh / 64 V", "expectedValue": 200, "unit": "Ah" },
+    { "outputId": "minimumInverterContinuousAcPowerW", "formulaId": "CALC-AIO-007", "expression": "max(hourlyEnergyWh) / 1 h", "expectedValue": 600, "unit": "W" },
+    { "outputId": "minimumInverterSurgeAcPowerW", "formulaId": "CALC-AIO-007", "expression": "600 W - 200 W + (200 W * 3)", "expectedValue": 1000, "unit": "W" }
+  ],
+  "expectedTraceSources": [
+    { "outputId": "dailyAcEnergyWh", "formulaId": "CALC-AIO-001", "sourceIds": ["SRC-AIO-003"] },
+    { "outputId": "peakCoincidentAcPowerW", "formulaId": "CALC-AIO-001", "sourceIds": ["SRC-AIO-003"] },
+    { "outputId": "dailyDcEnergyWh", "formulaId": "CALC-AIO-002", "sourceIds": ["SRC-AIO-002"] },
+    { "outputId": "designPeakSunHoursHPerDay", "formulaId": "CALC-AIO-003", "sourceIds": ["SRC-AIO-002", "SRC-AIO-003"] },
+    { "outputId": "minimumPvStcPowerW", "formulaId": "CALC-AIO-004", "sourceIds": ["SRC-AIO-001", "SRC-AIO-002"] },
+    { "outputId": "minimumUsableStorageWh", "formulaId": "CALC-AIO-005", "sourceIds": ["SRC-AIO-002", "SRC-AIO-004"] },
+    { "outputId": "minimumLeadAcidNominalStorageWh", "formulaId": "CALC-AIO-006", "sourceIds": ["SRC-AIO-001", "SRC-AIO-005"] },
+    { "outputId": "minimumLeadAcidNominalCapacityAh", "formulaId": "CALC-AIO-006", "sourceIds": ["SRC-AIO-001", "SRC-AIO-005"] },
+    { "outputId": "minimumInverterContinuousAcPowerW", "formulaId": "CALC-AIO-007", "sourceIds": ["SRC-AIO-004"] },
+    { "outputId": "minimumInverterSurgeAcPowerW", "formulaId": "CALC-AIO-007", "sourceIds": ["SRC-AIO-004"] }
+  ]
+}

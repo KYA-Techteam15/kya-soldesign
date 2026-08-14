@@ -1,5 +1,14 @@
 {
   "schemaVersion": 1,
-  "cases": []
+  "cases": [
+    {
+      "id": "AIO-G-001",
+      "specRequirementIds": ["FR-002", "FR-003", "FR-004", "FR-005", "FR-006", "FR-009", "FR-010"],
+      "sourceIds": ["SRC-AIO-001", "SRC-AIO-002", "SRC-AIO-003", "SRC-AIO-004", "SRC-AIO-005"],
+      "inputFile": "test-data/golden/aio-001-input.json",
+      "expectedFile": "test-data/golden/aio-001-expected.json",
+      "reviewedBy": "Project owner — approved in Codex chat",
+      "reviewedAt": "2026-08-14T03:49:27.118Z"
+    }
+  ]
 }
-

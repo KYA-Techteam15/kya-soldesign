@@ -31,6 +31,6 @@ Tout changement d'un `G-*`, d'une source ou d'une règle passe par approbation h
 | `US3`, `FR-007`, `FR-009`, `FR-010` | enveloppe, protocole async/sync, traces et provenance | `packages/engine/test/unit/aio.engine.unit.test.ts`; `packages/engine/test/integration/aio.integration.test.ts`; `packages/engine/test/unit/aio.boundary.unit.test.ts` |
 | `FR-008` | frontière de périmètre | `packages/engine/test/unit/aio.scope.unit.test.ts` |
 | comparaison informative | `L-*`, non normative | `packages/engine/test/unit/aio.legacy-comparison.unit.test.ts` |
-| `G-001..G-007` | golden scientifique | **absent — T014/T021 attendent l'approbation humaine** |
+| `G-001..G-007` | golden scientifique | `packages/engine/test/golden/aio.golden.test.ts`; entrées et calculs manuels approuvés dans `test-data/golden/aio-001-{input,expected}.json` |
 
-Les anciens chemins indicatifs `packages/engine/src/aio/__tests__/*` ne sont pas utilisés. La convention réelle du dépôt sépare `packages/engine/test/unit`, `property`, `integration` et `golden`; les identifiants `G-*` restent volontairement non satisfaits.
+Les anciens chemins indicatifs `packages/engine/src/aio/__tests__/*` ne sont pas utilisés. La convention réelle du dépôt sépare `packages/engine/test/unit`, `property`, `integration` et `golden`. `AIO-G-001` couvre les dix sorties de `CALC-AIO-001..007` avec calcul manuel, sources et revue humaine datée.

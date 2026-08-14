@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "technicalContext": {
+    "applicationType": "other",
+    "site": {
+      "arrayTiltDeg": 10,
+      "arrayAzimuthDeg": 180
+    }
+  },
+  "load": {
+    "basis": "direct-hourly-power",
+    "intervalMinutes": 60,
+    "timezoneIana": "Africa/Lome",
+    "hourlyEnergyWh": [100, 100, 100, 100, 100, 100, 100, 100, 600, 100, 100, 100, 100, 100, 100, 160, 0, 0, 0, 0, 0, 0, 0, 0],
+    "startupEvents": [
+      {
+        "hourIndex": 8,
+        "runningPowerW": 200,
+        "startupPowerMultiplier": 3,
+        "isInductive": true,
+        "sourceRef": "reviewed-motor-case"
+      }
+    ]
+  },
+  "solarDesignResource": {
+    "selectionMethod": "declared-critical-month",
+    "referencePeriod": {
+      "yearOrTypicalPeriod": "reviewed-analytical-period",
+      "month": 8
+    },
+    "planeOfArrayIrradiationKWhPerM2PerDay": 5,
+    "arrayTiltDeg": 10,
+    "arrayAzimuthDeg": 180,
+    "source": {
+      "provider": "KSD reviewed analytical fixture",
+      "datasetOrDocument": "AIO-GOLDEN-001",
+      "versionOrDate": "2026-08-14",
+      "locator": "test-data/golden/aio-001-input.json",
+      "retrievedAtIso": "2026-08-14T00:00:00.000Z"
+    },
+    "qualityFlags": ["analytical-fixture-not-site-data"],
+    "provenance": {
+      "sourceId": "GOLDEN-AIO-001",
+      "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+      "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+      "transformationVersion": "1.0.0"
+    }
+  },
+  "assumptions": {
+    "inverterEfficiencyRatio": 0.9,
+    "pvPerformanceRatio": 0.8,
+    "autonomyDays": 2,
+    "batteryChemistry": "lead-acid",
+    "depthOfDischargeRatio": 0.5,
+    "batteryDischargeEfficiencyRatio": 0.75,
+    "batteryNominalVoltageV": 64,
+    "assumptionSources": [
+      {
+        "assumptionId": "inverterEfficiencyRatio",
+        "provenance": {
+          "sourceId": "GOLDEN-AIO-001",
+          "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+          "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+          "transformationVersion": "1.0.0"
+        },
+        "declaredBy": "Project owner — approved in Codex chat on 2026-08-14"
+      },
+      {
+        "assumptionId": "pvPerformanceRatio",
+        "provenance": {
+          "sourceId": "GOLDEN-AIO-001",
+          "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+          "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+          "transformationVersion": "1.0.0"
+        },
+        "declaredBy": "Project owner — approved in Codex chat on 2026-08-14"
+      },
+      {
+        "assumptionId": "autonomyDays",
+        "provenance": {
+          "sourceId": "GOLDEN-AIO-001",
+          "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+          "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+          "transformationVersion": "1.0.0"
+        },
+        "declaredBy": "Project owner — approved in Codex chat on 2026-08-14"
+      },
+      {
+        "assumptionId": "batteryChemistry",
+        "provenance": {
+          "sourceId": "GOLDEN-AIO-001",
+          "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+          "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+          "transformationVersion": "1.0.0"
+        },
+        "declaredBy": "Project owner — approved in Codex chat on 2026-08-14"
+      },
+      {
+        "assumptionId": "depthOfDischargeRatio",
+        "provenance": {
+          "sourceId": "GOLDEN-AIO-001",
+          "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+          "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+          "transformationVersion": "1.0.0"
+        },
+        "declaredBy": "Project owner — approved in Codex chat on 2026-08-14"
+      },
+      {
+        "assumptionId": "batteryDischargeEfficiencyRatio",
+        "provenance": {
+          "sourceId": "GOLDEN-AIO-001",
+          "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+          "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+          "transformationVersion": "1.0.0"
+        },
+        "declaredBy": "Project owner — approved in Codex chat on 2026-08-14"
+      },
+      {
+        "assumptionId": "batteryNominalVoltageV",
+        "provenance": {
+          "sourceId": "GOLDEN-AIO-001",
+          "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+          "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+          "transformationVersion": "1.0.0"
+        },
+        "declaredBy": "Project owner — approved in Codex chat on 2026-08-14"
+      }
+    ]
+  },
+  "provenance": [
+    {
+      "sourceId": "GOLDEN-AIO-001",
+      "sourceRecordId": "reviewed-analytical-case-2026-08-14",
+      "sourceSha256": "f720d98bb272a21b3e73220b45802383ac267cd4e71274defe6a91af4dbb2bbf",
+      "transformationVersion": "1.0.0"
+    }
+  ]
+}

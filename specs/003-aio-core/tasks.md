@@ -9,9 +9,9 @@
 
 ## Phase 2: Calculs test-first
 
-- [ ] T005 [P] Écrire U-001/B-001/P-001/G-001 avant code dans `packages/engine/src/aio/__tests__/load.test.ts` (FR-002).
-- [ ] T006 [P] Écrire U-002..U-004, frontières, propriétés et goldens revus dans `packages/engine/src/aio/__tests__/energy-pv.test.ts` (FR-003, FR-004).
-- [ ] T007 [P] Écrire U-005..U-007, frontières, propriétés et goldens revus dans `packages/engine/src/aio/__tests__/storage-inverter.test.ts` (FR-005, FR-006).
+- [x] T005 [P] Couvrir U-001/B-001/P-001/G-001 dans `packages/engine/test/unit/aio.calculations.unit.test.ts`, `packages/engine/test/unit/aio.boundary.unit.test.ts`, `packages/engine/test/property/aio.property.test.ts` et `packages/engine/test/golden/aio.golden.test.ts` (FR-002).
+- [x] T006 [P] Couvrir U-002..U-004, frontières, propriétés et golden revu dans les suites réelles `packages/engine/test/{unit,property,golden}` (FR-003, FR-004).
+- [x] T007 [P] Couvrir U-005..U-007, frontières, propriétés et golden revu dans les suites réelles `packages/engine/test/{unit,property,golden}` (FR-005, FR-006).
 - [x] T008 Implémenter `CALC-AIO-001` dans `packages/engine/src/aio/calculations/load.ts` après T005 (FR-002).
 - [x] T009 Implémenter `CALC-AIO-002` à `CALC-AIO-004` dans `packages/engine/src/aio/calculations/energy-pv.ts` après T006 (FR-003, FR-004).
 - [x] T010 Implémenter `CALC-AIO-005` à `CALC-AIO-007` dans `packages/engine/src/aio/calculations/storage-inverter.ts` après T007 (FR-005, FR-006).
@@ -19,15 +19,15 @@
 ## Phase 3: Orchestration et traçabilité
 
 - [x] T011 Implémenter contraintes par sortie, warnings et traces formule/source dans `packages/engine/src/aio/engine.ts` (FR-007, FR-010).
-- [x] T012 Ajouter tests d'enveloppe, provenance, version et absence de défauts dans `packages/engine/src/aio/__tests__/engine.test.ts` (FR-007, FR-009).
+- [x] T012 Ajouter tests d'enveloppe, provenance, version et absence de défauts dans `packages/engine/test/unit/aio.engine.unit.test.ts` (FR-007, FR-009).
 - [x] T013 Exporter uniquement l'API approuvée dans `packages/engine/src/index.ts` et `packages/engine/src/aio/index.ts` (FR-009).
 
 ## Phase 4: Assurance scientifique
 
-- [ ] T014 Ajouter jeux golden revus avec calcul manuel et sources dans `packages/engine/src/aio/__tests__/fixtures/aio-golden-v1.json` (FR-010).
-- [x] T015 Ajouter tests de sensibilité/mutation (η, PR, PSH, autonomie, DoD) dans `packages/engine/src/aio/__tests__/sensitivity.test.ts` (FR-003 à FR-006).
-- [x] T016 Ajouter comparaisons legacy non normatives et écarts attendus dans `packages/engine/src/aio/__tests__/legacy-comparison.test.ts` (FR-010).
-- [x] T017 Ajouter test d'interdiction de sorties SIM/EQP/SAFE/FIN/DOC dans `packages/engine/src/aio/__tests__/scope.test.ts` (FR-008).
+- [x] T014 Ajouter le golden revu avec calcul manuel et sources dans `test-data/golden/aio-001-{input,expected}.json` et `packages/engine/test/golden/aio.golden.test.ts` (FR-010).
+- [x] T015 Ajouter tests de sensibilité/mutation (η, PR, PSH, autonomie, DoD) dans `packages/engine/test/property/aio.property.test.ts` (FR-003 à FR-006).
+- [x] T016 Ajouter comparaisons legacy non normatives et écarts attendus dans `packages/engine/test/unit/aio.legacy-comparison.unit.test.ts` (FR-010).
+- [x] T017 Ajouter test d'interdiction de sorties SIM/EQP/SAFE/FIN/DOC dans `packages/engine/test/unit/aio.scope.unit.test.ts` (FR-008).
 
 ## Phase 5: Gates et convergence
 
@@ -43,7 +43,7 @@ Les tâches marquées `[P]` sont parallélisables uniquement après que leurs pr
 
 ## Phase 6: Convergence
 
-- [ ] T021 Obtenir l'approbation humaine d'au moins un cas golden AIO indépendant (entrées, calcul manuel, sources `SRC-AIO-*`, relecteur et date), puis l'ajouter sans dériver d'une sortie legacy (FR-010, missing).
+- [x] T021 Obtenir l'approbation humaine d'au moins un cas golden AIO indépendant (entrées, calcul manuel, sources `SRC-AIO-*`, relecteur et date), puis l'ajouter sans dériver d'une sortie legacy (FR-010, missing).
 - [x] T022 Restaurer byte-for-byte le contrat public async `CalculationEngine.calculate` dans `packages/engine/src/engine.ts`; garder `calculateSync` comme extension AIO pure et faire déléguer `AioSizingEngine.calculate` vers ce cœur avec tests de contrat (FR-009, contradicts).
 - [x] T023 Remplacer le fallback générique `AIO_INVALID_HOURLY_SERIES` par une classification déterministe des erreurs de frontière et une propagation par dépendance conforme à `contracts/engine-api.md`, incluant série horaire, startup, ressource solaire, hypothèses, contexte technique, provenance et forme non récupérable (FR-007, contradicts).
 - [x] T024 Garantir une enveloppe sérialisable sans exception pour `NaN`, `Infinity` et valeurs non canoniques; introduire un identifiant diagnostique distinct du hash technique validé et tester le déterminisme (US1/AC3, US3/AC1, partial).
