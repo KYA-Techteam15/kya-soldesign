@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
-import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary } from '@ksd/engine';
+import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary, type SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { useUi, type Toast } from '../../store/ui';
@@ -98,6 +98,7 @@ export function SectionBesoins() {
     (p) => p.id === project.load.activeProfileId,
   )!;
   const calculation = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
+  const solarCalculation = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
 
   const mutateProfile = (fn: (p: NamedProfile) => void) =>
     update((draft) => {
@@ -125,6 +126,8 @@ export function SectionBesoins() {
           observedEnergy: 0,
           observedDays: null,
           normalizedProfileId: null,
+          forceYEn: false,
+          targetYEn: null,
           meterAmperage: 0,
           networkType: 'single_phase',
           morningPeakStart: '',
@@ -537,6 +540,17 @@ export function SectionBesoins() {
             </label>
             <label><span>{t('loads.observedDays')}</span><DraftNumberInput inputMode="numeric" nullable value={profile.meter.observedDays} onCommit={(value) => { if (value === null || (Number.isInteger(value) && value > 0)) mutateProfile((p) => { p.meter!.observedDays = value; }); }} /></label>
             <label><span>{t('loads.sourcedProfile')}</span><select value={profile.meter.normalizedProfileId ?? ''} onChange={(event) => mutateProfile((p) => { p.meter!.normalizedProfileId = event.target.value || null; })}><option value="">{t('loads.chooseProfile')}</option>{loadProfiles.map((item) => <option key={item.id} value={item.id}>{item.displayName} · {item.provenance.sourceRecordId}</option>)}</select></label>
+            <div className="yen-controls" style={{ gridColumn: '1 / -1' }}>
+              <label className="checkline">
+                <input type="checkbox" checked={profile.meter.forceYEn} onChange={(event) => mutateProfile((p) => { p.meter!.forceYEn = event.target.checked; })} />
+                <span>{t('loads.forceYEn')}</span>
+              </label>
+              {profile.meter.forceYEn && <label><span>{t('loads.targetYEn')}</span><span className="uf"><DraftNumberInput value={profile.meter.targetYEn === null ? null : profile.meter.targetYEn * 100} nullable format={(value) => fmt(value, 1)} onCommit={(value) => mutateProfile((p) => { p.meter!.targetYEn = value === null ? null : Math.min(100, Math.max(0, value)) / 100; })} /><span className="uf-unit">%</span></span></label>}
+              <div className="yen-result" role="status">
+                <span>{t('loads.calculatedYEn')}</span>
+                <b>{solarCalculation.status === 'ready' && solarCalculation.envelope.output.gamma.status === 'available' ? (fmt(solarCalculation.envelope.output.gamma.value * 100, 1) + ' %') : '—'}</b>
+              </div>
+            </div>
           </div>
         </section>
       )}

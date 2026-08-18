@@ -79,4 +79,8 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
   await page.getByLabel('Nombre exact de jours').fill('31');
   await page.getByLabel('Profil horaire sourcé').selectOption({ index: 1 });
   await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
+  await expect(page.getByText('YEn calculé').locator('..').locator('b')).not.toHaveText('—');
+  await page.getByRole('checkbox', { name: 'Forcer le YEn avec la météo locale' }).check();
+  await page.getByLabel('YEn cible').fill('75');
+  await expect(page.getByText('YEn calculé').locator('..').locator('b')).toHaveText('75,0 %');
 });

@@ -1855,6 +1855,11 @@ table.tbl select.cell-in {
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
+.yen-controls { display: flex; align-items: end; flex-wrap: wrap; gap: var(--sp-4); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
+.checkline { display: flex; align-items: center; gap: var(--sp-2); min-height: 38px; }
+.checkline input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--ok); }
+.yen-result { display: flex; align-items: baseline; gap: var(--sp-2); min-height: 38px; color: var(--text-muted); }
+.yen-result b { color: var(--text); font-family: var(--font-mono); }
 
 /* L'aperçu du fichier reprend la grammaire du graphe mensuel de la page Site,
    dans une bande compacte qui garde les douze mois lisibles dans le dialogue. */

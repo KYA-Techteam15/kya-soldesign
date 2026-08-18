@@ -88,6 +88,8 @@ export const meterLoadInputV1Schema = z.object({
   eveningPeak: z.object({ startLocalTime: localTime, endLocalTime: localTime }).strict(),
   peakImportanceRatio: nullableRatio,
   targetQualityFactor: nullableFinite,
+  forceYEn: z.boolean().default(false),
+  targetYEn: nullableRatio,
 }).strict();
 
 export const loadProfileInputV1Schema = z.object({

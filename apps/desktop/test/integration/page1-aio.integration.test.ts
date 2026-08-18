@@ -71,6 +71,7 @@ describe('Page 1 project to AIO integration', () => {
     profile.source = 'meter';
     profile.meter = {
       observedEnergy: 31, observedDays: 31, normalizedProfileId: loadProfiles[0]!.id,
+      forceYEn: false, targetYEn: null,
       meterAmperage: 0, networkType: 'single_phase', morningPeakStart: '', morningPeakEnd: '',
       eveningPeakStart: '', eveningPeakEnd: '', peakImportance: 0, targetQualityFactor: 0,
     };
@@ -132,6 +133,21 @@ describe('Page 1 project to AIO integration', () => {
     if (recomputed.status !== 'ready') return;
     expect(recomputed.solarAnalysis?.inputHash).not.toBe(ready.solarAnalysis?.inputHash);
     expect(recomputed.input.solarDesignResource).toBeDefined();
+
+    view.load.profiles[0]!.source = 'meter';
+    view.load.profiles[0]!.meter = {
+      observedEnergy: 31, observedDays: 31, normalizedProfileId: loadProfiles[0]!.id,
+      forceYEn: true, targetYEn: 0.75,
+      meterAmperage: 0, networkType: 'single_phase', morningPeakStart: '', morningPeakEnd: '',
+      eveningPeakStart: '', eveningPeakEnd: '', peakImportance: 0, targetQualityFactor: 0,
+    };
+    const adjusted = await projectToAioInput(projectViewToFile(view), { localities, weatherSources, loadProfiles });
+    expect(adjusted.status).toBe('ready');
+    if (adjusted.status !== 'ready') return;
+    expect(adjusted.input.load.hourlyEnergyWh.reduce((sum, value) => sum + value, 0)).toBeCloseTo(1_000, 8);
+    expect(adjusted.solarAnalysis?.output.gamma.status).toBe('available');
+    if (adjusted.solarAnalysis?.output.gamma.status === 'available') expect(adjusted.solarAnalysis.output.gamma.value).toBeCloseTo(0.75, 10);
+    expect(adjusted.warnings.some((warning) => warning.code === 'LOAD_METER_YEN_ADJUSTED')).toBe(true);
 
     const projectsWithWeather = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000106', [file]);
     const calculations = new AioCalculations((id) => projectsWithWeather.get(id), { localities, weatherSources, loadProfiles });

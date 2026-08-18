@@ -134,6 +134,8 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       observedEnergy: valueOrZero(profile.meter.observedEnergyWh) / 1000,
       observedDays: profile.meter.observedDays,
       normalizedProfileId: profile.meter.normalizedProfileId,
+      forceYEn: profile.meter.forceYEn ?? false,
+      targetYEn: profile.meter.targetYEn ?? null,
       meterAmperage: valueOrZero(profile.meter.meterCurrentA),
       networkType: profile.meter.networkType === 'single-phase' ? 'single_phase' as const : 'three_phase' as const,
       morningPeakStart: profile.meter.morningPeak.startLocalTime,
@@ -349,6 +351,8 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
           observedEnergyWh: profile.meter.observedEnergy * 1000,
           observedDays: profile.meter.observedDays,
           normalizedProfileId: profile.meter.normalizedProfileId,
+          forceYEn: profile.meter.forceYEn ?? false,
+          targetYEn: profile.meter.targetYEn ?? null,
           meterCurrentA: profile.meter.meterAmperage > 0 ? profile.meter.meterAmperage : null,
           networkType: profile.meter.networkType === 'single_phase' ? 'single-phase' : 'three-phase',
           morningPeak: {

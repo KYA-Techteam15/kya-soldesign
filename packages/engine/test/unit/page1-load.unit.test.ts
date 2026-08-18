@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultOperatingFractions, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, operatingFractionsForSelectedHours, reconcileOperatingFractions } from '../../src/load-profile/index.js';
+import { adjustHourlyFractionsToGamma, defaultOperatingFractions, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, operatingFractionsForSelectedHours, reconcileOperatingFractions } from '../../src/load-profile/index.js';
 
 const provenance = { sourceId: 'reviewed', sourceRecordId: 'profile', sourceSha256: 'a'.repeat(64), transformationVersion: '1.0.0' };
 
@@ -57,5 +57,29 @@ describe('Page 1 load normalization', () => {
     const result = normalizeMeterReading({ timezoneIana: 'Africa/Lome', observedEnergyWh: 31_000, observedDays: 31, profile: { id: 'flat', displayName: 'Flat', hourlyEnergyFractions: Array.from({ length: 24 }, () => 1 / 24), provenance } });
     expect(result.status).toBe('ready');
     if (result.status === 'ready') expect(result.load.hourlyEnergyWh.reduce((sum, value) => sum + value, 0)).toBeCloseTo(1000, 10);
+  });
+
+  it('adjusts a sourced meter profile to a weather-dependent YEn target without changing total energy', () => {
+    const original = [0.1, 0.2, 0.3, 0.4, ...Array.from({ length: 20 }, () => 0)];
+    const adjustment = adjustHourlyFractionsToGamma({
+      hourlyEnergyFractions: original,
+      meanHourlyPoaWm2: [0, 0, 100, 100, ...Array.from({ length: 20 }, () => 0)],
+      thresholdWm2: 10,
+      targetGamma: 0.75,
+    });
+    expect(adjustment.status).toBe('ready');
+    if (adjustment.status !== 'ready') return;
+    expect(adjustment.achievedGamma).toBeCloseTo(0.75, 12);
+    expect(adjustment.hourlyEnergyFractions.reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 12);
+    expect(adjustment.movedFraction).toBeGreaterThan(0);
+  });
+
+  it('blocks a forced YEn target when the weather has no usable hour', () => {
+    expect(adjustHourlyFractionsToGamma({
+      hourlyEnergyFractions: Array.from({ length: 24 }, () => 1 / 24),
+      meanHourlyPoaWm2: Array.from({ length: 24 }, () => 0),
+      thresholdWm2: 10,
+      targetGamma: 0.5,
+    })).toMatchObject({ status: 'blocked', code: 'YEN_TARGET_UNREACHABLE' });
   });
 });

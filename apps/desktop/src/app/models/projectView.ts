@@ -19,7 +19,7 @@ export interface NamedProfile {
   classic: { id: string; name: string; qty: number; unitPower: number; yield: number | null; simultaneity: number | null; operatingFractions: number[]; opHours: number }[];
   inductive: { id: string; name: string; qty: number; unitPower: number; yield: number | null; simultaneity: number | null; operatingFractions: number[]; opHours: number; startupCoef: number | null }[];
   hourly: { hour: number; realPower: number; peakPower: number }[];
-  meter: { observedEnergy: number; observedDays: number | null; normalizedProfileId: string | null; meterAmperage: number; networkType: 'single_phase' | 'three_phase'; morningPeakStart: string; morningPeakEnd: string; eveningPeakStart: string; eveningPeakEnd: string; peakImportance: number; targetQualityFactor: number } | null;
+  meter: { observedEnergy: number; observedDays: number | null; normalizedProfileId: string | null; forceYEn: boolean; targetYEn: number | null; meterAmperage: number; networkType: 'single_phase' | 'three_phase'; morningPeakStart: string; morningPeakEnd: string; eveningPeakStart: string; eveningPeakEnd: string; peakImportance: number; targetQualityFactor: number } | null;
 }
 
 export interface ProjectViewModel {
