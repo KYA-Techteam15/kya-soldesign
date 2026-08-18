@@ -9,7 +9,10 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
   await page.locator('.nav-item').nth(1).click();
 
   await page.getByRole('button', { name: /Télécharger les données d’irradiance/ }).click();
-  await page.getByRole('textbox', { name: 'Ville', exact: true }).fill('Bombouaka');
+  const town = page.getByRole('textbox', { name: 'Ville', exact: true });
+  await town.pressSequentially('Bombouaka');
+  await expect(town).toBeFocused();
+  await expect(town).toHaveValue('Bombouaka');
   await page.getByText('Rechercher', { exact: true }).click();
   await expect(page.getByLabel('Coordonnées trouvées')).toHaveValue('10,7030° / 0,2099°');
   await expect(page.getByLabel('Fuseau trouvé')).toHaveValue('Africa/Lome');
@@ -20,7 +23,11 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
 
   await page.getByRole('button', { name: /Télécharger les données d’irradiance/ }).click();
   await page.getByRole('button', { name: 'Par coordonnées' }).click();
-  await page.getByLabel('Latitude', { exact: true }).fill('10,7030');
+  const latitude = page.getByLabel('Latitude', { exact: true });
+  await latitude.pressSequentially('10,70abc30.9');
+  await expect(latitude).toBeFocused();
+  await expect(latitude).toHaveValue('10,70309');
+  await latitude.fill('10,7030');
   await page.getByLabel('Longitude', { exact: true }).fill('0,2099');
   await page.getByText('Rechercher', { exact: true }).click();
   await expect(page.getByLabel('Nom du site')).toHaveValue('Bombouaka');
@@ -54,8 +61,9 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
 
   await page.getByLabel("Heures d'usage").first().fill('2,5');
   await page.getByRole('button', { name: 'Ajuster les heures…' }).click();
-  await expect(page.getByRole('button', { name: '08 h' })).toHaveText('1');
-  await expect(page.getByRole('button', { name: '10 h' })).toHaveText('0.5');
+  await expect(page.getByRole('checkbox', { name: '08:00 - 09:00' })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: '10:00 - 11:00' })).toBeChecked();
+  await expect(page.getByText('0.5 h', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Confirmer' }).click();
   await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
   await expect(page.locator('.pane-right')).toContainText('1,45');

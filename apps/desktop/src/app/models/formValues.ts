@@ -2,6 +2,10 @@ export type FieldResult<Value> =
   | { readonly ok: true; readonly value: Value }
   | { readonly ok: false; readonly message: string };
 
+export function isDecimalDraft(raw: string): boolean {
+  return /^-?\d*(?:[.,]\d*)?$/u.test(raw);
+}
+
 export function parseOptionalDecimal(
   raw: string,
   constraints: { readonly min?: number; readonly maxExclusive?: number; readonly max?: number } = {},

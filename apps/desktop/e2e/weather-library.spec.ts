@@ -28,20 +28,18 @@ test('keeps downloaded weather locally and lists only localities backed by a fil
   await page.getByRole('textbox', { name: 'Ville', exact: true }).fill('Accra');
   await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
   await page.getByRole('button', { name: 'Télécharger', exact: true }).click();
-  await page.getByRole('button', { name: 'Enregistrer dans le dossier', exact: true }).last().click();
-  await expect(page.locator('.pickfield')).toContainText('Accra');
-
+  await expect(page.getByText(/^SHA-256 [0-9a-f]+…$/u)).toBeVisible();
+  await page.getByRole('button', { name: 'Annuler', exact: true }).click();
+  await page.goto('/accueil');
+  await page.reload();
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
+  await page.locator('.nav-item').nth(1).click();
   await page.locator('.pickfield').click();
   await expect(page.locator('.proj-row')).toHaveCount(2);
   await expect(page.locator('.proj-row').filter({ hasText: 'Accra' })).toBeVisible();
   await expect(page.locator('.proj-row').filter({ hasText: 'Bombouaka' })).toBeVisible();
   await expect(page.getByText('Alger', { exact: true })).toHaveCount(0);
   await expect(page.getByText('sans fichier', { exact: true })).toHaveCount(0);
-
-  await page.goto('/accueil');
-  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
-  await page.locator('.nav-item').nth(1).click();
-  await page.locator('.pickfield').click();
   await page.locator('.proj-row').filter({ hasText: 'Accra' }).click();
   await expect(page.locator('.pickfield')).toContainText('Accra');
   await expect(page.getByRole('img', { name: 'Irradiation mensuelle' })).toBeVisible();

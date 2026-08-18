@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import type { ProjectSessionPort, UiLocale } from './contracts.js';
-import { InMemoryProjects } from './adapters/inMemoryProjects.js';
+import { BrowserProjects } from './adapters/browserProjects.js';
 import {
   projectFileToView,
   projectViewToFile,
@@ -50,7 +50,7 @@ export function ProjectSessionProvider({
   readonly service?: ProjectSessionPort;
   readonly locale?: UiLocale;
 }) {
-  const service = useMemo(() => providedService ?? new InMemoryProjects(), [providedService]);
+  const service = useMemo(() => providedService ?? new BrowserProjects(), [providedService]);
   const [projects, setProjects] = useState<ProjectViewModel[]>(() => filesToViews(service.list()));
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState(() => Date.now());

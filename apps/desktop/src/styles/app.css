@@ -911,6 +911,82 @@ table.tbl td .cell-in:focus {
   outline: none;
 }
 
+/* Sélecteur des plages de fonctionnement, repris du dialogue historique :
+   journée et nuit restent lisibles comme deux périodes, et chaque heure est
+   nommée par son intervalle complet plutôt que par un index ambigu. */
+.operating-periods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.operating-period {
+  min-width: 0;
+  margin: 0;
+  padding: var(--sp-4);
+  border: 0;
+}
+.operating-period + .operating-period {
+  border-left: 1px solid var(--border);
+}
+.operating-period legend {
+  padding: 0;
+  color: var(--ok);
+  font-weight: 600;
+}
+.operating-period:last-child legend {
+  color: var(--text-muted);
+}
+.operating-hours {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-3);
+}
+.operating-hour {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.operating-hour input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--ok-fill);
+}
+.operating-hour input:focus-visible {
+  outline: 2px solid var(--ok);
+  outline-offset: 2px;
+}
+.operating-hour:has(input:checked) {
+  color: var(--text);
+  font-weight: 600;
+}
+.operating-hour:has(input:disabled) {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+.operating-hour small {
+  color: var(--ok);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+@media (max-width: 760px) {
+  .operating-periods { grid-template-columns: minmax(0, 1fr); }
+  .operating-period + .operating-period {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+
 /* Formulaires */
 .form-rows {
   display: grid;

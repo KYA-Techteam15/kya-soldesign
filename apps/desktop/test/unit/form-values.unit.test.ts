@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatOptionalDecimal,
   formatOptionalPercent,
+  isDecimalDraft,
   parseOptionalDecimal,
   parseOptionalPercent,
   parseRequiredInteger,
@@ -11,6 +12,15 @@ describe('form value boundaries', () => {
   it('keeps blank optional values unknown and accepts decimal commas', () => {
     expect(parseOptionalDecimal('')).toEqual({ ok: true, value: null });
     expect(parseOptionalDecimal(' 12,5 ')).toEqual({ ok: true, value: 12.5 });
+  });
+
+  it('accepts only editable decimal drafts for coordinate fields', () => {
+    for (const value of ['', '-', '10', '-10', '10,7030', '-0.1969', '.5']) {
+      expect(isDecimalDraft(value), value).toBe(true);
+    }
+    for (const value of ['1e3', '+10', '10°', '10,2.3', 'abc', '10 2']) {
+      expect(isDecimalDraft(value), value).toBe(false);
+    }
   });
 
   it('rejects invalid and out-of-range values without numeric defaults', () => {

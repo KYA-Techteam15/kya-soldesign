@@ -20,4 +20,10 @@ test('preserves all eight original workshop routes, labels, and browser navigati
   await expect(page.locator('.stephead .h-page')).toHaveText('Évaluation financière');
   await page.goForward();
   await expect(page.locator('.stephead .h-page')).toHaveText('Vue synoptique et rapports');
+
+  const currentUrl = page.url();
+  await page.reload();
+  await expect(page).toHaveURL(currentUrl);
+  await expect(page.locator('.stephead .h-page')).toHaveText('Vue synoptique et rapports');
+  await expect(page.locator('.nav-item').nth(7)).toHaveAttribute('aria-current', 'page');
 });

@@ -543,6 +543,18 @@ export function SectionSite() {
         <WeatherDownload
           lang={lang}
           onClose={() => setAskDownload(false)}
+          onStore={async (result) => {
+            await saveWeather(createSavedWeatherRecord({
+              siteName: result.siteName,
+              countryCode: result.countryCode,
+              sourceName: result.sourceName,
+              locator: result.locator,
+              optimalTilt: result.optimalTilt,
+              optimalAzimuth: result.optimalAzimuth,
+              timezoneIana: result.timezoneIana,
+              file: result.file,
+            }));
+          }}
           onSave={async (result) => {
             // Enregistrer, c'est écrire la localité, la série et l'orientation
             // par défaut d'un seul tenant — comme `save_weather_source`. La

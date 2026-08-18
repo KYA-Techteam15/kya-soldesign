@@ -63,26 +63,24 @@ export function OperatingHoursDialog({ items, onApply, onClose }: {
     <p className="label">
       Positionnez les {item.durationHours.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} h saisies dans le tableau. Le nombre d’heures reste inchangé.
     </p>
-    {[0, 12].map((offset) => <div className="hourgrid" key={offset} style={{ marginTop: 'var(--sp-3)' }}>
-      {Array.from({ length: 12 }, (_, localIndex) => offset + localIndex).map((hour) => {
-        const active = selected.includes(hour);
-        const fractionalHour = active && selected.length === required && item.durationHours % 1 !== 0
-          && hour === Math.max(...selected);
-        return <div key={hour}>
-          <span>{String(hour).padStart(2, '0')}h</span>
-          <button
-            type="button"
-            className="cell-in"
-            aria-label={`${String(hour).padStart(2, '0')} h`}
-            aria-pressed={active}
-            disabled={!active && selected.length >= required}
-            onClick={() => toggle(hour)}
-          >
-            {active ? fractionalHour ? String(item.durationHours % 1) : '1' : '0'}
-          </button>
-        </div>;
-      })}
-    </div>)}
+    <div className="operating-periods" style={{ marginTop: 'var(--sp-3)' }}>
+      <HourPeriod
+        title="Journée"
+        hours={Array.from({ length: 12 }, (_, hour) => hour + 6)}
+        selected={selected}
+        required={required}
+        durationHours={item.durationHours}
+        onToggle={toggle}
+      />
+      <HourPeriod
+        title="Nuit"
+        hours={[...Array.from({ length: 6 }, (_, hour) => hour + 18), ...Array.from({ length: 6 }, (_, hour) => hour)]}
+        selected={selected}
+        required={required}
+        durationHours={item.durationHours}
+        onToggle={toggle}
+      />
+    </div>
     <div className={`alert ${selected.length === required ? 'ok' : 'warn'}`} style={{ marginTop: 'var(--sp-3)' }} role="status">
       <b>{selected.length}/{required} positions</b>
       {selected.length === required
@@ -93,4 +91,37 @@ export function OperatingHoursDialog({ items, onApply, onClose }: {
       )}
     </div>
   </Dialog>;
+}
+
+function HourPeriod({ title, hours, selected, required, durationHours, onToggle }: {
+  readonly title: string;
+  readonly hours: readonly number[];
+  readonly selected: readonly number[];
+  readonly required: number;
+  readonly durationHours: number;
+  readonly onToggle: (hour: number) => void;
+}) {
+  return <fieldset className="operating-period">
+    <legend>{title}</legend>
+    <div className="operating-hours">
+      {hours.map((hour) => {
+        const active = selected.includes(hour);
+        const fractionalHour = active && selected.length === required && durationHours % 1 !== 0
+          && hour === Math.max(...selected);
+        const endHour = (hour + 1) % 24;
+        const interval = `${String(hour).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
+        return <label className="operating-hour" key={hour}>
+          <input
+            type="checkbox"
+            aria-label={interval}
+            checked={active}
+            disabled={!active && selected.length >= required}
+            onChange={() => onToggle(hour)}
+          />
+          <span>{interval}</span>
+          {fractionalHour && <small>{durationHours % 1} h</small>}
+        </label>;
+      })}
+    </div>
+  </fieldset>;
 }
