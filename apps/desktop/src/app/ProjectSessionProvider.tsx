@@ -8,6 +8,7 @@ import {
   systemTypeToCanonical,
 } from './models/projectAdapters.js';
 import type { ProjectViewModel, SystemType } from './models/projectView.js';
+import { readNavigationSession, writeNavigationSession } from './navigationSession.js';
 
 type ProjectMutation = (draft: ProjectViewModel) => void;
 
@@ -52,7 +53,7 @@ export function ProjectSessionProvider({
 }) {
   const service = useMemo(() => providedService ?? new BrowserProjects(), [providedService]);
   const [projects, setProjects] = useState<ProjectViewModel[]>(() => filesToViews(service.list()));
-  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [currentId, setCurrentId] = useState<string | null>(() => readNavigationSession(service.list()).currentProjectId);
   const [savedAt, setSavedAt] = useState(() => Date.now());
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [past, setPast] = useState<readonly ProjectViewModel[][]>([]);
@@ -140,7 +141,11 @@ export function ProjectSessionProvider({
     undo,
     redo,
     current: () => projects.find((project) => project.id === currentId) ?? null,
-    open: setCurrentId,
+    open: (id) => {
+      setCurrentId(id);
+      const session = readNavigationSession(service.list());
+      writeNavigationSession({ ...session, currentProjectId: service.get(id) ? id : null });
+    },
     create,
     remove,
     update,

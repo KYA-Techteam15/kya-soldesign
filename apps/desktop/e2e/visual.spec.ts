@@ -31,11 +31,8 @@ async function loadBombouakaAndNeeds(page: Page) {
   await page.getByLabel('Quantité').first().fill('1');
   await page.getByLabel('Puissance unitaire').first().fill('100');
   await page.getByLabel('Rendement').first().fill('1');
-  await page.getByLabel('Simultanéité').first().fill('1');
-  await page.getByRole('button', { name: '0 h', exact: true }).click();
-  await page.getByRole('button', { name: 'Toute la journée', exact: true }).click();
-  await page.getByRole('button', { name: 'Terminer', exact: true }).click();
-  await expect(page.locator('.curve-legend')).toContainText('γ 0,500');
+  await page.getByLabel("Heures d'usage").first().fill('4');
+  await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
 }
 
 for (const viewport of viewports) {

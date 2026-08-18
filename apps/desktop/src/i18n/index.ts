@@ -301,6 +301,8 @@ export const messages: Dict = {
   'loads.observedDays': { fr: 'Nombre exact de jours', en: 'Exact number of days' },
   'loads.sourcedProfile': { fr: 'Profil horaire sourcé', en: 'Sourced hourly profile' },
   'loads.chooseProfile': { fr: 'Choisir un profil…', en: 'Select a profile…' },
+  'loads.currentCalculation': { fr: 'Calcul actuel', en: 'Current calculation' },
+  'loads.meterCalculationNote': { fr: 'L’estimation utilise l’énergie observée, le nombre exact de jours et le profil horaire sourcé. Les informations d’ampérage, de réseau et de pointes sont réservées au futur diagnostic électrique et ne sont pas saisissables tant qu’elles n’ont aucun effet calculé.', en: 'The estimate uses observed energy, the exact number of days, and the sourced hourly profile. Meter amperage, network type, and peak windows are reserved for the future electrical diagnostic and cannot be edited until they affect a calculation.' },
   'loads.page1Owner': { fr: 'AIO-001', en: 'AIO-001' },
   'loads.page1Balance': { fr: 'Bilan calculé de la Page 1', en: 'Calculated Page 1 balance' },
   'loads.audit': { fr: 'Preuve du calcul', en: 'Calculation evidence' },

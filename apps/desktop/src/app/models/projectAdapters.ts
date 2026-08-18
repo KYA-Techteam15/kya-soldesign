@@ -306,8 +306,10 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
         locator: view.site.downloadedSource.locator,
         retrievedAtIso: view.site.downloadedSource.retrievedAtIso,
         monthlyPlaneOfArrayIrradiationKWhPerM2PerDay: view.site.monthlyIrradiation,
-        arrayTiltDeg: view.site.irradiationBasis?.tilt ?? view.site.tilt,
-        arrayAzimuthDeg: view.site.irradiationBasis?.azimuth ?? view.site.azimuth,
+        // L'orientation courante pilote le prochain calcul. irradiationBasis
+        // est uniquement la preuve de l'orientation du dernier résultat affiché.
+        arrayTiltDeg: view.site.tilt,
+        arrayAzimuthDeg: view.site.azimuth,
         qualityFlags: view.site.downloadedSource.qualityFlags,
         ...(view.site.downloadedSource.weatherFileId === undefined ? {} : { weatherFileId: view.site.downloadedSource.weatherFileId }),
         ...(view.site.downloadedSource.sourceSha256 === undefined ? {} : { sourceSha256: view.site.downloadedSource.sourceSha256 }),

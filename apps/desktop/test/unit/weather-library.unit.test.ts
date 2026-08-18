@@ -35,4 +35,20 @@ describe('downloaded weather library', () => {
     expect(weatherLibraryKey('TG', '  BomboUAKA  ')).toBe('TG:bombouaka');
     expect(() => parseSavedWeatherRecord({ ...record, source: { ...record.source, localityId: 'another-locality' } })).toThrow('WEATHER_LIBRARY_ASSOCIATION_INVALID');
   });
+
+  it('restores the full weather file after a fresh library instance', async () => {
+    const file = (await new CanonicalCatalog().listWeatherFiles())[0]!;
+    const record = createSavedWeatherRecord({
+      siteName: 'Bombouaka', countryCode: 'TG', sourceName: 'PVGIS', locator: 'file:bombouaka.json',
+      optimalTilt: 15, optimalAzimuth: 180, timezoneIana: 'Africa/Lome', file,
+    });
+    const first = new InMemoryWeatherLibrary();
+    await first.save(record);
+    const restarted = new InMemoryWeatherLibrary(await first.list());
+    const restored = (await restarted.list())[0]!;
+    expect(restored.locality.name).toBe('Bombouaka');
+    expect(restored.source.id).toBe(record.source.id);
+    expect(restored.file.metadata.sourceSha256).toBe(file.metadata.sourceSha256);
+    expect(restored.file.document.outputs.tmy_hourly).toHaveLength(8_760);
+  });
 });

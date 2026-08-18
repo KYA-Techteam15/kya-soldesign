@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
@@ -58,11 +58,30 @@ export function SectionSite() {
      n'était qu'une question de plus. */
   const bound = active ?? sources[0] ?? null;
 
-  /* Le profil est en plan des modules : tant que l'orientation n'a pas changé
-     depuis le dernier calcul, l'irradiation affichée reste celle du site. */
-  const basis = solar === null ? null : { tilt: s.tilt, azimuth: s.azimuth };
+  /* Le profil est en plan des modules : l'orientation enregistrée dans la
+     preuve est la référence du dernier calcul affiché. */
+  const basis = s.irradiationBasis;
   const loaded = solar !== null;
-  const stale = false;
+  const calculationCurrent = solarState.status === 'ready' && solarState.createdAt === project.updatedAt;
+  const orientationChanged = s.downloadedSource !== null && (
+    basis === null || basis.tilt !== s.tilt || basis.azimuth !== s.azimuth
+  );
+  const stale = s.downloadedSource !== null && (!calculationCurrent || orientationChanged);
+
+  useEffect(() => {
+    if (!calculationCurrent || !orientationChanged) return;
+    /* The analysis is ready for the current inputs. Store its orientation as
+       proof so the next render can distinguish a current result from a stale
+       one without treating a loading transition as a successful calculation. */
+    update((p) => {
+      if (
+        p.site.irradiationBasis?.tilt === p.site.tilt
+        && p.site.irradiationBasis?.azimuth === p.site.azimuth
+      ) return;
+      p.site.irradiationBasis = { tilt: p.site.tilt, azimuth: p.site.azimuth };
+    });
+  }, [calculationCurrent, orientationChanged, update]);
+
   /* Une localité téléchargée n'est pas forcément dans le référentiel embarqué :
      c'est le nom qui atteste qu'un site est posé, pas son identifiant en base. */
   const located = s.region.trim().length > 0;

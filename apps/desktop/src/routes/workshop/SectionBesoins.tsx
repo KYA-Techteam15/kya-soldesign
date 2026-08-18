@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
 import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
@@ -13,6 +13,7 @@ import { useT } from '../../i18n';
 import { useCatalog } from '../../app/CatalogProvider';
 import { OperatingHoursDialog } from './OperatingHoursDialog';
 import { Dialog } from '../../ui/Dialog';
+import { isDecimalDraft } from '../../app/models/formValues';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -23,14 +24,62 @@ const MODES: { key: LoadSource; label: string }[] = [
   { key: 'meter', label: 'Partir de la facture' },
 ];
 
-const GRANULARITIES: { key: Granularity; label: string; n: string; hint: string }[] = [
-  { key: 'annual', label: 'Annuel', n: '1', hint: 'Un seul profil pour toute l’année' },
-  { key: 'weekly', label: 'Hebdomadaire', n: '2', hint: 'Semaine et week-end séparés' },
-  { key: 'daily', label: 'Journalier', n: '7', hint: 'Un profil par jour de la semaine' },
-  { key: 'monthly', label: 'Mensuel', n: '12', hint: 'Un profil par mois' },
-  { key: 'periodic', label: 'Périodes', n: 'N', hint: 'Périodes saisonnières personnalisées' },
-  { key: 'combined', label: 'Combiné', n: '×', hint: 'Hebdomadaire × périodes, jusqu’à 12 profils' },
+const GRANULARITIES: { key: Granularity; label: string; n: string; hint: string; implemented: boolean }[] = [
+  { key: 'annual', label: 'Annuel', n: '1', hint: 'Un seul profil pour toute l’année', implemented: true },
+  { key: 'weekly', label: 'Hebdomadaire', n: '2', hint: 'Semaine et week-end séparés', implemented: false },
+  { key: 'daily', label: 'Journalier', n: '7', hint: 'Un profil par jour de la semaine', implemented: false },
+  { key: 'monthly', label: 'Mensuel', n: '12', hint: 'Un profil par mois', implemented: false },
+  { key: 'periodic', label: 'Périodes', n: 'N', hint: 'Périodes saisonnières personnalisées', implemented: false },
+  { key: 'combined', label: 'Combiné', n: '×', hint: 'Hebdomadaire × périodes, jusqu’à 12 profils', implemented: false },
 ];
+
+function DraftNumberInput({
+  value,
+  onCommit,
+  format = (number) => String(number),
+  nullable = false,
+  inputMode = 'decimal',
+  ...props
+}: Omit<ComponentProps<'input'>, 'value' | 'onChange'> & {
+  readonly value: number | null;
+  readonly onCommit: (value: number | null) => void;
+  readonly format?: (value: number) => string;
+  readonly nullable?: boolean;
+}) {
+  const [draft, setDraft] = useState(() => value === null ? '' : format(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(value === null ? '' : format(value));
+  }, [focused, format, value]);
+
+  const commitDraft = (raw: string) => {
+    if (raw.trim() === '') {
+      if (nullable) onCommit(null);
+      return;
+    }
+    if (!isDecimalDraft(raw)) return;
+    const parsed = Number(raw.replace(',', '.'));
+    if (Number.isFinite(parsed)) onCommit(parsed);
+  };
+
+  return <input
+    {...props}
+    inputMode={inputMode}
+    value={draft}
+    onFocus={() => setFocused(true)}
+    onChange={(event: ChangeEvent<HTMLInputElement>) => {
+      const raw = event.target.value;
+      if (!isDecimalDraft(raw)) return;
+      setDraft(raw);
+      commitDraft(raw);
+    }}
+    onBlur={() => {
+      commitDraft(draft);
+      setFocused(false);
+    }}
+  />;
+}
 
 export function SectionBesoins() {
   const t = useT();
@@ -269,20 +318,20 @@ export function SectionBesoins() {
                             onChange={(ev) => mutateProfile((p) => { p.classic[i].name = ev.target.value; })} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={1} aria-label="Quantité" value={e.qty}
-                            onChange={(ev) => mutateProfile((p) => { p.classic[i].qty = num(ev.target.value); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label="Quantité" value={e.qty}
+                            inputMode="numeric" onCommit={(value) => { if (value !== null && Number.isInteger(value) && value >= 1) mutateProfile((p) => { p.classic[i].qty = value; }); }} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={2} aria-label="Puissance unitaire" value={e.unitPower}
-                            onChange={(ev) => mutateProfile((p) => { p.classic[i].unitPower = num(ev.target.value); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label="Puissance unitaire" value={e.unitPower}
+                            onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.classic[i].unitPower = Math.max(0, value); }); }} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={3} aria-label="Rendement" value={e.yield === null ? '' : fmt(e.yield, 2)}
-                            onChange={(ev) => mutateProfile((p) => { p.classic[i].yield = nullableNum(ev.target.value); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label="Rendement" nullable value={e.yield}
+                            format={(value) => fmt(value, 2)} onCommit={(value) => { if (value === null || (value > 0 && value <= 1)) mutateProfile((p) => { p.classic[i].yield = value; }); }} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={4} aria-label="Heures d'usage" value={fmt(e.opHours, e.opHours % 1 ? 2 : 0)}
-                            onChange={(ev) => mutateProfile((p) => { const row = p.classic[i]; row.opHours = duration(ev.target.value); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label="Heures d'usage" value={e.opHours}
+                            format={(value) => fmt(value, value % 1 ? 2 : 0)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { const row = p.classic[i]; row.opHours = duration(String(value)); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); }); }} />
                         </td>
                         <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
                         <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
@@ -362,24 +411,24 @@ export function SectionBesoins() {
                             onChange={(ev) => mutateProfile((p) => { p.inductive[i].name = ev.target.value; })} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={1} aria-label="Quantité" value={e.qty}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].qty = num(ev.target.value); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label="Quantité" value={e.qty}
+                            inputMode="numeric" onCommit={(value) => { if (value !== null && Number.isInteger(value) && value >= 1) mutateProfile((p) => { p.inductive[i].qty = value; }); }} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={2} aria-label="Puissance unitaire" value={e.unitPower}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].unitPower = num(ev.target.value); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label="Puissance unitaire" value={e.unitPower}
+                            onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.inductive[i].unitPower = Math.max(0, value); }); }} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={3} aria-label="Rendement" value={e.yield === null ? '' : fmt(e.yield, 2)}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].yield = nullableNum(ev.target.value); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label="Rendement" nullable value={e.yield}
+                            format={(value) => fmt(value, 2)} onCommit={(value) => { if (value === null || (value > 0 && value <= 1)) mutateProfile((p) => { p.inductive[i].yield = value; }); }} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={4} aria-label="Coefficient de démarrage" value={e.startupCoef === null ? '' : fmt(e.startupCoef, 1)}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].startupCoef = nullableNum(ev.target.value); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label="Coefficient de démarrage" nullable value={e.startupCoef}
+                            format={(value) => fmt(value, 1)} onCommit={(value) => { if (value === null || value >= 1) mutateProfile((p) => { p.inductive[i].startupCoef = value; }); }} />
                         </td>
                         <td>
-                          <input className="cell-in" data-r={i} data-c={5} aria-label="Heures d'usage" value={fmt(e.opHours, e.opHours % 1 ? 2 : 0)}
-                            onChange={(ev) => mutateProfile((p) => { const row = p.inductive[i]; row.opHours = duration(ev.target.value); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); })} />
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={5} aria-label="Heures d'usage" value={e.opHours}
+                            format={(value) => fmt(value, value % 1 ? 2 : 0)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { const row = p.inductive[i]; row.opHours = duration(String(value)); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); }); }} />
                         </td>
                         <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
                         <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
@@ -445,24 +494,26 @@ export function SectionBesoins() {
               {profile.hourly.slice(offset, offset + 12).map((h) => (
                 <div key={h.hour}>
                   <span>{String(h.hour).padStart(2, '0')}</span>
-                  <input
+                  <DraftNumberInput
                     className="cell-in"
                     aria-label={`Puissance à ${h.hour} h`}
-                    value={fmt(h.realPower, 2)}
-                    onChange={(ev) =>
+                    value={h.realPower}
+                    format={(value) => fmt(value, 2)}
+                    onCommit={(value) => {
+                      if (value === null) return;
                       mutateProfile((p) => {
-                        const next = num(ev.target.value);
+                        const next = Math.max(0, value);
                         p.hourly[h.hour].realPower = next;
                         if (p.hourly[h.hour].peakPower < next) p.hourly[h.hour].peakPower = next;
-                      })
-                    }
+                      });
+                    }}
                   />
                 </div>
               ))}
             </div>
           ))}
           <div className="tbl-title" style={{ marginTop: 'var(--sp-4)' }}><h2 className="h-sec">{t('loads.hourlyPeak')}</h2><span className="label">kW · chaque valeur doit être ≥ à la puissance moyenne</span></div>
-          {[0, 12].map((offset) => <div className="hourgrid" key={`peak-${offset}`} style={{ marginBottom: 'var(--sp-3)' }}>{profile.hourly.slice(offset, offset + 12).map((h) => <div key={h.hour}><span>{String(h.hour).padStart(2, '0')}</span><input className="cell-in" aria-label={`Puissance de pointe à ${h.hour} h`} value={fmt(h.peakPower, 2)} onChange={(event) => mutateProfile((p) => { p.hourly[h.hour].peakPower = num(event.target.value); })} /></div>)}</div>)}
+          {[0, 12].map((offset) => <div className="hourgrid" key={`peak-${offset}`} style={{ marginBottom: 'var(--sp-3)' }}>{profile.hourly.slice(offset, offset + 12).map((h) => <div key={h.hour}><span>{String(h.hour).padStart(2, '0')}</span><DraftNumberInput className="cell-in" aria-label={`Puissance de pointe à ${h.hour} h`} value={h.peakPower} format={(value) => fmt(value, 2)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.hourly[h.hour].peakPower = Math.max(p.hourly[h.hour].realPower, value); }); }} /></div>)}</div>)}
           <CapabilityNotice capability="sizing" state={calculation} compact />
         </section>
       )}
@@ -473,68 +524,19 @@ export function SectionBesoins() {
             <h2 className="h-sec">Estimation depuis la facture d'électricité</h2>
           </div>
           <div className="form-rows">
+            <div className="alert" role="note" style={{ gridColumn: '1 / -1' }}>
+              <b>{t('loads.currentCalculation')}</b> {t('loads.meterCalculationNote')}
+            </div>
             <label>
               <span>{t('loads.observedEnergy')}</span>
               <span className="uf">
-                <input value={profile.meter.observedEnergy}
-                  onChange={(e) => mutateProfile((p) => { p.meter!.observedEnergy = num(e.target.value); })} />
+                <DraftNumberInput value={profile.meter.observedEnergy}
+                  onCommit={(value) => { if (value !== null && value >= 0) mutateProfile((p) => { p.meter!.observedEnergy = value; }); }} />
                 <span className="uf-unit">kWh</span>
               </span>
             </label>
-            <label><span>{t('loads.observedDays')}</span><input inputMode="numeric" value={profile.meter.observedDays ?? ''} onChange={(event) => mutateProfile((p) => { p.meter!.observedDays = nullableNum(event.target.value); })} /></label>
+            <label><span>{t('loads.observedDays')}</span><DraftNumberInput inputMode="numeric" nullable value={profile.meter.observedDays} onCommit={(value) => { if (value === null || (Number.isInteger(value) && value > 0)) mutateProfile((p) => { p.meter!.observedDays = value; }); }} /></label>
             <label><span>{t('loads.sourcedProfile')}</span><select value={profile.meter.normalizedProfileId ?? ''} onChange={(event) => mutateProfile((p) => { p.meter!.normalizedProfileId = event.target.value || null; })}><option value="">{t('loads.chooseProfile')}</option>{loadProfiles.map((item) => <option key={item.id} value={item.id}>{item.displayName} · {item.provenance.sourceRecordId}</option>)}</select></label>
-            <label>
-              <span>{t('loads.meterAmperage')}</span>
-              <span className="uf">
-                <input value={profile.meter.meterAmperage}
-                  onChange={(e) => mutateProfile((p) => { p.meter!.meterAmperage = num(e.target.value); })} />
-                <span className="uf-unit">A</span>
-              </span>
-            </label>
-            <label>
-              <span>{t('loads.networkType')}</span>
-              <select
-                value={profile.meter.networkType}
-                onChange={(e) =>
-                  mutateProfile((p) => {
-                    p.meter!.networkType = e.target.value as 'single_phase' | 'three_phase';
-                  })
-                }
-              >
-                <option value="single_phase">{t('loads.singlePhase')}</option>
-                <option value="three_phase">{t('loads.threePhase')}</option>
-              </select>
-            </label>
-            <label>
-              <span>{t('loads.morningPeak')}</span>
-              <span className="rf">
-                <input value={profile.meter.morningPeakStart}
-                  onChange={(e) => mutateProfile((p) => { p.meter!.morningPeakStart = e.target.value; })} />
-                <span className="rf-sep" aria-hidden="true">→</span>
-                <input value={profile.meter.morningPeakEnd}
-                  onChange={(e) => mutateProfile((p) => { p.meter!.morningPeakEnd = e.target.value; })} />
-              </span>
-            </label>
-            <label>
-              <span>{t('loads.eveningPeak')}</span>
-              <span className="rf">
-                <input value={profile.meter.eveningPeakStart}
-                  onChange={(e) => mutateProfile((p) => { p.meter!.eveningPeakStart = e.target.value; })} />
-                <span className="rf-sep" aria-hidden="true">→</span>
-                <input value={profile.meter.eveningPeakEnd}
-                  onChange={(e) => mutateProfile((p) => { p.meter!.eveningPeakEnd = e.target.value; })} />
-              </span>
-            </label>
-            <label>
-              <span>{t('loads.peakImportance')}</span>
-              <input value={fmt(profile.meter.peakImportance, 2)}
-                onChange={(e) => mutateProfile((p) => { p.meter!.peakImportance = num(e.target.value); })} />
-            </label>
-            <label>
-              <span>{t('loads.qualityTarget')}</span>
-              <input value={fmt(profile.meter.targetQualityFactor, 2)}
-                onChange={(e) => mutateProfile((p) => { p.meter!.targetQualityFactor = num(e.target.value); })} />
-            </label>
           </div>
         </section>
       )}
@@ -549,7 +551,9 @@ export function SectionBesoins() {
                   <button
                     key={g.key}
                     className="proj-row"
+                    disabled={!g.implemented}
                     onClick={() => {
+                      if (!g.implemented) return;
                       update((d) => { d.load.granularity = g.key; });
                       setShowGranularity(false);
                       notify({ kind: 'success', title: `Granularité : ${g.label}` });
@@ -557,7 +561,7 @@ export function SectionBesoins() {
                   >
                     <span>
                       <b>{g.label}</b>
-                      <small>{g.hint}</small>
+                      <small>{g.hint} · {g.implemented ? 'disponible' : 'indisponible dans cette version'}</small>
                     </span>
                     <span className="when">{g.n}</span>
                     <span className="badge">

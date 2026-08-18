@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { useUi } from './store/ui';
 import { Splash } from './routes/Splash';
 import { Home } from './routes/Home';
@@ -18,6 +18,8 @@ import { SectionDossier } from './routes/workshop/SectionDossier';
 import { Toasts } from './shell/Toasts';
 import { ConfirmDialog } from './shell/ConfirmDialog';
 import { CommandPalette } from './shell/CommandPalette';
+import { useProjects } from './store/project';
+import { readNavigationSession, writeNavigationSession } from './app/navigationSession';
 
 export function App() {
   const theme = useUi((s) => s.theme);
@@ -25,6 +27,24 @@ export function App() {
   const setVibe = useUi((s) => s.setVibe);
 
   const setTheme = useUi((s) => s.setTheme);
+  const location = useLocation();
+  const projects = useProjects((s) => s.projects);
+
+  useEffect(() => {
+    const match = location.pathname.match(/^\/projet\/([^/]+)\/atelier\/([^/]+)$/u);
+    if (!match) return;
+    const project = projects.find((candidate) => candidate.id === match[1]);
+    if (!project) return;
+    const session = readNavigationSession(projects);
+    writeNavigationSession({
+      ...session,
+      currentProjectId: project.id,
+      route: location.pathname,
+      search: location.search,
+      activeProfileId: project.load.activeProfileId,
+      dossierView: location.pathname.endsWith('/dossier') ? new URLSearchParams(location.search).get('vue') : session.dossierView,
+    });
+  }, [location.pathname, location.search, projects]);
 
   useEffect(() => {
     // ?theme=dark force le thème — utilisé par le script de captures
