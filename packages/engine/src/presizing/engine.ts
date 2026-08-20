@@ -3,7 +3,7 @@ import type { PresizingCandidateV1, PresizingEnvelopeV1, PresizingInputV1, Presi
 const GRID = Array.from({ length: 11 }, (_, index) => index / 10);
 
 export class PresizingEngine {
-  public readonly version = 'presizing-1.0.0';
+  public readonly version = 'presizing-1.1.0';
 
   public async calculate(input: PresizingInputV1, onProgress?: (progress: PresizingProgress) => void, yieldControl: () => Promise<void> = () => Promise.resolve()): Promise<PresizingEnvelopeV1> {
     validateInput(input);
@@ -39,10 +39,17 @@ export class PresizingEngine {
 function evaluateCandidate(input: PresizingInputV1, alphaA: number, alphaN: number): PresizingCandidateV1 | null {
   const annualPoaKwh = input.hourlyPoaWm2.reduce((sum, value) => sum + value / 1000, 0);
   if (annualPoaKwh <= 0 || input.dailyEnergyWh <= 0) return null;
-  const pvPeakKw = input.dailyEnergyWh / 1000 * (1 + alphaN) / (annualPoaKwh / 365 * input.systemPr * input.inverterEfficiency);
+  const dailyEnergyKwh = input.dailyEnergyWh / 1000;
+  const conversionEfficiency = input.inverterEfficiency;
+  const storageEfficiency = input.batteryEfficiency;
+  const exergyNeedKwh = dailyEnergyKwh / (conversionEfficiency * storageEfficiency)
+    * ((-1 - alphaN + alphaA + storageEfficiency) * input.yEn + alphaN + 1);
+  const pvPeakKw = exergyNeedKwh / (annualPoaKwh / 365 * input.systemPr);
   // Page 2 reports useful storage energy directly. DoD and battery technology
   // are deliberately deferred to the equipment-sizing page.
-  const storageKwh = input.dailyEnergyWh / 1000 * (1 + alphaN) * (1 - alphaA);
+  const storageKwh = dailyEnergyKwh / conversionEfficiency * (-input.yEn
+    + ((alphaA + storageEfficiency) * input.yEn + (1 + alphaN) * (1 - input.yEn)) / storageEfficiency);
+  if (pvPeakKw <= 0 || storageKwh < 0) return null;
   const inverterKw = Math.max(input.peakPowerW / 1000, pvPeakKw * input.inverterEfficiency);
   let storedKwh = storageKwh; let lossHours = 0; let served = 0; let production = 0;
   for (let hour = 0; hour < input.hourlyPoaWm2.length; hour += 1) {
@@ -57,11 +64,29 @@ function evaluateCandidate(input: PresizingInputV1, alphaA: number, alphaN: numb
     if (direct + discharged * input.batteryEfficiency + 1e-9 < loadKwh) lossHours += 1;
   }
   const totalLoadKwh = input.dailyEnergyWh / 1000 * 365;
-  const lpsp = Math.max(0, Math.min(1, 1 - served / Math.max(totalLoadKwh, 0.001)));
+  const servedEnergyKwh = Math.min(served, totalLoadKwh);
+  const lpsp = Math.max(0, Math.min(1, 1 - servedEnergyKwh / Math.max(totalLoadKwh, 0.001)));
   const lolp = lossHours / input.hourlyPoaWm2.length; const sri = (1 - lolp) * (1 - lpsp);
   const investment = pvPeakKw * input.pvSpecificCostPerKw + storageKwh * input.batterySpecificCostPerKwh + inverterKw * input.inverterSpecificCostPerKw;
-  const lcoe = investment / Math.max(production, 0.001); const svi = lcoe / Math.max(input.gridTariffPerKwh, 0.001);
-  return { alphaA, alphaN, pvPeakKw, storageKwh, inverterKw, annualProductionKwh: production, lpsp, lolp, sri, lcoe, svi, co2AvoidedKg: Math.min(production, served) * input.emissionFactorKgPerKwh };
+  const discountFactor = (year: number) => 1 / ((1 + input.discountRateRatio) ** year);
+  const annuity = Array.from({ length: input.projectLifetimeYears }, (_, index) => discountFactor(index + 1)).reduce((sum, value) => sum + value, 0);
+  const maintenance = (pvPeakKw * input.pvSpecificCostPerKw * input.pvMaintenanceRatioPerYear
+    + storageKwh * input.batterySpecificCostPerKwh * input.batteryMaintenanceRatioPerYear
+    + inverterKw * input.inverterSpecificCostPerKw * input.inverterMaintenanceRatioPerYear) * annuity;
+  const replacement = replacementCost(pvPeakKw, storageKwh, inverterKw, input, discountFactor);
+  const lcc = investment + maintenance + replacement;
+  const discountedServedEnergy = servedEnergyKwh * annuity;
+  const lcoe = lcc / Math.max(discountedServedEnergy, 0.001); const svi = lcoe / Math.max(input.gridTariffPerKwh, 0.001);
+  const co2AvoidedKg = servedEnergyKwh * input.emissionFactorKgPerKwh;
+  const carbonFactorKgPerKwh = co2AvoidedKg / Math.max(servedEnergyKwh, 0.001);
+  return { alphaA, alphaN, pvPeakKw, storageKwh, inverterKw, annualProductionKwh: production, servedEnergyKwh, lcc, lpsp, lolp, sri, lcoe, svi, carbonFactorKgPerKwh, co2AvoidedKg };
+}
+function replacementCost(pvPeakKw: number, storageKwh: number, inverterKw: number, input: PresizingInputV1, discountFactor: (year: number) => number): number {
+  let total = 0;
+  for (let year = input.pvLifetimeYears; year < input.projectLifetimeYears; year += input.pvLifetimeYears) total += pvPeakKw * input.pvSpecificCostPerKw * discountFactor(year);
+  for (let year = input.batteryLifetimeYears; year < input.projectLifetimeYears; year += input.batteryLifetimeYears) total += storageKwh * input.batterySpecificCostPerKwh * discountFactor(year);
+  for (let year = input.inverterLifetimeYears; year < input.projectLifetimeYears; year += input.inverterLifetimeYears) total += inverterKw * input.inverterSpecificCostPerKw * discountFactor(year);
+  return total;
 }
 
 function validateInput(input: PresizingInputV1): void {
@@ -71,7 +96,9 @@ function validateInput(input: PresizingInputV1): void {
   if (input.hourlyLoadWh.some((value) => !Number.isFinite(value) || value < 0) || input.hourlyPoaWm2.some((value) => !Number.isFinite(value) || value < 0)) throw new Error('HOURLY_DATA_INVALID');
   const ratios = [input.lpspMax, input.lolpMax, input.systemPr, input.inverterEfficiency, input.batteryEfficiency];
   if (ratios.some((value) => !Number.isFinite(value) || value < 0 || value > 1) || input.systemPr === 0 || input.inverterEfficiency === 0 || input.batteryEfficiency === 0) throw new Error('ASSUMPTION_OUT_OF_RANGE');
-  const nonNegative = [input.peakPowerW, input.pvSpecificCostPerKw, input.batterySpecificCostPerKwh, input.inverterSpecificCostPerKw, input.gridTariffPerKwh, input.emissionFactorKgPerKwh];
+  const nonNegative = [input.peakPowerW, input.pvSpecificCostPerKw, input.batterySpecificCostPerKwh, input.inverterSpecificCostPerKw, input.gridTariffPerKwh, input.emissionFactorKgPerKwh, input.pvMaintenanceRatioPerYear, input.batteryMaintenanceRatioPerYear, input.inverterMaintenanceRatioPerYear, input.discountRateRatio];
   if (nonNegative.some((value) => !Number.isFinite(value) || value < 0) || input.gridTariffPerKwh === 0) throw new Error('ASSUMPTION_OUT_OF_RANGE');
+  const lifetimes = [input.projectLifetimeYears, input.pvLifetimeYears, input.batteryLifetimeYears, input.inverterLifetimeYears];
+  if (lifetimes.some((value) => !Number.isInteger(value) || value <= 0)) throw new Error('ASSUMPTION_OUT_OF_RANGE');
 }
 function hash(value: string): string { let result = 2166136261; for (let index = 0; index < value.length; index += 1) result = Math.imul(result ^ value.charCodeAt(index), 16777619); return (result >>> 0).toString(16).padStart(8, '0'); }

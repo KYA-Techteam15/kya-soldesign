@@ -36,6 +36,7 @@ export function CalculationProvider({
   const defaultService = useMemo<CalculationCapabilityPort>(() => references === null ? unavailableCalculations : new AioCalculations(
     (id) => session.canonicalProjects.find((project) => project.id === id) ?? null,
     references,
+    (project) => session.replaceCanonical(project),
   ), [references, session.canonicalProjects]);
   return (
     <CalculationContext.Provider value={service ?? defaultService}>

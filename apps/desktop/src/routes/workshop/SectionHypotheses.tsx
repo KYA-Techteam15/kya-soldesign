@@ -10,7 +10,7 @@ import { CapabilityNotice } from '../../ui/CapabilityNotice';
 import { useT } from '../../i18n';
 
 const FAMILIES = [
-  { key: 'tech', label: 'Technique', hint: 'rendements, seuils, tension du parc' },
+  { key: 'tech', label: 'Technique', hint: 'rendements et seuils de simulation' },
   { key: 'costs', label: 'Coûts & référence', hint: 'coûts spécifiques, marges, tarif réseau' },
   { key: 'life', label: 'Durées de vie', hint: 'remplacements, entretien, actualisation' },
 ] as const;
@@ -37,7 +37,12 @@ export function SectionHypotheses() {
   const [progress, setProgress] = useState<PresizingProgress | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  useEffect(() => { setResult(null); setProgress(null); setRunError(null); }, [project.updatedAt]);
+  useEffect(() => {
+    setProgress(null);
+    setRunError(null);
+    if (state.status === 'ready') setResult(state.envelope as PresizingEnvelopeV1);
+    else setResult(null);
+  }, [project.updatedAt, state]);
   const set = (key: keyof typeof assumptions) => (value: number) => update((draft) => { (draft.assumptions[key] as number) = value; });
   const run = async () => {
     if (service.runPresizing === undefined) return;
@@ -69,11 +74,14 @@ export function SectionHypotheses() {
       </>}
     </div></section>
     <section className={`out ${candidate === null ? 'is-stale' : ''}`}><div className="out-head"><span className={`out-tag ${output?.viable ? 'ok' : ''}`}>{output === null ? t('g.unavailable') : output.viable ? t('presizing.viable') : t('presizing.notViable')}</span><h2 className="h-sec">Fiabilité &amp; économie</h2></div><div className="out-grid">
-      {candidate === null || output === null ? ['LPSP', 'LOLP', 'SRI', 'Coût du kWh produit', 'SVI', 'CO₂ évité'].map((label) => <PendingValue key={label} label={label} />) : <>
+      {candidate === null || output === null ? ['Énergie servie', 'LPSP', 'LOLP', 'SRI', 'Coût cycle de vie', 'Coût du kWh produit', 'SVI', 'CO₂ évité', 'Facteur carbone'].map((label) => <PendingValue key={label} label={label} />) : <>
+        <ResultValue label="Énergie servie" value={candidate.servedEnergyKwh} unit="kWh/an" digits={0} />
         <ResultValue label="LPSP" value={candidate.lpsp * 100} unit="%" /><ResultValue label="LOLP" value={candidate.lolp * 100} unit="%" />
         <ResultValue label="SRI" value={candidate.sri} digits={3} /><ResultValue label="SRI minimum" value={output.sriMin} digits={3} />
+        <ResultValue label="Coût cycle de vie" value={candidate.lcc} unit="FCFA" digits={0} />
         <ResultValue label="Coût du kWh produit" value={candidate.lcoe} unit="FCFA/kWh" /><ResultValue label="SVI" value={candidate.svi} digits={3} />
         <ResultValue label="CO₂ évité" value={candidate.co2AvoidedKg} unit="kg/an" digits={0} />
+        <ResultValue label="Facteur carbone" value={candidate.carbonFactorKgPerKwh} unit="kgCO₂/kWh" digits={3} />
       </>}
     </div></section>
     {open && <Dialog title="Hypothèses de calcul" lead={FAMILIES.find((item) => item.key === family)?.hint} wide onClose={() => setOpen(false)} footer={<button className="btn-primary" onClick={() => setOpen(false)}>{t('g.close')}</button>}>
@@ -82,7 +90,6 @@ export function SectionHypotheses() {
         <NumField label="Performance ratio" unit="%" value={assumptions.systemPr} onChange={set('systemPr')} decimals={1} />
         <NumField label="Rendement onduleur" unit="%" value={assumptions.inverterYield} onChange={set('inverterYield')} decimals={1} />
         <NumField label="Rendement batterie" unit="%" value={assumptions.batteryYield} onChange={set('batteryYield')} decimals={1} />
-        <NumField label="Tension du parc" unit="V" value={assumptions.batteryVoltage} onChange={set('batteryVoltage')} />
         <NumField label="Seuil d’irradiance minimale" unit="W/m²" value={project.load.irMin} onChange={(value) => update((draft) => { draft.load.irMin = value; })} />
       </div>}
       {family === 'costs' && <div className="form-rows">

@@ -14,6 +14,7 @@ export class AioCalculations implements CalculationCapabilityPort {
   public constructor(
     private readonly getProject: (id: string) => ProjectFileV1 | null,
     private readonly references: { readonly localities: readonly Locality[]; readonly weatherSources: readonly WeatherSource[]; readonly loadProfiles: readonly NormalizedHourlyProfile[] },
+    private readonly saveProject: (project: ProjectFileV1) => void = () => undefined,
   ) {}
 
   public async read<Output>(projectId: string, capability: CapabilityId): Promise<CapabilityState<Output>> {
@@ -31,9 +32,13 @@ export class AioCalculations implements CalculationCapabilityPort {
       };
     }
     if (capability === 'presizing') {
-      const envelope = this.presizingResults.get(projectId);
-      return envelope === undefined
-        ? { status: 'empty', messageKey: 'PRESIZING_NOT_RUN' }
+      const adapted = await projectToPresizingInput(project, this.references);
+      if (adapted.status === 'blocked') return { status: 'empty', messageKey: adapted.issues.map((issue) => issue.code).join(',') };
+      const envelope = (project.lastCalculation ?? this.presizingResults.get(projectId)) as PresizingEnvelopeV1 | undefined;
+      if (envelope === undefined) return { status: 'empty', messageKey: 'PRESIZING_NOT_RUN' };
+      const currentHash = hash(JSON.stringify(adapted.input));
+      return envelope.inputHash !== currentHash
+        ? { status: 'stale', previousRunId: `${project.id}:${envelope.inputHash}`, previousInputHash: envelope.inputHash, currentInputHash: currentHash, reasonKey: 'state.calculationStale' }
         : { status: 'ready', runId: `${project.id}:${envelope.inputHash}`, createdAt: project.updatedAt, envelope: envelope as never };
     }
     const adapted = await projectToAioInput(project, this.references);
@@ -65,6 +70,13 @@ export class AioCalculations implements CalculationCapabilityPort {
     if (adapted.status === 'blocked') throw new Error(adapted.issues.map((issue) => issue.code).join(','));
     const envelope = await this.presizingEngine.calculate(adapted.input, onProgress, () => new Promise((resolve) => setTimeout(resolve, 0)));
     this.presizingResults.set(projectId, envelope);
+    this.saveProject({ ...project, updatedAt: new Date().toISOString(), lastCalculation: envelope });
     return envelope;
   }
+}
+
+function hash(value: string): string {
+  let result = 2166136261;
+  for (let index = 0; index < value.length; index += 1) result = Math.imul(result ^ value.charCodeAt(index), 16777619);
+  return (result >>> 0).toString(16).padStart(8, '0');
 }

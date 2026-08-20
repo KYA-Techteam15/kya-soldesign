@@ -11,6 +11,8 @@ import { useUi } from '../../store/ui';
 import { useT } from '../../i18n';
 import { sectionStates } from '../../domain/completion';
 import { useCatalog } from '../../app/CatalogProvider';
+import { useCalculationState } from '../../app/CalculationProvider';
+import type { PresizingOutputV1 } from '@ksd/engine';
 
 /**
  * Les 8 étapes de l'atelier. Aucun ordre n'est imposé (critère A4).
@@ -42,6 +44,7 @@ export function WorkshopLayout() {
   const centerRef = useRef<HTMLElement>(null);
   const { summary } = useCatalog();
   const project = projects.find((p) => p.id === id) ?? null;
+  const presizing = useCalculationState<PresizingOutputV1>(project?.id ?? '', 'presizing', project?.updatedAt ?? '');
 
   useEffect(() => {
     if (id) open(id);
@@ -147,7 +150,10 @@ export function WorkshopLayout() {
       </div>
 
       {verdictCollapsed && (
-        <VerdictTab svi={null} viable={false} />
+        <VerdictTab
+          svi={presizing.status === 'ready' ? presizing.envelope.output.selected.svi : null}
+          viable={presizing.status === 'ready' && presizing.envelope.output.viable}
+        />
       )}
 
       <StatusBar currency={project.currency} />

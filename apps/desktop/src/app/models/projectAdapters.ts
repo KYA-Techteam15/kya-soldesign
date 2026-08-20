@@ -154,6 +154,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     systemType: systemToView[project.system],
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
+    lastCalculation: project.lastCalculation,
     currency: input.currencyCode,
     details: {
       clientName: input.details.clientName,
@@ -448,7 +449,7 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
     inputs: input,
     selectedEquipmentIds: [view.selection.moduleId, view.selection.batteryId, view.selection.inverterId]
       .filter((id): id is string => id !== null),
-    lastCalculation: null,
+    lastCalculation: view.lastCalculation,
   });
 }
 

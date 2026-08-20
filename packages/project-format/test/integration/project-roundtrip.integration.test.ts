@@ -20,5 +20,13 @@ describe('project file v1', () => {
   it('rejects future schemas until a migration exists', () => {
     expect(() => parseProjectFile({ schemaVersion: 2 })).toThrow();
   });
-});
 
+  it('round-trips a persisted calculation envelope', () => {
+    const source = {
+      schemaVersion: 1 as const, id: 'ddeb27fb-d9a0-4624-be4d-4615062daed4', name: 'Calculated project', system: 'standalone-all-in-one' as const,
+      createdAt: '2026-08-11T00:00:00.000Z', updatedAt: '2026-08-11T00:00:00.000Z', inputs: {}, selectedEquipmentIds: [],
+      lastCalculation: { engineVersion: 'presizing-1.1.0', inputHash: '1234abcd', output: { evaluatedPairs: 121 }, issues: [], warnings: [], trace: [] },
+    };
+    expect(parseProjectFile(JSON.parse(JSON.stringify(source)))).toEqual(source);
+  });
+});

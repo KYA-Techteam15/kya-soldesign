@@ -111,6 +111,14 @@ export async function projectToPresizingInput(project: ProjectFileV1, references
     batterySpecificCostPerKwh: value.batteryCost * (1 + assumptions.batteryMarginRatio),
     inverterSpecificCostPerKw: value.inverterCost * (1 + assumptions.inverterMarginRatio),
     gridTariffPerKwh: value.tariff, emissionFactorKgPerKwh: value.emission,
+    projectLifetimeYears: assumptions.projectLifetimeYears ?? PRESIZING_DEFAULTS.projectLifetimeYears,
+    pvLifetimeYears: assumptions.pvLifetimeYears ?? PRESIZING_DEFAULTS.pvLifetimeYears,
+    batteryLifetimeYears: assumptions.batteryLifetimeYears ?? PRESIZING_DEFAULTS.batteryLifetimeYears,
+    inverterLifetimeYears: assumptions.inverterLifetimeYears ?? PRESIZING_DEFAULTS.inverterLifetimeYears,
+    pvMaintenanceRatioPerYear: assumptions.pvMaintenanceRatioPerYear ?? PRESIZING_DEFAULTS.pvMaintenanceRatioPerYear,
+    batteryMaintenanceRatioPerYear: assumptions.batteryMaintenanceRatioPerYear ?? PRESIZING_DEFAULTS.batteryMaintenanceRatioPerYear,
+    inverterMaintenanceRatioPerYear: assumptions.inverterMaintenanceRatioPerYear ?? PRESIZING_DEFAULTS.inverterMaintenanceRatioPerYear,
+    discountRateRatio: assumptions.discountRateRatio ?? PRESIZING_DEFAULTS.discountRateRatio,
   } };
 }
 

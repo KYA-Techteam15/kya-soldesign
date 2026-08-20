@@ -97,6 +97,7 @@ describe('Page 1 project to AIO integration', () => {
     const weatherSource = weatherSources.find((candidate) => candidate.localityId === locality.id)!;
     const view = projectFileToView(projects.create('standalone-all-in-one', 'fr'));
     view.load.profiles[0]!.source = 'hourly';
+    view.load.profiles[0]!.hourly.forEach((point) => { point.realPower = 0.1; point.peakPower = 0.1; });
     view.site.localityId = locality.id;
     view.site.latitude = locality.latitudeDeg;
     view.site.longitude = locality.longitudeDeg;
@@ -154,6 +155,17 @@ describe('Page 1 project to AIO integration', () => {
     const solarState = await calculations.read<SolarResourceAnalysisOutputV1>(view.id, 'solar-resource');
     expect(solarState.status).toBe('ready');
     if (solarState.status === 'ready') expect(solarState.envelope.output.hourlyPoaWm2).toHaveLength(8_760);
+
+    const persistent = new AioCalculations((id) => projectsWithWeather.get(id), { localities, weatherSources, loadProfiles }, (project) => projectsWithWeather.replace(project));
+    const calculated = await persistent.runPresizing(view.id, () => undefined);
+    expect(projectsWithWeather.get(view.id)?.lastCalculation).toEqual(calculated);
+    const restored = await new AioCalculations((id) => projectsWithWeather.get(id), { localities, weatherSources, loadProfiles }).read(view.id, 'presizing');
+    expect(restored.status).toBe('ready');
+    const changed = projectFileToView(projectsWithWeather.get(view.id)!);
+    changed.assumptions.actualizationRate += 1;
+    projectsWithWeather.replace(projectViewToFile(changed));
+    const stale = await new AioCalculations((id) => projectsWithWeather.get(id), { localities, weatherSources, loadProfiles }).read(view.id, 'presizing');
+    expect(stale.status).toBe('stale');
   }, 20_000);
 
   it('analyzes an imported weather file in UTC but keeps gamma unavailable until a project timezone is declared', async () => {

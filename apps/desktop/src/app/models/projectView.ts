@@ -28,6 +28,7 @@ export interface ProjectViewModel {
   systemType: SystemType;
   createdAt: string;
   updatedAt: string;
+  lastCalculation: ProjectCalculation | null;
   currency: string;
   details: { clientName: string; clientAddress: string; clientTel: string; clientEmail: string; followerName: string; applicationType: ApplicationType; projectDate: string; projectNumber: string; projectLocation: string; projectImage: string };
   site: { country: string; countryCode: string; localityId: string | null; region: string; latitude: number; longitude: number; tilt: number; azimuth: number; irradiation: number; monthlyIrradiation: (number | null)[]; weatherSourceId: string | null; timezoneIana: string | null; designMonth: number | null; irradiationBasis: { tilt: number; azimuth: number } | null; downloadedSource: { name: string; provider: string; versionOrDate: string; locator: string; retrievedAtIso: string; qualityFlags: string[]; weatherFileId?: string; sourceSha256?: string; timezoneOffsetMinutes?: number; albedo?: number; hourlyIrradiance?: { timestampUtcIso: string; ghiWm2: number; dniWm2: number; dhiWm2: number }[] } | null };
@@ -37,4 +38,13 @@ export interface ProjectViewModel {
   cables: { segment: CableSegment; length: number; material: 'copper' | 'aluminium'; installation: 'buried' | 'not_buried' }[];
   protections: { segment: CableSegment; caliberA: number | null }[];
   costing: { useGlobalCost: boolean; moduleUnitPrice: number; moduleMargin: number; batteryUnitPrice: number; batteryMargin: number; inverterUnitPrice: number; inverterMargin: number; definedCostForAccessories: boolean; cablingPrice: number; cablingMargin: number; electricalBoxPrice: number; electricalBoxMargin: number; supportsPrice: number; supportsMargin: number; transportPrice: number; transportMargin: number; installationPrice: number; installationMargin: number; tvaPercent: number; reductionPercent: number; downPaymentPercent: number; deliveryTime: number; offerValidity: number; productWarranty: number; additional: { id: string; name: string; description: string; quantity: number; costPrice: number; marginPercent: number }[] };
+}
+
+export interface ProjectCalculation {
+  readonly engineVersion: string;
+  readonly inputHash: string;
+  readonly output: unknown;
+  readonly issues: readonly { readonly code: string; readonly severity: 'warning' | 'error' | 'info'; readonly message: string; readonly sourceId?: string }[];
+  readonly warnings?: readonly unknown[];
+  readonly trace: readonly unknown[];
 }

@@ -30,6 +30,7 @@ interface ProjectSessionContextValue {
   readonly remove: (id: string) => void;
   readonly update: (mutate: ProjectMutation) => void;
   readonly touchSaved: () => void;
+  readonly replaceCanonical: (project: ProjectFileV1) => void;
 }
 
 const ProjectSessionContext = createContext<ProjectSessionContextValue | null>(null);
@@ -150,6 +151,11 @@ export function ProjectSessionProvider({
     remove,
     update,
     touchSaved: () => setSavedAt(Date.now()),
+    replaceCanonical: (project) => {
+      service.replace(project);
+      setProjects(filesToViews(service.list()));
+      setSavedAt(Date.now());
+    },
   }), [create, currentId, future, past, projects, redo, remove, savedAt, service, undo, update, validationErrors]);
 
   return <ProjectSessionContext.Provider value={value}>{children}</ProjectSessionContext.Provider>;
