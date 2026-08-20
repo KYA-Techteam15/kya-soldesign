@@ -89,3 +89,9 @@ export function useCalculationState<Output>(
 
   return state;
 }
+
+export function useCalculationService(): CalculationCapabilityPort {
+  const service = useContext(CalculationContext);
+  if (service === null) throw new Error('CalculationProvider is required');
+  return service;
+}

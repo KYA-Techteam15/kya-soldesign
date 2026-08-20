@@ -1,7 +1,8 @@
 import type { AioSizingRequestV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { adjustHourlyFractionsToGamma, analyzeSolarResource, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import { adjustHourlyFractionsToGamma, analyzeSolarResource, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
+import { PRESIZING_DEFAULTS } from '../models/projectAdapters.js';
 
 interface Page1References {
   readonly localities: readonly Locality[];
@@ -66,6 +67,51 @@ export async function projectToAioInput(project: ProjectFileV1, references: Page
     provenance: [projectProvenance, ...(locality === undefined ? [] : [locality.provenance]), ...(weatherSource === undefined ? [] : [weatherSource.provenance]), ...(solarProvenance === null ? [] : [solarProvenance])],
   };
   return { status: 'ready', input: request, warnings: normalized.warnings, solarAnalysis };
+}
+
+export async function projectToPresizingInput(project: ProjectFileV1, references: Page1References): Promise<{ readonly status: 'ready'; readonly input: PresizingInputV1 } | { readonly status: 'blocked'; readonly issues: readonly LoadInputIssue[] }> {
+  const adapted = await projectToAioInput(project, references);
+  if (adapted.status === 'blocked') return adapted;
+  const solar = adapted.solarAnalysis;
+  if (solar === null) return { status: 'blocked', issues: [{ code: 'WEATHER_FILE_MISSING', path: 'site.solarResource', message: 'Local hourly weather data is required' }] };
+  if (solar.output.gamma.status !== 'available') return { status: 'blocked', issues: [{ code: 'YEN_UNAVAILABLE', path: 'load.activeProfileId', message: 'YEn requires a non-zero active load profile' }] };
+  const storedAssumptions = parseProjectInputsV1(project.inputs).assumptions;
+  const assumptions = {
+    ...storedAssumptions,
+    maxLpspRatio: storedAssumptions.maxLpspRatio ?? PRESIZING_DEFAULTS.maxLpspRatio,
+    maxLolpRatio: storedAssumptions.maxLolpRatio ?? PRESIZING_DEFAULTS.maxLolpRatio,
+    systemPerformanceRatio: storedAssumptions.systemPerformanceRatio ?? PRESIZING_DEFAULTS.systemPerformanceRatio,
+    inverterEfficiencyRatio: storedAssumptions.inverterEfficiencyRatio ?? PRESIZING_DEFAULTS.inverterEfficiencyRatio,
+    batteryEfficiencyRatio: storedAssumptions.batteryEfficiencyRatio ?? PRESIZING_DEFAULTS.batteryEfficiencyRatio,
+    pvSpecificCostMinorPerKw: storedAssumptions.pvSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.pvSpecificCostMinorPerKw,
+    pvMarginRatio: storedAssumptions.pvMarginRatio ?? PRESIZING_DEFAULTS.pvMarginRatio,
+    batterySpecificCostMinorPerKwh: storedAssumptions.batterySpecificCostMinorPerKwh ?? PRESIZING_DEFAULTS.batterySpecificCostMinorPerKwh,
+    batteryMarginRatio: storedAssumptions.batteryMarginRatio ?? PRESIZING_DEFAULTS.batteryMarginRatio,
+    inverterSpecificCostMinorPerKw: storedAssumptions.inverterSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.inverterSpecificCostMinorPerKw,
+    inverterMarginRatio: storedAssumptions.inverterMarginRatio ?? PRESIZING_DEFAULTS.inverterMarginRatio,
+    gridTariffMinorPerKwh: storedAssumptions.gridTariffMinorPerKwh ?? PRESIZING_DEFAULTS.gridTariffMinorPerKwh,
+    gridEmissionKgCo2PerKwh: storedAssumptions.gridEmissionKgCo2PerKwh ?? PRESIZING_DEFAULTS.gridEmissionKgCo2PerKwh,
+  };
+  const required = {
+    lpspMax: assumptions.maxLpspRatio, lolpMax: assumptions.maxLolpRatio, systemPr: assumptions.systemPerformanceRatio,
+    inverterEfficiency: assumptions.inverterEfficiencyRatio, batteryEfficiency: assumptions.batteryEfficiencyRatio,
+    pvCost: assumptions.pvSpecificCostMinorPerKw, batteryCost: assumptions.batterySpecificCostMinorPerKwh,
+    inverterCost: assumptions.inverterSpecificCostMinorPerKw, tariff: assumptions.gridTariffMinorPerKwh, emission: assumptions.gridEmissionKgCo2PerKwh,
+  };
+  const missing = Object.entries(required).filter(([, value]) => value === null).map(([key]) => key);
+  if (missing.length > 0) return { status: 'blocked', issues: [{ code: 'PRESIZING_ASSUMPTIONS_MISSING', path: `assumptions.${missing.join(',')}`, message: 'All pre-sizing assumptions are required' }] };
+  const value = required as { readonly [Key in keyof typeof required]: number };
+  const load = adapted.input.load;
+  const peakPowerW = solar.output.loadHourlyPeakPowerW === null ? Math.max(...load.hourlyEnergyWh) : Math.max(...solar.output.loadHourlyPeakPowerW);
+  return { status: 'ready', input: {
+    dailyEnergyWh: load.hourlyEnergyWh.reduce((sum, item) => sum + item, 0), yEn: solar.output.gamma.value, hourlyLoadWh: load.hourlyEnergyWh,
+    hourlyPoaWm2: solar.output.hourlyPoaWm2, peakPowerW, lpspMax: value.lpspMax, lolpMax: value.lolpMax, systemPr: value.systemPr,
+    inverterEfficiency: value.inverterEfficiency, batteryEfficiency: value.batteryEfficiency,
+    pvSpecificCostPerKw: value.pvCost * (1 + assumptions.pvMarginRatio),
+    batterySpecificCostPerKwh: value.batteryCost * (1 + assumptions.batteryMarginRatio),
+    inverterSpecificCostPerKw: value.inverterCost * (1 + assumptions.inverterMarginRatio),
+    gridTariffPerKwh: value.tariff, emissionFactorKgPerKwh: value.emission,
+  } };
 }
 
 /** Site can calculate the real solar resource before the user has entered a valid load; gamma then remains unavailable. */

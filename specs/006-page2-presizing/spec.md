@@ -47,11 +47,10 @@ vieillissement plus fine que celle définie ci-dessous.
 | Météo | fichier local | 8 760 pas | irradiance horaire, orientation, albédo et provenance obligatoires |
 | LPSP maximale | % | ratio [0, 1] | défaut historique : 5 % |
 | LOLP maximale | % | ratio [0, 1] | défaut historique : 5 % |
-| Rendements, PR, DoD | % | ratios [0, 1] | validation des bornes avant calcul |
-| Tension batterie | V | V | strictement positive |
+| Rendements et PR | % | ratios [0, 1] | validation des bornes avant calcul |
 | Coûts spécifiques et tarif | FCFA/kW, kWh ou FCFA/kWh | même unité | marges converties en coût appliqué |
 | Durées de vie | ans | ans entiers positifs | remplacements inclus dans le coût cycle de vie |
-| Émission et autoconsommation | kgCO2/kWh et % | kgCO2/kWh et ratio | bornes explicites |
+| Facteur d’émission | kgCO2/kWh | kgCO2/kWh | bornes explicites ; le CO2 est calculé sur l’énergie solaire effectivement servie |
 
 Les valeurs absentes restent absentes. Elles ne sont jamais remplacées par
 zéro pour faire apparaître un résultat. Les valeurs par défaut historiques
@@ -77,13 +76,13 @@ hypothèse requise hors limites.
 Pour alphaA et alphaN dans {0, 0.1, …, 1}, évaluer chaque couple :
 
 1. besoin d’exergie et stockage de production/gestion ;
-2. stockage total St, puissance PV Pc, capacité batterie cBat et puissance
+2. stockage utile total St en kWh, puissance PV Pc et puissance
    onduleur pInv ;
 3. coût d’investissement, maintenance, remplacements et coût cycle de vie LCC ;
 4. production annuelle, LCOE, LPSP et LOLP par simulation horaire ;
 5. SRI, SVI, CO₂ évité et facteur carbone.
 
-Le balayage contient 121 couples lorsque 0 < gamma < 1. Pour gamma = 0,
+Le balayage contient 121 couples lorsque 0 < gamma < 1. L’interface affiche une progression déterminée par les couples effectivement évalués (couple terminé / couples totaux). Pour gamma = 0,
 alphaA est fixé à zéro ; pour gamma = 1, alphaN est fixé à zéro. Toute
 configuration non dimensionnable est comptée et expliquée, pas transformée en
 valeur nulle.
@@ -158,6 +157,8 @@ restaurer les paramètres, l’onglet d’hypothèses et le résultat correspond
 
 - Le bouton de calcul s’active uniquement avec toutes les entrées requises et
   lance réellement le moteur KEG dans packages/engine.
+- Pendant le calcul, la barre de progression affiche le nombre de couples
+  évalués, le total attendu et atteint 100 % uniquement à la fin du balayage.
 - Un cas contrôlé produit les mêmes dimensions et indicateurs que les
   fonctions de référence de ksd_app, à tolérance numérique documentée.
 - Les unités pourcentage/ratio sont converties une seule fois et les seuils

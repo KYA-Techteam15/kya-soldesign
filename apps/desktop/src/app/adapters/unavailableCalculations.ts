@@ -20,4 +20,5 @@ export const unavailableCalculations: CalculationCapabilityPort = {
       roadmapOwner: owners[capability],
     };
   },
+  async runPresizing() { throw new Error('PRESIZING_UNAVAILABLE'); },
 };
