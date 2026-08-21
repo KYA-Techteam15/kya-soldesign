@@ -25,39 +25,47 @@ const canonicalKind: Readonly<Record<Kind, Equipment['kind']>> = {
   inverter: 'inverter',
 };
 
-function details(item: Equipment): { readonly technology: string; readonly specs: string } {
+function details(item: Equipment): { readonly technology: string; readonly specs: string; readonly characteristics: readonly string[] } {
   if (item.kind === 'pv-module') {
     return {
       technology: item.technology ?? 'Technologie non renseignée',
       specs: `${fmt(item.nominalPowerW)} Wc · ${fmt(item.openCircuitVoltageV, 1)} V`,
+      characteristics: [`Vmp ${fmt(item.voltageAtMaximumPowerV, 1)} V`, `Imp ${fmt(item.currentAtMaximumPowerA, 2)} A`, `Isc ${fmt(item.shortCircuitCurrentA, 2)} A`, `Coeff. Pmax ${fmt(item.temperatureCoefficientPmaxPerC ?? 0, 3)} /°C`, `Coeff. Voc ${fmt(item.temperatureCoefficientVocPerC ?? 0, 3)} /°C`, `NOCT ${fmt(item.nominalOperatingCellTemperatureC ?? 0, 1)} °C`, `Surface ${fmt(item.areaM2 ?? 0, 2)} m²`],
     };
   }
   if (item.kind === 'battery') {
     return {
       technology: item.technology ?? 'Technologie non renseignée',
-      specs: `${fmt(item.nominalCapacityAh)} Ah · ${fmt(item.nominalVoltageV)} V`,
+      specs: `${fmt(item.nominalCapacityAh ?? 0)} Ah · ${fmt(item.nominalVoltageV ?? 0)} V`,
+      characteristics: [`Énergie ${fmt(item.nominalEnergyWh / 1000, 2)} kWh`, `DoD utile ${fmt((item.usableDepthOfDischargeRatio ?? 0) * 100, 0)} %`, `Rendement ${fmt((item.roundTripEfficiencyRatio ?? 0) * 100, 0)} %`, `Cycles ${fmt(item.cycleLife ?? 0, 0)}`],
     };
   }
   return {
     technology: item.inverterType ?? 'Type non renseigné',
     specs: `${fmt(item.nominalAcPowerW / 1000, 1)} kW · ${fmt(item.nominalDcVoltageV)} Vdc`,
+    characteristics: [`Surcharge ${fmt((item.surgePowerW ?? 0) / 1000, 1)} kW`, `Sortie ${fmt(item.nominalAcVoltageV ?? 0, 0)} Vac`, `Rendement ${fmt((item.efficiencyRatio ?? 0) * 100, 1)} %`, `PV max ${fmt((item.pvArrayMaxPowerW ?? 0) / 1000, 1)} kWc`, `MPPT ${fmt(item.mpptMinVoltageV ?? 0, 0)}–${fmt(item.mpptMaxVoltageV ?? 0, 0)} V`, `Voc max ${fmt(item.pvOpenCircuitMaxVoltageV ?? 0, 0)} V`, `${fmt(item.pvInputsNumber ?? 0, 0)} entrées PV`, `Charge ${fmt(item.maxChargingCurrentA ?? 0, 0)} A`, `Parallèle ${item.canBeInParallel ? `jusqu’à ${fmt(item.maxParallelUnits ?? 0, 0)}` : 'non'}`],
   };
 }
 
 export function EquipmentPicker({
   kind,
   project,
+  equipment: availableEquipment,
+  compatibleIds,
   onPick,
   onClose,
 }: {
   kind: Kind;
   project: ProjectViewModel;
+  equipment?: readonly Equipment[];
+  compatibleIds?: readonly string[];
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
   const t = useT();
   const [query, setQuery] = useState('');
-  const { equipment } = useCatalog();
+  const { equipment: catalogEquipment } = useCatalog();
+  const equipment = availableEquipment ?? catalogEquipment;
   const current = kind === 'module'
     ? project.selection.moduleId
     : kind === 'battery'
@@ -67,6 +75,7 @@ export function EquipmentPicker({
   const rows = useMemo(() => {
     const matching = equipment.filter((item) => {
       if (item.kind !== canonicalKind[kind]) return false;
+      if (kind === 'inverter' && compatibleIds !== undefined && !compatibleIds.includes(item.id)) return false;
       const technical = details(item).technology;
       return needle.length === 0
         || `${item.model} ${item.manufacturer} ${technical}`.toLocaleLowerCase().includes(needle);
@@ -79,12 +88,12 @@ export function EquipmentPicker({
   return (
     <Dialog
       title={TITLE[kind]}
-      lead="références canoniques · compatibilité prévue dans EQP-001"
+      lead={kind === 'inverter' ? `${rows.length} références compatibles avec le module et la batterie retenus` : 'caractéristiques catalogue complètes et effet immédiat sur le dimensionnement'}
       wide
       onClose={onClose}
       footer={
         <>
-          <span className="label">Aucune compatibilité ni quantité n’est déduite dans cette étape.</span>
+          <span className="label">La sélection recalcule immédiatement la configuration retenue.</span>
           <button className="btn btn-ghost" onClick={onClose}>{t('g.close')}</button>
         </>
       }
@@ -111,7 +120,7 @@ export function EquipmentPicker({
                 <b>{item.model}</b>
                 <small>{item.manufacturer} · {itemDetails.technology}</small>
               </span>
-              <span className="pick-spec">{itemDetails.specs}</span>
+              <span className="pick-spec">{itemDetails.specs}<small>{itemDetails.characteristics.join(' · ')}</small></span>
               <span className="badge">{item.id === current ? 'retenu' : ''}</span>
             </button>
           );

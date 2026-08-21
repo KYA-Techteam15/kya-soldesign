@@ -155,6 +155,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
     lastCalculation: project.lastCalculation,
+    sizingCalculation: project.sizingCalculation ?? null,
     currency: input.currencyCode,
     details: {
       clientName: input.details.clientName,
@@ -450,6 +451,7 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
     selectedEquipmentIds: [view.selection.moduleId, view.selection.batteryId, view.selection.inverterId]
       .filter((id): id is string => id !== null),
     lastCalculation: view.lastCalculation,
+    sizingCalculation: view.sizingCalculation,
   });
 }
 
@@ -463,6 +465,6 @@ export function createEmptyProjectFile(
     schemaVersion: 1, id, name, system,
     createdAt: timestamp, updatedAt: timestamp,
     inputs: createEmptyProjectInputs(),
-    selectedEquipmentIds: [], lastCalculation: null,
+    selectedEquipmentIds: [], lastCalculation: null, sizingCalculation: null,
   });
 }

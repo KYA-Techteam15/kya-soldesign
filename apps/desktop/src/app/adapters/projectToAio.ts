@@ -1,5 +1,6 @@
 import type { AioSizingRequestV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { adjustHourlyFractionsToGamma, analyzeSolarResource, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import { adjustHourlyFractionsToGamma, analyzeSolarResource, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
 import { PRESIZING_DEFAULTS } from '../models/projectAdapters.js';
@@ -120,6 +121,17 @@ export async function projectToPresizingInput(project: ProjectFileV1, references
     inverterMaintenanceRatioPerYear: assumptions.inverterMaintenanceRatioPerYear ?? PRESIZING_DEFAULTS.inverterMaintenanceRatioPerYear,
     discountRateRatio: assumptions.discountRateRatio ?? PRESIZING_DEFAULTS.discountRateRatio,
   } };
+}
+
+export function projectToSizingInput(project: ProjectFileV1, equipment: readonly Equipment[]): { readonly status: 'ready'; readonly input: SizingInputV1 } | { readonly status: 'blocked'; readonly issues: readonly LoadInputIssue[] } {
+  const module = equipment.filter((item): item is Extract<Equipment, { kind: 'pv-module' }> => item.kind === 'pv-module').find((item) => item.id === project.selectedEquipmentIds[0]);
+  const battery = equipment.filter((item): item is Extract<Equipment, { kind: 'battery' }> => item.kind === 'battery').find((item) => item.id === project.selectedEquipmentIds[1]);
+  const inverter = equipment.filter((item): item is Extract<Equipment, { kind: 'inverter' }> => item.kind === 'inverter').find((item) => item.id === project.selectedEquipmentIds[2]);
+  if (project.lastCalculation === null || typeof project.lastCalculation.output !== 'object' || project.lastCalculation.output === null) return { status: 'blocked', issues: [{ code: 'PRESIZING_NOT_RUN', path: 'lastCalculation', message: 'A valid pre-sizing result is required' }] };
+  if (module === undefined || battery === undefined || inverter === undefined) return { status: 'blocked', issues: [{ code: 'EQUIPMENT_SELECTION_INCOMPLETE', path: 'selectedEquipmentIds', message: 'A module, battery and inverter must be selected' }] };
+  const presizing = project.lastCalculation.output as { selected?: { pvPeakKw?: number; storageKwh?: number; inverterKw?: number } };
+  if (presizing.selected?.pvPeakKw === undefined || presizing.selected.storageKwh === undefined || presizing.selected.inverterKw === undefined) return { status: 'blocked', issues: [{ code: 'PRESIZING_OUTPUT_INVALID', path: 'lastCalculation.output', message: 'The pre-sizing result has no usable requirements' }] };
+  return { status: 'ready', input: { requiredPvPowerKw: presizing.selected.pvPeakKw, requiredStorageKwh: presizing.selected.storageKwh, requiredInverterPowerKw: presizing.selected.inverterKw, coldTemperatureC: 0, referenceTemperatureC: 25, temperatureCoefficientDefaultPerC: 0.003, selectedEquipment: { module: { id: module.id, powerW: module.nominalPowerW, vmpV: module.voltageAtMaximumPowerV, vocV: module.openCircuitVoltageV, iscA: module.shortCircuitCurrentA, vocTemperatureCoefficientPerC: module.temperatureCoefficientVocPerC }, battery: { id: battery.id, voltageV: battery.nominalVoltageV, capacityAh: battery.nominalCapacityAh, energyWh: battery.nominalEnergyWh, usableDodRatio: battery.usableDepthOfDischargeRatio }, inverter: { id: inverter.id, acPowerW: inverter.nominalAcPowerW, dcVoltageV: inverter.nominalDcVoltageV, surgePowerW: inverter.surgePowerW, mpptMinV: inverter.mpptMinVoltageV, mpptMaxV: inverter.mpptMaxVoltageV, pvMaxPowerW: inverter.pvArrayMaxPowerW, vocMaxV: inverter.pvOpenCircuitMaxVoltageV, maxChargingCurrentA: inverter.maxChargingCurrentA, maxParallelUnits: inverter.maxParallelUnits, canBeInParallel: inverter.canBeInParallel } } } };
 }
 
 /** Site can calculate the real solar resource before the user has entered a valid load; gamma then remains unavailable. */

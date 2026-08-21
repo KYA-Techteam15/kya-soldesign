@@ -29,6 +29,7 @@ export interface ProjectViewModel {
   createdAt: string;
   updatedAt: string;
   lastCalculation: ProjectCalculation | null;
+  sizingCalculation: ProjectCalculation | null;
   currency: string;
   details: { clientName: string; clientAddress: string; clientTel: string; clientEmail: string; followerName: string; applicationType: ApplicationType; projectDate: string; projectNumber: string; projectLocation: string; projectImage: string };
   site: { country: string; countryCode: string; localityId: string | null; region: string; latitude: number; longitude: number; tilt: number; azimuth: number; irradiation: number; monthlyIrradiation: (number | null)[]; weatherSourceId: string | null; timezoneIana: string | null; designMonth: number | null; irradiationBasis: { tilt: number; azimuth: number } | null; downloadedSource: { name: string; provider: string; versionOrDate: string; locator: string; retrievedAtIso: string; qualityFlags: string[]; weatherFileId?: string; sourceSha256?: string; timezoneOffsetMinutes?: number; albedo?: number; hourlyIrradiance?: { timestampUtcIso: string; ghiWm2: number; dniWm2: number; dhiWm2: number }[] } | null };

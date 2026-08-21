@@ -27,6 +27,7 @@ export const projectFileV1Schema = z.object({
   inputs: z.record(z.string(), z.unknown()),
   selectedEquipmentIds: z.array(z.string()),
   lastCalculation: calculationEnvelopeSchema.nullable(),
+  sizingCalculation: calculationEnvelopeSchema.nullable().optional(),
 }).strict();
 
 export type ProjectFileV1 = z.infer<typeof projectFileV1Schema>;

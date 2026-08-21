@@ -2416,6 +2416,102 @@ table.tbl select.cell-in {
 .fitgrid {
   gap: var(--sp-3);
 }
+
+.sheet {
+  container-type: inline-size;
+}
+
+@container (max-width: 920px) {
+  .targets {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) var(--sp-4);
+  }
+
+  .pickrow {
+    flex-wrap: wrap;
+  }
+
+  .pickrow-ref {
+    flex: 1 1 220px;
+  }
+
+  .pickrow .sep {
+    display: none;
+  }
+
+  .cand {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 3px;
+  }
+
+  .cand-ref {
+    grid-column: 1;
+  }
+
+  .cand-pow,
+  .cand .res {
+    grid-row: 1;
+  }
+
+  .cand-pow {
+    grid-column: 2;
+  }
+
+  .cand .res {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .cand-cfg {
+    grid-column: 1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .fitgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .runbar {
+    flex-wrap: wrap;
+  }
+
+  .runbar-note {
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+}
+
+@container (max-width: 620px) {
+  .targets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .targets-tag {
+    grid-column: 1 / -1;
+  }
+
+  .tgt {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .pickrow-role {
+    width: auto;
+  }
+
+  .pickrow-ref {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .pickrow button {
+    margin-left: auto;
+  }
+}
 /* L'intitulé de famille porte le montage (« 3S x 1P = 3 modules ») : il doit
    tenir sur une ligne, quitte a etre tronque, sinon la hauteur des trois
    cellules cesse d'etre identique. */

@@ -1,6 +1,6 @@
 import type { Equipment, PvgisTmyJson, WeatherFileRecord } from '@ksd/catalog';
 import type { CalculationEnvelope, Locality, NormalizedHourlyProfile, SystemKind, WeatherSource } from '@ksd/domain';
-import type { PresizingEnvelopeV1, PresizingProgress } from '@ksd/engine';
+import type { PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress } from '@ksd/engine';
 import type { ProjectFileV1 } from '@ksd/project-format';
 
 export type UiLocale = 'fr' | 'en';
@@ -71,6 +71,8 @@ export type CapabilityState<Output> =
 export interface CalculationCapabilityPort {
   read<Output>(projectId: string, capability: CapabilityId): Promise<CapabilityState<Output>>;
   runPresizing?(projectId: string, onProgress: (progress: PresizingProgress) => void): Promise<PresizingEnvelopeV1>;
+  runSizing?(projectId: string, onProgress: (progress: SizingProgress) => void): Promise<SizingEnvelopeV1>;
+  compatibleInverterIds?(projectId: string): Promise<readonly string[]>;
 }
 
 export interface ApplicationServices {

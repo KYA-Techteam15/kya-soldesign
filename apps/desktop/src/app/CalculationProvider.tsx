@@ -46,10 +46,10 @@ export function CalculationProvider({
 }
 
 async function loadReferences(catalog: CanonicalCatalog) {
-  const [localities, weatherSources, loadProfiles] = await Promise.all([
-    catalog.listLocalities(), catalog.listWeatherSources(), catalog.listLoadProfiles(),
+  const [localities, weatherSources, loadProfiles, equipment] = await Promise.all([
+    catalog.listLocalities(), catalog.listWeatherSources(), catalog.listLoadProfiles(), catalog.list(),
   ]);
-  return { localities, weatherSources, loadProfiles };
+  return { localities, weatherSources, loadProfiles, equipment };
 }
 
 export function useCalculationState<Output>(
