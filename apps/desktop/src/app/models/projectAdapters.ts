@@ -24,6 +24,7 @@ const systemToView: Readonly<Record<SystemKind, Exclude<SystemType, 'undefined'>
 const ratio = (percent: number): number => percent / 100;
 const percent = (value: number | null): number => value === null ? 0 : value * 100;
 const valueOrZero = (value: number | null): number => value ?? 0;
+const SEGMENTS = ['pv-inverter', 'inverter-battery', 'inverter-load'] as const;
 
 // Defaults used by the historical Page 2 workflow when a new/legacy project
 // has not yet collected an explicit engineering assumption.
@@ -234,15 +235,14 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       batteryId: selected[1] ?? null,
       inverterId: selected[2] ?? null,
     },
-    cables: input.cableChoices.map((choice) => ({
-      segment: choice.segment.replaceAll('-', '_') as ProjectViewModel['cables'][number]['segment'],
-      length: valueOrZero(choice.lengthM), material: choice.material,
-      installation: choice.installation.replace('-', '_') as ProjectViewModel['cables'][number]['installation'],
-    })),
-    protections: input.protectionChoices.map((choice) => ({
-      segment: choice.segment.replaceAll('-', '_') as ProjectViewModel['protections'][number]['segment'],
-      caliberA: choice.ratingA,
-    })),
+    cables: SEGMENTS.map((segment) => {
+      const choice = input.cableChoices.find((item) => item.segment === segment);
+      return { segment: segment.replaceAll('-', '_') as ProjectViewModel['cables'][number]['segment'], length: valueOrZero(choice?.lengthM ?? null), material: choice?.material ?? 'copper', installation: (choice?.installation ?? 'not-buried').replace('-', '_') as ProjectViewModel['cables'][number]['installation'] };
+    }),
+    protections: SEGMENTS.map((segment) => {
+      const choice = input.protectionChoices.find((item) => item.segment === segment);
+      return { segment: segment.replaceAll('-', '_') as ProjectViewModel['protections'][number]['segment'], caliberA: choice?.ratingA ?? null };
+    }),
     costing: {
       useGlobalCost: input.costing.useGlobalCost,
       moduleUnitPrice: input.costing.moduleUnitPriceMinor,

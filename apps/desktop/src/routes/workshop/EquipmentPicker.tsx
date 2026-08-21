@@ -25,25 +25,54 @@ const canonicalKind: Readonly<Record<Kind, Equipment['kind']>> = {
   inverter: 'inverter',
 };
 
-function details(item: Equipment): { readonly technology: string; readonly specs: string; readonly characteristics: readonly string[] } {
+interface EquipmentDetails {
+  readonly technology: string;
+  readonly specs: string;
+  readonly characteristics: readonly { readonly label: string; readonly value: string }[];
+}
+
+function details(item: Equipment): EquipmentDetails {
   if (item.kind === 'pv-module') {
     return {
       technology: item.technology ?? 'Technologie non renseignée',
       specs: `${fmt(item.nominalPowerW)} Wc · ${fmt(item.openCircuitVoltageV, 1)} V`,
-      characteristics: [`Vmp ${fmt(item.voltageAtMaximumPowerV, 1)} V`, `Imp ${fmt(item.currentAtMaximumPowerA, 2)} A`, `Isc ${fmt(item.shortCircuitCurrentA, 2)} A`, `Coeff. Pmax ${fmt(item.temperatureCoefficientPmaxPerC ?? 0, 3)} /°C`, `Coeff. Voc ${fmt(item.temperatureCoefficientVocPerC ?? 0, 3)} /°C`, `NOCT ${fmt(item.nominalOperatingCellTemperatureC ?? 0, 1)} °C`, `Surface ${fmt(item.areaM2 ?? 0, 2)} m²`],
+      characteristics: [
+        { label: 'Vmp', value: `${fmt(item.voltageAtMaximumPowerV, 1)} V` },
+        { label: 'Imp', value: `${fmt(item.currentAtMaximumPowerA, 2)} A` },
+        { label: 'Isc', value: `${fmt(item.shortCircuitCurrentA, 2)} A` },
+        { label: 'Coeff. Pmax', value: `${fmt(item.temperatureCoefficientPmaxPerC ?? 0, 3)} /°C` },
+        { label: 'Coeff. Voc', value: `${fmt(item.temperatureCoefficientVocPerC ?? 0, 3)} /°C` },
+        { label: 'NOCT', value: `${fmt(item.nominalOperatingCellTemperatureC ?? 0, 1)} °C` },
+        { label: 'Surface', value: `${fmt(item.areaM2 ?? 0, 2)} m²` },
+      ],
     };
   }
   if (item.kind === 'battery') {
     return {
       technology: item.technology ?? 'Technologie non renseignée',
       specs: `${fmt(item.nominalCapacityAh ?? 0)} Ah · ${fmt(item.nominalVoltageV ?? 0)} V`,
-      characteristics: [`Énergie ${fmt(item.nominalEnergyWh / 1000, 2)} kWh`, `DoD utile ${fmt((item.usableDepthOfDischargeRatio ?? 0) * 100, 0)} %`, `Rendement ${fmt((item.roundTripEfficiencyRatio ?? 0) * 100, 0)} %`, `Cycles ${fmt(item.cycleLife ?? 0, 0)}`],
+      characteristics: [
+        { label: 'Énergie', value: `${fmt(item.nominalEnergyWh / 1000, 2)} kWh` },
+        { label: 'DoD utile', value: `${fmt((item.usableDepthOfDischargeRatio ?? 0) * 100, 0)} %` },
+        { label: 'Rendement', value: `${fmt((item.roundTripEfficiencyRatio ?? 0) * 100, 0)} %` },
+        { label: 'Durée de vie', value: `${fmt(item.cycleLife ?? 0, 0)} cycles` },
+      ],
     };
   }
   return {
     technology: item.inverterType ?? 'Type non renseigné',
     specs: `${fmt(item.nominalAcPowerW / 1000, 1)} kW · ${fmt(item.nominalDcVoltageV)} Vdc`,
-    characteristics: [`Surcharge ${fmt((item.surgePowerW ?? 0) / 1000, 1)} kW`, `Sortie ${fmt(item.nominalAcVoltageV ?? 0, 0)} Vac`, `Rendement ${fmt((item.efficiencyRatio ?? 0) * 100, 1)} %`, `PV max ${fmt((item.pvArrayMaxPowerW ?? 0) / 1000, 1)} kWc`, `MPPT ${fmt(item.mpptMinVoltageV ?? 0, 0)}–${fmt(item.mpptMaxVoltageV ?? 0, 0)} V`, `Voc max ${fmt(item.pvOpenCircuitMaxVoltageV ?? 0, 0)} V`, `${fmt(item.pvInputsNumber ?? 0, 0)} entrées PV`, `Charge ${fmt(item.maxChargingCurrentA ?? 0, 0)} A`, `Parallèle ${item.canBeInParallel ? `jusqu’à ${fmt(item.maxParallelUnits ?? 0, 0)}` : 'non'}`],
+    characteristics: [
+      { label: 'Surcharge', value: `${fmt((item.surgePowerW ?? 0) / 1000, 1)} kW` },
+      { label: 'Sortie', value: `${fmt(item.nominalAcVoltageV ?? 0, 0)} Vac` },
+      { label: 'Rendement', value: `${fmt((item.efficiencyRatio ?? 0) * 100, 1)} %` },
+      { label: 'Champ PV max', value: `${fmt((item.pvArrayMaxPowerW ?? 0) / 1000, 1)} kWc` },
+      { label: 'Plage MPPT', value: `${fmt(item.mpptMinVoltageV ?? 0, 0)}–${fmt(item.mpptMaxVoltageV ?? 0, 0)} V` },
+      { label: 'Voc PV max', value: `${fmt(item.pvOpenCircuitMaxVoltageV ?? 0, 0)} V` },
+      { label: 'Entrées PV', value: fmt(item.pvInputsNumber ?? 0, 0) },
+      { label: 'Courant de charge', value: `${fmt(item.maxChargingCurrentA ?? 0, 0)} A` },
+      { label: 'Mise en parallèle', value: item.canBeInParallel ? `jusqu’à ${fmt(item.maxParallelUnits ?? 0, 0)}` : 'non' },
+    ],
   };
 }
 
@@ -105,7 +134,12 @@ export function EquipmentPicker({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
-      <div className="pick-list">
+      <div className="pick-columns" aria-hidden="true">
+        <span>Référence catalogue</span>
+        <span>Caractéristiques</span>
+        <span>État</span>
+      </div>
+      <div className="pick-list pick-list-catalog">
         {rows.length === 0 && <div className="empty"><b>{t('equipment.noneFound')}</b></div>}
         {rows.map((item) => {
           const itemDetails = details(item);
@@ -120,8 +154,24 @@ export function EquipmentPicker({
                 <b>{item.model}</b>
                 <small>{item.manufacturer} · {itemDetails.technology}</small>
               </span>
-              <span className="pick-spec">{itemDetails.specs}<small>{itemDetails.characteristics.join(' · ')}</small></span>
-              <span className="badge">{item.id === current ? 'retenu' : ''}</span>
+              <span className="pick-spec">
+                <strong>{itemDetails.specs}</strong>
+                <span className="pick-spec-grid">
+                  {itemDetails.characteristics.map((characteristic) => (
+                    <span key={characteristic.label}>
+                      <small>{characteristic.label}</small>
+                      <b>{characteristic.value}</b>
+                    </span>
+                  ))}
+                </span>
+              </span>
+              <span className="pick-state">
+                {item.id === current
+                  ? <span className="badge ok">Retenu</span>
+                  : kind === 'inverter'
+                    ? <span className="badge ok">Compatible</span>
+                    : <span className="pick-action">Choisir</span>}
+              </span>
             </button>
           );
         })}

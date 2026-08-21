@@ -1,34 +1,32 @@
+import type { Equipment } from '@ksd/catalog';
+import { sizeCableSegment, sizeProtectionSegment, type ProtectionSizingResult, type SizingOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { StepHead } from '../../ui/Flow';
-import type { CableSegment } from '../../app/models/projectView';
+import { Prov } from '../../ui/Prov';
+import { fmt } from '../../domain/format';
+import { useCatalog } from '../../app/CatalogProvider';
 import { useCalculationState } from '../../app/CalculationProvider';
-import { CapabilityNotice } from '../../ui/CapabilityNotice';
-import { useT } from '../../i18n';
+import type { CableSegment } from '../../app/models/projectView';
 
-const LABEL: Readonly<Record<CableSegment, string>> = {
-  pv_inverter: 'PV → Onduleur',
-  inverter_battery: 'Onduleur → Batterie',
-  inverter_load: 'Onduleur → Charges',
-};
+const LABEL: Record<CableSegment, string> = { pv_inverter: 'PV → Onduleur', inverter_battery: 'Onduleur → Batterie', inverter_load: 'Onduleur → Charges' };
+const segments: CableSegment[] = ['pv_inverter', 'inverter_battery', 'inverter_load'];
+const selected = (items: readonly Equipment[], id: string | null) => items.find((item) => item.id === id);
 
 export function SectionProtections() {
-  const t = useT();
-  const project = useProject();
-  const update = useProjects((state) => state.update);
-  const state = useCalculationState(project.id, 'protections', project.updatedAt);
-  const num = (value: string) => {
-    const parsed = Number.parseFloat(value.replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-  return <div className="sheet">
-    <StepHead slug="protections" aside={<span className="label">Les choix saisis sont conservés ; aucun calibre n’est conseillé sans calcul.</span>} />
-    <CapabilityNotice capability="protections" state={state} compact />
-    <section><div className="tbl-title"><h2 className="h-sec">{t('protections.title')}</h2><span className="label">calibre saisi, sans recommandation automatique</span></div><div className="tbl-wrap"><table className="tbl t-prot"><thead><tr><th>{t('protections.segment')}</th><th>{t('catalog.type')}</th><th className="derived">{t('protections.requiredCurrent')}<span className="unit">A</span></th><th className="pick">{t('protections.selectedRating')}<span className="unit">A</span></th><th className="derived">{t('protections.voltage')}<span className="unit">V</span></th><th>{t('protections.state')}</th></tr></thead><tbody>
-      {project.protections.map((choice, index) => <tr key={choice.segment}><td>{LABEL[choice.segment]}</td><td>{t('protections.toDetermine')}</td><td className="derived num">—</td><td className="pick"><input className="cell-in" aria-label={`Calibre ${LABEL[choice.segment]}`} value={choice.caliberA ?? ''} placeholder="—" onChange={(event) => update((draft) => { draft.protections[index].caliberA = event.target.value ? num(event.target.value) : null; })} /></td><td className="derived num">—</td><td><span className="badge">{t('protections.unverified')}</span></td></tr>)}
-    </tbody></table></div></section>
-    <section><div className="tbl-title"><h2 className="h-sec">{t('cables.title')}</h2><span className="label">longueur, matériau et pose saisis · résultats indisponibles</span></div><div className="tbl-wrap"><table className="tbl t-cables"><thead><tr><th>{t('protections.segment')}</th><th>{t('cables.length')}<span className="unit">m</span></th><th>{t('cables.material')}</th><th>{t('cables.installation')}</th><th className="derived">{t('cables.current')}<span className="unit">A</span></th><th className="derived">{t('cables.drop')}<span className="unit">%</span></th><th className="derived">{t('cables.minSection')}<span className="unit">mm²</span></th><th className="derived">{t('cables.standardSection')}<span className="unit">mm²</span></th></tr></thead><tbody>
-      {project.cables.map((cable, index) => <tr key={cable.segment}><td>{LABEL[cable.segment]}</td><td><input className="cell-in" aria-label={`Longueur ${LABEL[cable.segment]}`} value={cable.length} onChange={(event) => update((draft) => { draft.cables[index].length = num(event.target.value); })} /></td><td><select className="cell-in" aria-label={`Matériau ${LABEL[cable.segment]}`} value={cable.material} onChange={(event) => update((draft) => { draft.cables[index].material = event.target.value as 'copper' | 'aluminium'; })}><option value="copper">{t('cables.copper')}</option><option value="aluminium">{t('cables.aluminium')}</option></select></td><td><select className="cell-in" aria-label={`Pose ${LABEL[cable.segment]}`} value={cable.installation} onChange={(event) => update((draft) => { draft.cables[index].installation = event.target.value as 'buried' | 'not_buried'; })}><option value="not_buried">{t('cables.aerial')}</option><option value="buried">{t('cables.buried')}</option></select></td><td className="derived num">—</td><td className="derived num">—</td><td className="derived num">—</td><td className="derived num">—</td></tr>)}
-    </tbody></table></div></section>
-  </div>;
+  const project = useProject(); const update = useProjects((state) => state.update); const { equipment } = useCatalog();
+  const sizingState = useCalculationState<SizingOutputV1>(project.id, 'sizing', project.updatedAt); const sizing = sizingState.status === 'ready' ? sizingState.envelope.output : null;
+  const module = selected(equipment, project.selection.moduleId); const battery = selected(equipment, project.selection.batteryId); const inverter = selected(equipment, project.selection.inverterId);
+  const pv = module?.kind === 'pv-module' ? module : null; const bat = battery?.kind === 'battery' ? battery : null; const inv = inverter?.kind === 'inverter' ? inverter : null;
+  const inverterPowerW = sizing?.inverter.obtainedPowerKw ? sizing.inverter.obtainedPowerKw * 1000 : inv?.nominalAcPowerW ?? 0; const dcVoltageV = sizing?.battery.bankVoltageV ?? bat?.nominalVoltageV ?? inv?.nominalDcVoltageV ?? 0; const pvSeries = sizing?.pv.modulesInSeries ?? 1; const pvParallel = sizing?.pv.stringsInParallel ?? 1;
+  const protections = segments.map((segment): ProtectionSizingResult => sizeProtectionSegment({ segment, moduleIscA: pv?.shortCircuitCurrentA, moduleVocV: pv?.openCircuitVoltageV, pvStrings: pvParallel, pvModulesInSeries: pvSeries, inverterPowerW, dcVoltageV, acVoltageV: inv?.nominalAcVoltageV ?? 230, selectedCaliberA: project.protections.find((item) => item.segment === segment)?.caliberA }));
+  const cables = project.cables.map((cable) => { const protection = protections.find((item) => item.segment === cable.segment); return sizeCableSegment({ segment: cable.segment, currentA: protection?.caliberA ?? 0, voltageV: protection?.serviceVoltageV ?? 0, lengthM: cable.length, material: cable.material, installation: cable.installation, phase: cable.segment === 'inverter_load' ? 'single_phase' : 'dc', maxDropPercent: cable.segment === 'pv_inverter' ? 1.5 : 1 }); });
+  const num = (value: string) => { const parsed = Number.parseFloat(value.replace(',', '.')); return Number.isFinite(parsed) ? parsed : 0; };
+  return <div className="sheet"><StepHead slug="protections" aside={<span className="label">Le calibre borne le courant ; la section du câble en découle.</span>} />
+    <section><div className="tbl-title"><h2 className="h-sec">Protections</h2><span className="label">calibre normalisé, conseillé mais modifiable</span></div><div className="tbl-wrap"><table className="tbl t-prot"><thead><tr><th>Segment</th><th>Type</th><th className="derived">Courant requis<span className="unit">A</span></th><th className="pick">Calibre retenu<span className="unit">A</span></th><th className="derived">Tension<span className="unit">V</span></th><th className="derived">Qté</th><th>État</th></tr></thead><tbody>
+      {protections.map((p) => <tr key={p.segment}><td>{LABEL[p.segment]}</td><td>{p.kind}</td><td className="derived num"><Prov title="Courant à couvrir" formula={p.segment === 'pv_inverter' ? 'I ≥ 1,5 × Np × Isc module' : 'I ≥ 1,25 × P onduleur / U'} rows={[["Courant requis", fmt(p.requiredA, 2) + ' A'], ['Calibres admissibles', p.options.length ? p.options.join(' · ') : 'aucun au catalogue']]} source="Protections · calibres normalisés">{fmt(p.requiredA, 1)}</Prov></td><td className="pick">{p.options.length ? <select className="cell-in" value={p.caliberA} aria-label={'Calibre ' + LABEL[p.segment]} onChange={(event) => update((draft) => { const row = draft.protections.find((item) => item.segment === p.segment); if (row) row.caliberA = Number(event.target.value); })}>{p.options.map((option) => <option key={option} value={option}>{fmt(option)}</option>)}</select> : <span className="num">{fmt(p.caliberA, 2)}</span>}</td><td className="derived num">{fmt(p.serviceVoltageV, 1)}</td><td className="derived num">{p.quantity}</td><td><span className={p.exact ? p.overridden ? 'badge warn' : 'badge ok' : 'badge bad'}>{p.exact ? p.overridden ? 'imposé' : 'conseillé' : 'hors catalogue'}</span></td></tr>)}
+    </tbody></table></div><p className="label" style={{ marginTop: 6 }}>Si aucun calibre normalisé ne dépasse le courant calculé, la valeur calculée est conservée et signalée — jamais arrondie en silence.</p></section>
+    <section><div className="tbl-title"><h2 className="h-sec">Câbles</h2><span className="label">dimensionnés pour le calibre retenu ci-dessus — la section normalisée est celle qui sera commandée</span></div><div className="tbl-wrap"><table className="tbl t-cables"><thead><tr><th>Segment</th><th>Longueur<span className="unit">m</span></th><th className="pick">Matériau</th><th className="pick">Pose</th><th className="derived">Courant<span className="unit">A</span></th><th className="derived">Chute<span className="unit">%</span></th><th className="derived">Section min.<span className="unit">mm²</span></th><th className="derived">Normalisée<span className="unit">mm²</span></th></tr></thead><tbody>
+      {project.cables.map((cable, index) => { const result = cables[index]; return <tr key={cable.segment}><td>{LABEL[cable.segment]}</td><td><input className="cell-in" value={cable.length} aria-label={'Longueur ' + LABEL[cable.segment]} onChange={(event) => update((draft) => { draft.cables[index].length = num(event.target.value); })} /></td><td className="pick"><select className="cell-in" value={cable.material} aria-label={'Matériau ' + LABEL[cable.segment]} onChange={(event) => update((draft) => { draft.cables[index].material = event.target.value as 'copper' | 'aluminium'; })}><option value="copper">Cuivre</option><option value="aluminium">Aluminium</option></select></td><td className="pick"><select className="cell-in" value={cable.installation} aria-label={'Pose ' + LABEL[cable.segment]} onChange={(event) => update((draft) => { draft.cables[index].installation = event.target.value as 'buried' | 'not_buried'; })}><option value="not_buried">Aérien</option><option value="buried">Enterré</option></select></td><td className="derived num">{fmt(result?.currentA ?? 0, 1)}</td><td className="derived num">{fmt(result?.dropPercent ?? 0, 1)}</td><td className="derived num">{fmt(result?.minimalSection ?? 0, 1)}</td><td className="derived num"><Prov title="Section normalisée" formula="S = ρ × L × I × b / (U × ΔUmax)" rows={[["Résistivité", cable.material === 'copper' ? '0,01851 Ω·mm²/m' : '0,0283 Ω·mm²/m'], ['Courant', fmt(result?.currentA ?? 0, 1) + ' A'], ['Tension', fmt(result?.voltageV ?? 0, 1) + ' V'], ['Section calculée', fmt(result?.minimalSection ?? 0, 1) + ' mm²']]} source="Câblage · valeurs de calcul"><b>{fmt(result?.normalizedSection ?? 0, 1)}</b></Prov></td></tr>; })}
+    </tbody></table></div></section></div>;
 }

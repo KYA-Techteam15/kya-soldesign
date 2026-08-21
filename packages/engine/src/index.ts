@@ -6,3 +6,5 @@ export * from './presizing/contracts.js';
 export * from './presizing/engine.js';
 export * from './sizing/contracts.js';
 export * from './sizing/engine.js';
+export * from './protection-cabling/contracts.js';
+export * from './protection-cabling/engine.js';

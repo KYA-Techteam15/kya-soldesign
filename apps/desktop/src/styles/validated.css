@@ -643,6 +643,98 @@
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
 }
+
+/* Variante catalogue : le contenu technique reste comparable sans se tasser
+   en une phrase centrée. Les effets calculés du design validé seront branchés
+   ici lorsque le moteur exposera la simulation par candidat. */
+.pick-columns {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.82fr) minmax(360px, 1.35fr) 94px;
+  gap: var(--sp-4);
+  margin: var(--sp-3) var(--sp-3) 0;
+  padding: 0 var(--sp-3);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pick-columns span:last-child { text-align: right; }
+.pick-list-catalog { margin-top: 5px; }
+.pick-list-catalog .pick-row {
+  grid-template-columns: minmax(220px, 0.82fr) minmax(360px, 1.35fr) 94px;
+  align-items: start;
+  gap: var(--sp-4);
+  min-height: 94px;
+  padding: 11px var(--sp-3);
+}
+.pick-list-catalog .pick-id { padding-top: 2px; }
+.pick-list-catalog .pick-id b {
+  font-size: var(--fs-md);
+  white-space: normal;
+}
+.pick-list-catalog .pick-id small {
+  margin-top: 3px;
+  white-space: normal;
+}
+.pick-list-catalog .pick-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  text-align: left;
+}
+.pick-list-catalog .pick-spec > strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.pick-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px 12px;
+}
+.pick-spec-grid > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 7px;
+  min-width: 0;
+}
+.pick-spec-grid small {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pick-spec-grid b {
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pick-list-catalog .pick-state {
+  align-items: flex-start;
+  padding-top: 2px;
+}
+.pick-action {
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.pick-list-catalog .pick-row:hover .pick-action { text-decoration: underline; }
+@media (max-width: 860px) {
+  .modal-wide { width: min(720px, calc(100vw - 32px)); }
+  .pick-columns { display: none; }
+  .pick-list-catalog { margin-top: var(--sp-3); }
+  .pick-list-catalog .pick-row {
+    grid-template-columns: minmax(0, 1fr) 88px;
+  }
+  .pick-list-catalog .pick-spec { grid-column: 1 / -1; }
+  .pick-list-catalog .pick-state { grid-column: 2; grid-row: 1; }
+}
+@media (max-width: 620px) {
+  .pick-spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .dlg-check {
   display: flex;
   align-items: center;
