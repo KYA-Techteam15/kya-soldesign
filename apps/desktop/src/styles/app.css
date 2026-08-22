@@ -2859,6 +2859,34 @@ table.tbl select.cell-in {
     margin-left: auto;
   }
 }
+
+/* Le panneau de viabilité retire plus de 300 px à la zone centrale. Le
+   chiffrage doit alors se recomposer selon la largeur de la feuille, et non
+   selon celle de la fenêtre entière. */
+@container (max-width: 760px) {
+  .costrow,
+  .costhead {
+    grid-template-columns: 76px 38px minmax(126px, 1fr) 86px;
+    gap: var(--sp-2);
+  }
+
+  .costrow-total,
+  .costhead > :last-child {
+    display: none;
+  }
+
+  .acclist {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  }
+
+  .out-foot {
+    flex-wrap: wrap;
+  }
+
+  .out-foot-net {
+    margin-left: 0;
+  }
+}
 /* L'intitulé de famille porte le montage (« 3S x 1P = 3 modules ») : il doit
    tenir sur une ligne, quitte a etre tronque, sinon la hauteur des trois
    cellules cesse d'etre identique. */
@@ -2995,6 +3023,29 @@ table.tbl select.cell-in {
 .out-grid-4 {
   grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
 }
+.finance-summary {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.finance-comparison {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface);
+}
+.finance-comparison .out-head {
+  border-bottom: 1px solid var(--grid-line);
+}
+.finance-compare-table {
+  table-layout: fixed;
+  min-width: 620px;
+}
+.finance-compare-table th:first-child { width: 42%; }
+.finance-compare-table th:not(:first-child) { width: 19.333%; text-align: right; }
+.finance-compare-table .muted-value { color: var(--text-faint); }
+.finance-compare-table .delta-value.good { color: var(--ok-strong); }
+.finance-compare-table .delta-value.bad { color: var(--danger); }
+.finance-compare-table .delta-value { font-weight: 600; }
 .out-foot-say {
   font-size: var(--fs-sm);
   color: var(--text-muted);
@@ -3191,6 +3242,12 @@ table.tbl select.cell-in {
   .out-foot-say {
     display: none;
   }
+}
+
+@container (max-width: 760px) {
+  .finance-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finance-comparison .tbl-wrap { overflow-x: auto; }
+  .finance-comparison .out-head .badge { display: none; }
 }
 
 /* Le seuil se lit sur la fenêtre, pas sur la feuille : entre les deux il y a

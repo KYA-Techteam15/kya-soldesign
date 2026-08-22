@@ -1,5 +1,5 @@
 import type { AioSizingRequestV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { adjustHourlyFractionsToGamma, analyzeSolarResource, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import { adjustHourlyFractionsToGamma, analyzeSolarResource, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
@@ -132,6 +132,39 @@ export function projectToSizingInput(project: ProjectFileV1, equipment: readonly
   const presizing = project.lastCalculation.output as { selected?: { pvPeakKw?: number; storageKwh?: number; inverterKw?: number } };
   if (presizing.selected?.pvPeakKw === undefined || presizing.selected.storageKwh === undefined || presizing.selected.inverterKw === undefined) return { status: 'blocked', issues: [{ code: 'PRESIZING_OUTPUT_INVALID', path: 'lastCalculation.output', message: 'The pre-sizing result has no usable requirements' }] };
   return { status: 'ready', input: { requiredPvPowerKw: presizing.selected.pvPeakKw, requiredStorageKwh: presizing.selected.storageKwh, requiredInverterPowerKw: presizing.selected.inverterKw, coldTemperatureC: 0, referenceTemperatureC: 25, temperatureCoefficientDefaultPerC: 0.003, selectedEquipment: { module: { id: module.id, powerW: module.nominalPowerW, vmpV: module.voltageAtMaximumPowerV, vocV: module.openCircuitVoltageV, iscA: module.shortCircuitCurrentA, vocTemperatureCoefficientPerC: module.temperatureCoefficientVocPerC }, battery: { id: battery.id, voltageV: battery.nominalVoltageV, capacityAh: battery.nominalCapacityAh, energyWh: battery.nominalEnergyWh, usableDodRatio: battery.usableDepthOfDischargeRatio }, inverter: { id: inverter.id, acPowerW: inverter.nominalAcPowerW, dcVoltageV: inverter.nominalDcVoltageV, surgePowerW: inverter.surgePowerW, mpptMinV: inverter.mpptMinVoltageV, mpptMaxV: inverter.mpptMaxVoltageV, pvMaxPowerW: inverter.pvArrayMaxPowerW, vocMaxV: inverter.pvOpenCircuitMaxVoltageV, maxChargingCurrentA: inverter.maxChargingCurrentA, maxParallelUnits: inverter.maxParallelUnits, canBeInParallel: inverter.canBeInParallel } } } };
+}
+
+export async function projectToFinanceInput(project: ProjectFileV1, references: Page1References): Promise<{ readonly status: 'ready'; readonly input: FinanceInputV1 } | { readonly status: 'blocked'; readonly issues: readonly LoadInputIssue[] }> {
+  const presizing = await projectToPresizingInput(project, references);
+  if (presizing.status === 'blocked') return { status: 'blocked', issues: presizing.issues };
+  const sizing = project.sizingCalculation?.output as SizingOutputV1 | undefined;
+  if (sizing === undefined || !sizing.valid) return { status: 'blocked', issues: [{ code: 'SIZING_NOT_RUN', path: 'sizingCalculation', message: 'A valid retained system is required before financial evaluation' }] };
+  const stored = parseProjectInputsV1(project.inputs);
+  const c = stored.costing;
+  const assumptions = stored.assumptions;
+  const costingNotInitialized = c.moduleUnitPriceMinor === 0 && c.batteryUnitPriceMinor === 0 && c.inverterUnitPriceMinor === 0;
+  const moduleUnitCost = c.moduleUnitPriceMinor > 0 ? c.moduleUnitPriceMinor : sizing.pv.obtainedPowerKwc / Math.max(sizing.pv.totalModules, 1) * (assumptions.pvSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.pvSpecificCostMinorPerKw);
+  const batteryUnitCost = c.batteryUnitPriceMinor > 0 ? c.batteryUnitPriceMinor : sizing.battery.obtainedEnergyKwh / Math.max(sizing.battery.totalUnits, 1) * (assumptions.batterySpecificCostMinorPerKwh ?? PRESIZING_DEFAULTS.batterySpecificCostMinorPerKwh);
+  const inverterUnitCost = c.inverterUnitPriceMinor > 0 ? c.inverterUnitPriceMinor : sizing.inverter.obtainedPowerKw / Math.max(sizing.inverter.count, 1) * (assumptions.inverterSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.inverterSpecificCostMinorPerKw);
+  const main = [
+    { key: 'modules', label: 'Modules', quantity: sizing.pv.totalModules, unitCost: moduleUnitCost, marginRatio: costingNotInitialized ? (assumptions.pvMarginRatio ?? PRESIZING_DEFAULTS.pvMarginRatio ?? 0) : c.moduleMarginRatio },
+    { key: 'batteries', label: 'Batteries', quantity: sizing.battery.totalUnits, unitCost: batteryUnitCost, marginRatio: costingNotInitialized ? (assumptions.batteryMarginRatio ?? PRESIZING_DEFAULTS.batteryMarginRatio ?? 0) : c.batteryMarginRatio },
+    { key: 'inverters', label: 'Onduleurs', quantity: sizing.inverter.count, unitCost: inverterUnitCost, marginRatio: costingNotInitialized ? (assumptions.inverterMarginRatio ?? PRESIZING_DEFAULTS.inverterMarginRatio ?? 0) : c.inverterMarginRatio },
+  ];
+  const mainCost = main.reduce((total, line) => total + line.quantity * line.unitCost, 0);
+  const ancillary = (key: string, label: string, value: typeof c.cabling, marginRatio: number) => ({ key, label, quantity: 1, unitCost: value.mode === 'absolute' ? value.amountMinor : mainCost * value.ratio, marginRatio });
+  const p = presizing.input;
+  return { status: 'ready', input: {
+    lines: [...main, ancillary('cabling', 'Câblage', c.cabling, c.cablingMarginRatio), ancillary('electricalBox', 'Coffret électrique', c.electricalBox, c.electricalBoxMarginRatio), ancillary('supports', 'Supports', c.supports, c.supportsMarginRatio), ancillary('transport', 'Transport', c.transport, c.transportMarginRatio), ancillary('installation', 'Installation', c.installation, c.installationMarginRatio), ...c.additional.map((line) => ({ key: line.id, label: line.name, quantity: line.quantity, unitCost: line.unitCostMinor, marginRatio: line.marginRatio }))],
+    vatRatio: c.vatRatio, discountRatio: c.discountRatio, downPaymentRatio: c.downPaymentRatio,
+    pvPeakKw: sizing.pv.obtainedPowerKwc, storageKwh: sizing.battery.usefulEnergyKwh, inverterKw: sizing.inverter.obtainedPowerKw,
+    hourlyLoadKwh: p.hourlyLoadWh.map((value) => value / 1000), hourlyPoaWm2: p.hourlyPoaWm2,
+    systemPerformanceRatio: p.systemPr, inverterEfficiencyRatio: p.inverterEfficiency, batteryEfficiencyRatio: p.batteryEfficiency,
+    projectLifetimeYears: p.projectLifetimeYears, batteryLifetimeYears: p.batteryLifetimeYears, inverterLifetimeYears: p.inverterLifetimeYears,
+    pvMaintenanceRatioPerYear: p.pvMaintenanceRatioPerYear, batteryMaintenanceRatioPerYear: p.batteryMaintenanceRatioPerYear, inverterMaintenanceRatioPerYear: p.inverterMaintenanceRatioPerYear,
+    discountRateRatio: p.discountRateRatio, gridTariffPerKwh: p.gridTariffPerKwh, emissionFactorKgPerKwh: p.emissionFactorKgPerKwh,
+    selfConsumptionRatio: assumptions.selfConsumptionRatio ?? PRESIZING_DEFAULTS.selfConsumptionRatio, dieselSpecificCostPerKw: assumptions.dieselSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.dieselSpecificCostMinorPerKw,
+  } };
 }
 
 /** Site can calculate the real solar resource before the user has entered a valid load; gamma then remains unavailable. */

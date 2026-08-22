@@ -1,16 +1,17 @@
 import type { AioSizingEnvelopeV1, AioSizingOutputV1, PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
-import { AioSizingEngine, PresizingEngine, SizingEngine, compatibleInverters } from '@ksd/engine';
+import { AioSizingEngine, FinanceEngine, PresizingEngine, SizingEngine, compatibleInverters } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { Locality, NormalizedHourlyProfile, WeatherSource } from '@ksd/domain';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import type { CalculationCapabilityPort, CapabilityId, CapabilityState } from '../contracts.js';
 import { unavailableCalculations } from './unavailableCalculations.js';
-import { projectToAioInput, projectToPresizingInput, projectToSizingInput, projectToSolarAnalysis } from './projectToAio.js';
+import { projectToAioInput, projectToFinanceInput, projectToPresizingInput, projectToSizingInput, projectToSolarAnalysis } from './projectToAio.js';
 
 export class AioCalculations implements CalculationCapabilityPort {
   private readonly engine = new AioSizingEngine();
   private readonly presizingEngine = new PresizingEngine();
   private readonly sizingEngine = new SizingEngine();
+  private readonly financeEngine = new FinanceEngine();
   private readonly presizingResults = new Map<string, PresizingEnvelopeV1>();
 
   public constructor(
@@ -20,7 +21,7 @@ export class AioCalculations implements CalculationCapabilityPort {
   ) {}
 
   public async read<Output>(projectId: string, capability: CapabilityId): Promise<CapabilityState<Output>> {
-    if (capability !== 'presizing' && capability !== 'sizing' && capability !== 'solar-resource') return unavailableCalculations.read(projectId, capability);
+    if (capability !== 'presizing' && capability !== 'sizing' && capability !== 'solar-resource' && capability !== 'finance') return unavailableCalculations.read(projectId, capability);
     const project = this.getProject(projectId);
     if (project === null) return { status: 'error', code: 'PROJECT_NOT_FOUND', messageKey: 'state.projectNotFound', retryable: false };
     if (capability === 'solar-resource') {
@@ -42,6 +43,12 @@ export class AioCalculations implements CalculationCapabilityPort {
       return envelope.inputHash !== currentHash
         ? { status: 'stale', previousRunId: `${project.id}:${envelope.inputHash}`, previousInputHash: envelope.inputHash, currentInputHash: currentHash, reasonKey: 'state.calculationStale' }
         : { status: 'ready', runId: `${project.id}:${envelope.inputHash}`, createdAt: project.updatedAt, envelope: envelope as never };
+    }
+    if (capability === 'finance') {
+      const adapted = await projectToFinanceInput(project, this.references);
+      if (adapted.status === 'blocked') return { status: 'empty', messageKey: adapted.issues.map((issue) => issue.code).join(',') };
+      const envelope = this.financeEngine.calculate(adapted.input);
+      return { status: 'ready', runId: `${project.id}:${envelope.inputHash}`, createdAt: project.updatedAt, envelope: envelope as never };
     }
     if (this.references.equipment === undefined) return this.readLegacySizing<Output>(project);
     const adapted = projectToSizingInput(project, this.references.equipment);

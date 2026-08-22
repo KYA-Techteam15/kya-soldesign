@@ -1318,6 +1318,8 @@ tfoot td:first-child {
   padding: var(--sp-4);
   display: grid;
   gap: var(--sp-4);
+  width: 100%;
+  min-width: 0;
 }
 .sheet-head {
   display: flex;
@@ -1342,6 +1344,7 @@ tfoot td:first-child {
    ========================================================================== */
 .pane-center.pinned {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
 }
 .pane-center.pinned > .sheet {

@@ -15,6 +15,8 @@ export function sectionStates(project: ProjectViewModel, lang: Lang = 'fr'): Rec
   const costing = project.costing;
   const profile = project.load.profiles.find((item) => item.id === project.load.activeProfileId);
   const lineCount = (profile?.classic.length ?? 0) + (profile?.inductive.length ?? 0);
+  const configuredCables = project.cables.filter((cable) => cable.length > 0).length;
+  const selectedProtections = project.protections.filter((choice) => choice.caliberA !== null).length;
   const build = (checks: [boolean, string][], meta: string): SectionState => ({
     level: level(checks.filter(([valid]) => valid).length, checks.length),
     missing: checks.filter(([valid]) => !valid).map(([, label]) => label),
@@ -46,9 +48,9 @@ export function sectionStates(project: ProjectViewModel, lang: Lang = 'fr'): Rec
       [Boolean(project.selection.inverterId), 'onduleur'],
     ], `${[project.selection.moduleId, project.selection.batteryId, project.selection.inverterId].filter(Boolean).length}/3 ${unit('unit.refs')}`),
     protections: build([
-      [project.cables.every((cable) => cable.length > 0), 'longueurs de câble'],
-      [project.protections.every((choice) => choice.caliberA !== null), 'calibres retenus'],
-    ], 'calcul indisponible'),
+      [project.cables.length === 3 && configuredCables === 3, 'longueurs de câble'],
+      [project.protections.length === 3 && selectedProtections === 3, 'calibres retenus'],
+    ], ''),
     chiffrage: build([
       [costing.moduleUnitPrice > 0 && costing.batteryUnitPrice > 0 && costing.inverterUnitPrice > 0, 'prix de revient'],
       [costing.tvaPercent >= 0, 'TVA'],

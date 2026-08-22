@@ -8,3 +8,5 @@ export * from './sizing/contracts.js';
 export * from './sizing/engine.js';
 export * from './protection-cabling/contracts.js';
 export * from './protection-cabling/engine.js';
+export * from './finance/contracts.js';
+export * from './finance/engine.js';

@@ -110,7 +110,7 @@ export function WorkshopLayout() {
                     <i className={`st st-${st.level}`} />
                     <span className="nav-rank">{SECTIONS.indexOf(s) + 1}</span>
                     <span className="nav-label">{t(s.key)}</span>
-                    <span className="nav-meta">{st.meta}</span>
+                    {st.meta && <span className="nav-meta">{st.meta}</span>}
                   </NavLink>
                 </li>
               );
