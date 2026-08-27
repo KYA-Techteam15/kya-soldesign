@@ -64,6 +64,14 @@
   font-weight: 300;
   color: var(--ink-2);
 }
+
+.a4-logo-image {
+  display: block;
+  width: 128px;
+  height: 54px;
+  object-fit: contain;
+  object-position: left center;
+}
 .a4-who {
   text-align: right;
   font-size: 7.5pt;

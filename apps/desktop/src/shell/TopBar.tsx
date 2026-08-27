@@ -24,8 +24,7 @@ export function TopBar({ project, primary, back }: Props) {
         onClick={() => nav('/accueil')}
         title={t('home.welcome')}
       >
-        <i />
-        KYA<span>-SolDesign</span>
+        <img src="/kya-sol-design-logo.png" alt="KYA-SolDesign" />
       </button>
 
       <div className="crumbs">

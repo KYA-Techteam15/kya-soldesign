@@ -144,6 +144,13 @@
 .sys-card:disabled {
   cursor: not-allowed;
 }
+.upcoming-title { margin-top: var(--sp-5); }
+.splash-logo {
+  display: block;
+  width: min(280px, 62vw);
+  height: auto;
+  object-fit: contain;
+}
 /* On éteint le texte d'une carte à venir, pas son badge : c'est lui qui
    dit de quelle famille elle relève, et l'information reste vraie même
    quand le type n'est pas encore ouvert. */
@@ -3288,3 +3295,23 @@ table.tbl select.cell-in {
     margin-bottom: 2px;
   }
 }
+/* Les filtres du catalogue gardent une taille stable et passent proprement à la ligne. */
+.catalog-filters {
+  flex-wrap: wrap;
+  margin: var(--sp-3) 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.catalog-filters select,
+.catalog-filters input {
+  min-width: 140px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+.settings-group { margin-top: var(--sp-5); }
+.settings-input { width: min(320px, 45vw); text-align: left; }

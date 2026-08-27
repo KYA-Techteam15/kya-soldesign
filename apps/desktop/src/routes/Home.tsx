@@ -113,8 +113,9 @@ export function Home() {
                 {t('home.settings')}
               </button>
             </div>
+            <h3 className="h-sec">{t('home.availableSection')}</h3>
             <div className="sys-grid">
-              {SYSTEMS.map((s) => (
+              {SYSTEMS.filter((s) => s.ready).map((s) => (
                 <button
                   key={s.type}
                   className={`sys-card ${s.schema ? 'has-schema' : ''}`}
@@ -132,8 +133,19 @@ export function Home() {
                   </span>
                   <span className="sys-desc">{t(`sysd.${s.type}`)}</span>
                   <span className="sys-state">
-                    {s.ready ? 'Disponible' : t('home.comingSoon')}
+                    {s.ready ? t('home.available') : t('home.comingSoon')}
                   </span>
+                </button>
+              ))}
+            </div>
+            <h3 className="h-sec upcoming-title">{t('home.upcomingSection')}</h3>
+            <div className="sys-grid">
+              {SYSTEMS.filter((s) => !s.ready).map((s) => (
+                <button key={s.type} className={'sys-card ' + (s.schema ? 'has-schema' : '')} disabled>
+                  {s.schema && <img className="sys-schema" src={s.schema} alt="" aria-hidden="true" />}
+                  <span className="sys-name"><span className={'glyph g-' + s.tone}>{s.glyph}</span><b>{t('sys.' + s.type)}</b></span>
+                  <span className="sys-desc">{t('sysd.' + s.type)}</span>
+                  <span className="sys-state">{t('home.comingSoon')}</span>
                 </button>
               ))}
             </div>
@@ -150,7 +162,8 @@ export function Home() {
             {recent.length === 0 ? (
               <div className="empty">
                 <b>{t('home.noProject')}</b>
-                Créez votre premier projet pour démarrer.
+                <span>{t('home.emptyHint')}</span>
+                <button className="btn btn-ok" onClick={() => start('standalone_all_in_one', true)}>{t('home.emptyCta')}</button>
               </div>
             ) : (
               <div className="proj-list">
@@ -163,8 +176,8 @@ export function Home() {
                     <span>
                       <b>{p.name}</b>
                       <small>
-                        {p.details.clientName || 'Client non renseigné'} ·{' '}
-                        {p.details.projectLocation || 'Lieu non renseigné'}
+                        {p.details.clientName || t('home.clientMissing')} ·{' '}
+                        {p.details.projectLocation || t('home.locationMissing')}
                       </small>
                     </span>
                     <span className="when">n° {p.details.projectNumber || '—'}</span>

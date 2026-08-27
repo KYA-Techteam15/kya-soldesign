@@ -9,6 +9,7 @@ import {
 } from './models/projectAdapters.js';
 import type { ProjectViewModel, SystemType } from './models/projectView.js';
 import { readNavigationSession, writeNavigationSession } from './navigationSession.js';
+import { useSettings } from '../store/settings.js';
 
 type ProjectMutation = (draft: ProjectViewModel) => void;
 
@@ -89,6 +90,27 @@ export function ProjectSessionProvider({
   const create = useCallback((system: SystemType): string => {
     const file = service.create(systemTypeToCanonical(system), locale);
     const view = projectFileToView(file);
+    const defaults = useSettings.getState();
+    view.assumptions.systemPr = defaults.performanceRatioPercent;
+    view.assumptions.lpspMax = defaults.maxLpspPercent;
+    view.assumptions.lolpMax = defaults.maxLolpPercent;
+    view.assumptions.inverterYield = defaults.inverterEfficiencyPercent;
+    view.assumptions.batteryYield = defaults.batteryEfficiencyPercent;
+    view.assumptions.batteryVoltage = defaults.batteryVoltage;
+    view.assumptions.pvSpecificCost = defaults.pvSpecificCost;
+    view.assumptions.batterySpecificCost = defaults.batterySpecificCost;
+    view.assumptions.inverterSpecificCost = defaults.inverterSpecificCost;
+    view.assumptions.pvMargin = defaults.pvMarginPercent;
+    view.assumptions.batteryMargin = defaults.batteryMarginPercent;
+    view.assumptions.inverterMargin = defaults.inverterMarginPercent;
+    view.costing.tvaPercent = defaults.vatPercent;
+    view.costing.offerValidity = defaults.offerValidityDays;
+    view.costing.productWarranty = defaults.warrantyMonths;
+    view.costing.deliveryTime = defaults.deliveryDays;
+    view.costing.reductionPercent = defaults.discountPercent;
+    view.costing.downPaymentPercent = defaults.downPaymentPercent;
+    view.currency = defaults.currencyCode;
+    service.replace(projectViewToFile(view));
     setPast((history) => [...history, projects].slice(-50));
     setFuture([]);
     setProjects([view, ...projects]);

@@ -1,10 +1,24 @@
-/** État d'interface éphémère : thème, langue, notifications et confirmations. */
+/** Préférences d'interface persistées localement, plus l'état de session UI. */
 import { create } from 'zustand';
 
 export type Theme = 'light' | 'dark';
 export type Vibe = 'sober' | 'vivid' | 'radiant';
 export const VIBES: readonly Vibe[] = ['sober', 'vivid', 'radiant'];
 export type Lang = 'fr' | 'en';
+const UI_SETTINGS_KEY = 'kya-sol-design.ui-settings.v1';
+type UiSettings = Pick<UiStore, 'theme' | 'vibe' | 'lang'>;
+
+function readSettings(): UiSettings {
+  if (typeof window === 'undefined') return { theme: 'light', vibe: 'sober', lang: 'fr' };
+  try {
+    const value = JSON.parse(window.localStorage.getItem(UI_SETTINGS_KEY) ?? 'null') as Partial<UiSettings> | null;
+    return { theme: value?.theme === 'dark' ? 'dark' : 'light', vibe: VIBES.includes(value?.vibe as Vibe) ? value!.vibe as Vibe : 'sober', lang: value?.lang === 'en' ? 'en' : 'fr' };
+  } catch { return { theme: 'light', vibe: 'sober', lang: 'fr' }; }
+}
+
+function saveSettings(settings: UiSettings): void {
+  try { window.localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(settings)); } catch { /* storage unavailable: session state remains usable */ }
+}
 
 export interface Toast {
   readonly id: number;
@@ -43,14 +57,15 @@ interface UiStore {
 }
 
 let toastSequence = 0;
-export const useUi = create<UiStore>()((set) => ({
-  theme: 'light', vibe: 'sober', lang: 'fr', splashSeen: false, toasts: [],
+const initialSettings = readSettings();
+export const useUi = create<UiStore>()((set, get) => ({
+  ...initialSettings, splashSeen: false, toasts: [],
   confirm: null, verdictCollapsed: false, verdictTabTop: 42,
-  setTheme: (theme) => set({ theme }),
-  setVibe: (vibe) => set({ vibe }),
-  toggleVibe: () => set((state) => ({ vibe: VIBES[(VIBES.indexOf(state.vibe) + 1) % VIBES.length] })),
-  toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
-  setLang: (lang) => set({ lang }),
+  setTheme: (theme) => { set({ theme }); saveSettings({ theme, vibe: get().vibe, lang: get().lang }); },
+  setVibe: (vibe) => { set({ vibe }); saveSettings({ theme: get().theme, vibe, lang: get().lang }); },
+  toggleVibe: () => { const vibe = VIBES[(VIBES.indexOf(get().vibe) + 1) % VIBES.length]; set({ vibe }); saveSettings({ theme: get().theme, vibe, lang: get().lang }); },
+  toggleTheme: () => { const theme = get().theme === 'dark' ? 'light' : 'dark'; set({ theme }); saveSettings({ theme, vibe: get().vibe, lang: get().lang }); },
+  setLang: (lang) => { set({ lang }); saveSettings({ theme: get().theme, vibe: get().vibe, lang }); },
   markSplashSeen: () => set({ splashSeen: true }),
   notify: (toast) => {
     const id = ++toastSequence;

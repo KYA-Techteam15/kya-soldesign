@@ -33,10 +33,7 @@ export function Splash() {
 
   return (
     <div className="splash">
-      <div className="mark">
-        <i />
-        KYA<span>-SolDesign</span>
-      </div>
+      <img className="splash-logo" src="/kya-sol-design-logo.png" alt="KYA-SolDesign" />
       <p>{t('splash.tagline')}</p>
       <div className="bar">
         <i />
