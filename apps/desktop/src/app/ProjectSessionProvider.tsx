@@ -8,6 +8,7 @@ import {
   systemTypeToCanonical,
 } from './models/projectAdapters.js';
 import type { ProjectViewModel, SystemType } from './models/projectView.js';
+import { applyProjectDefaults } from './services/createProject.js';
 import { readNavigationSession, writeNavigationSession } from './navigationSession.js';
 import { useSettings } from '../store/settings.js';
 
@@ -32,6 +33,7 @@ interface ProjectSessionContextValue {
   readonly update: (mutate: ProjectMutation) => void;
   readonly touchSaved: () => void;
   readonly replaceCanonical: (project: ProjectFileV1) => void;
+  readonly addCanonical: (project: ProjectFileV1) => void;
 }
 
 const ProjectSessionContext = createContext<ProjectSessionContextValue | null>(null);
@@ -89,27 +91,7 @@ export function ProjectSessionProvider({
 
   const create = useCallback((system: SystemType): string => {
     const file = service.create(systemTypeToCanonical(system), locale);
-    const view = projectFileToView(file);
-    const defaults = useSettings.getState();
-    view.assumptions.systemPr = defaults.performanceRatioPercent;
-    view.assumptions.lpspMax = defaults.maxLpspPercent;
-    view.assumptions.lolpMax = defaults.maxLolpPercent;
-    view.assumptions.inverterYield = defaults.inverterEfficiencyPercent;
-    view.assumptions.batteryYield = defaults.batteryEfficiencyPercent;
-    view.assumptions.batteryVoltage = defaults.batteryVoltage;
-    view.assumptions.pvSpecificCost = defaults.pvSpecificCost;
-    view.assumptions.batterySpecificCost = defaults.batterySpecificCost;
-    view.assumptions.inverterSpecificCost = defaults.inverterSpecificCost;
-    view.assumptions.pvMargin = defaults.pvMarginPercent;
-    view.assumptions.batteryMargin = defaults.batteryMarginPercent;
-    view.assumptions.inverterMargin = defaults.inverterMarginPercent;
-    view.costing.tvaPercent = defaults.vatPercent;
-    view.costing.offerValidity = defaults.offerValidityDays;
-    view.costing.productWarranty = defaults.warrantyMonths;
-    view.costing.deliveryTime = defaults.deliveryDays;
-    view.costing.reductionPercent = defaults.discountPercent;
-    view.costing.downPaymentPercent = defaults.downPaymentPercent;
-    view.currency = defaults.currencyCode;
+    const view = projectFileToView(applyProjectDefaults(file, useSettings.getState()));
     service.replace(projectViewToFile(view));
     setPast((history) => [...history, projects].slice(-50));
     setFuture([]);
@@ -175,6 +157,11 @@ export function ProjectSessionProvider({
     touchSaved: () => setSavedAt(Date.now()),
     replaceCanonical: (project) => {
       service.replace(project);
+      setProjects(filesToViews(service.list()));
+      setSavedAt(Date.now());
+    },
+    addCanonical: (project) => {
+      service.add(project);
       setProjects(filesToViews(service.list()));
       setSavedAt(Date.now());
     },

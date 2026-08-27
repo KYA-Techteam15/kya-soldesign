@@ -1,4 +1,5 @@
 export const NAVIGATION_SESSION_STORAGE_KEY = 'kya-sol-design.navigation.v1';
+export const PROJECT_RESUME_STORAGE_KEY = 'kya-sol-design.project-resume.v1';
 
 export interface NavigationSessionV1 {
   readonly version: 1;
@@ -10,6 +11,7 @@ export interface NavigationSessionV1 {
 }
 
 type NavigationStorage = Pick<Storage, 'getItem' | 'setItem'>;
+type ResumeStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 const emptySession: NavigationSessionV1 = {
   version: 1,
@@ -21,6 +23,36 @@ const emptySession: NavigationSessionV1 = {
 };
 
 const workshopSlugs = new Set(['projet', 'site', 'besoins', 'hypotheses', 'materiel', 'protections', 'chiffrage', 'dossier']);
+
+export function readProjectResumeTarget(
+  projectId: string,
+  storage: ResumeStorage = window.localStorage,
+): string | null {
+  try {
+    const raw = storage.getItem(PROJECT_RESUME_STORAGE_KEY);
+    if (raw === null) return null;
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    const route = value[projectId];
+    return typeof route === 'string' && isWorkshopRoute(route, projectId) ? route : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeProjectResumeTarget(
+  projectId: string,
+  route: string,
+  storage: ResumeStorage = window.localStorage,
+): void {
+  if (!isWorkshopRoute(route, projectId)) return;
+  try {
+    const raw = storage.getItem(PROJECT_RESUME_STORAGE_KEY);
+    const current = raw === null ? {} : JSON.parse(raw) as Record<string, unknown>;
+    storage.setItem(PROJECT_RESUME_STORAGE_KEY, JSON.stringify({ ...current, [projectId]: route }));
+  } catch {
+    // Navigation remains usable when persistence is unavailable.
+  }
+}
 
 export function readNavigationSession(
   projects: readonly { readonly id: string }[],

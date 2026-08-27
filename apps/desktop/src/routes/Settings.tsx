@@ -1,124 +1,53 @@
+import { useEffect, useState, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from 'react';
 import { TopBar } from '../shell/TopBar';
 import { StatusBar } from '../shell/StatusBar';
 import { useT } from '../i18n';
 import { useUi, VIBES, type Vibe } from '../store/ui';
-import { useSettings, type ApplicationSettings } from '../store/settings';
+import { useSettings } from '../store/settings';
+import type { ApplicationSettingsV2 } from '../app/models/applicationSettings';
+import { createManualRate } from '../app/services/exchangeRates';
+import { applicationReleaseInfo } from '../app/models/releaseInfo';
+import { reportAssetRepository, useReportAssetUrl } from '../app/adapters/reportAssetRepository';
+import { unavailableLicense } from '../app/adapters/unavailableLicense';
+import type { LicenseState } from '../app/models/license';
 
-/** Les trois styles soumis à l'avis, décrits en une phrase chacun. */
-const VIBE_LABEL: Record<Vibe, string> = {
-  sober: 'Sobre',
-  vivid: 'Vif',
-  radiant: 'Éclatant',
-};
-const VIBE_SAY: Record<Vibe, string> = {
-  sober: 'Sobre : l’instrument de mesure. Contraste et densité, rien d’autre.',
-  vivid: 'Vif : la charte assumée. Chrome sombre, surfaces colorées.',
-  radiant: 'Éclatant : le blanc éclairé. Profondeur, halos, un grand chiffre.',
-};
+const VIBE_LABEL: Record<Vibe, string> = { sober: 'settings.vibe.sober', vivid: 'settings.vibe.vivid', radiant: 'settings.vibe.radiant' };
+const VIBE_SAY: Record<Vibe, string> = { sober: 'settings.vibe.soberHelp', vivid: 'settings.vibe.vividHelp', radiant: 'settings.vibe.radiantHelp' };
 
 export function SettingsRoute() {
-  const t = useT();
-  const { theme, setTheme, vibe, setVibe, lang, setLang, ask } = useUi();
-  const settings = useSettings();
-  const updateText = (key: keyof ApplicationSettings) => (event: React.ChangeEvent<HTMLInputElement>) => settings.update({ [key]: event.target.value });
-  const updateNumber = (key: keyof ApplicationSettings) => (event: React.ChangeEvent<HTMLInputElement>) => { const value = Number(event.target.value); if (Number.isFinite(value)) settings.update({ [key]: value }); };
-  const reset = () => ask({ title: 'Réinitialiser les réglages ?', message: 'Les préférences globales seront remplacées par les valeurs par défaut.', confirmLabel: 'Réinitialiser', danger: true, onConfirm: settings.reset });
+  const t = useT(); const { theme, setTheme, vibe, setVibe, lang, setLang, ask, notify } = useUi();
+  const [licenseState, setLicenseState] = useState<LicenseState>({ status: 'checking' });
+  useEffect(() => { let active = true; void unavailableLicense.readState().then((state) => { if (active) setLicenseState(state); }); return () => { active = false; }; }, []);
+  const settings = useSettings(); const updateCategory = settings.updateCategory;
+  const updateCompany = (key: keyof ApplicationSettingsV2['company']) => (value: string) => updateCategory('company', { [key]: value });
+  const updateReports = (key: keyof ApplicationSettingsV2['reports']) => (value: string) => updateCategory('reports', { [key]: value });
+  const updateDefaults = (patch: Partial<ApplicationSettingsV2['defaults']>) => updateCategory('defaults', patch);
+  const updateProjects = (patch: Partial<ApplicationSettingsV2['projects']>) => updateCategory('projects', patch);
+  const updateCurrency = (patch: Partial<ApplicationSettingsV2['currency']>) => { try { updateCategory('currency', patch); } catch (error) { notify({ kind: 'error', title: t('settings.invalid'), detail: error instanceof Error ? error.message : '' }); } };
+  const setManualRate = (raw: string) => { try { updateCurrency({ rate: createManualRate(settings.currency.inputCurrencyCode, settings.currency.outputCurrencyCode, raw, new Date().toISOString(), t('settings.manualSource')) }); } catch { notify({ kind: 'error', title: t('settings.invalidRate') }); } };
+  const reset = () => ask({ title: t('settings.resetTitle'), message: t('settings.resetMessage'), confirmLabel: t('settings.resetConfirm'), danger: true, onConfirm: settings.reset });
+  const resetCategories = (...categories: Array<Parameters<typeof settings.resetCategory>[0]>) => ask({ title: t('settings.resetCategoryTitle'), message: t('settings.resetCategoryMessage'), confirmLabel: t('settings.resetCategory'), danger: true, onConfirm: () => categories.forEach((category) => settings.resetCategory(category)) });
+  const exportSettings = () => { const blob = new Blob([settings.exportJson()], { type: 'application/json' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'kya-sol-design-settings-v2.json'; anchor.click(); URL.revokeObjectURL(url); notify({ kind: 'success', title: t('settings.exported') }); };
+  const importSettings = async (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; try { const value = JSON.parse(await file.text()) as { settings?: unknown }; settings.replace(value.settings ?? value); notify({ kind: 'success', title: t('settings.imported') }); } catch (error) { notify({ kind: 'error', title: t('settings.importFailed'), detail: error instanceof Error ? error.message : t('settings.invalid') }); } };
 
-  return (
-    <div className="page">
-      <TopBar back="/accueil" />
-      <div className="page-body">
-        <div className="page-inner">
-          <h1 className="page-title">{t('home.settings')}</h1>
+  return <div className="page"><TopBar back="/accueil" /><div className="page-body"><div className="page-inner">
+    <div className="rowline"><h1 className="page-title">{t('home.settings')}</h1><span className="sep" /><label className="btn">{t('settings.import')}<input type="file" accept="application/json,.json" hidden onChange={importSettings} /></label><button className="btn" onClick={exportSettings}>{t('settings.export')}</button></div>
+    <div className="kpis"><div className="kpi kpi-head"><span className="h-sec">{t('settings.interface')}</span></div><div className="kpi"><span>{t('settings.theme')}</span><span className="seg"><button aria-selected={theme === 'light'} onClick={() => setTheme('light')}>{t('app.theme.light')}</button><button aria-selected={theme === 'dark'} onClick={() => setTheme('dark')}>{t('app.theme.dark')}</button></span></div><div className="kpi"><span>{t('settings.visualIntensity')}<br /><span className="label">{t(VIBE_SAY[vibe])}</span></span><span className="seg">{VIBES.map((value) => <button key={value} aria-selected={vibe === value} onClick={() => setVibe(value)}>{t(VIBE_LABEL[value])}</button>)}</span></div><div className="kpi"><span>{t('settings.language')}</span><span className="seg"><button aria-selected={lang === 'fr'} onClick={() => setLang('fr')}>{t('app.language.fr')}</button><button aria-selected={lang === 'en'} onClick={() => setLang('en')}>{t('app.language.en')}</button></span></div></div>
 
-          <div className="kpis">
-            <div className="kpi kpi-head">
-              <span className="h-sec">{t('settings.interface')}</span>
-            </div>
-            <div className="kpi">
-              <span>{t('settings.theme')}</span>
-              <span className="seg">
-                <button
-                  aria-selected={theme === 'light'}
-                  onClick={() => setTheme('light')}
-                >
-                  Clair
-                </button>
-                <button
-                  aria-selected={theme === 'dark'}
-                  onClick={() => setTheme('dark')}
-                >
-                  Sombre
-                </button>
-              </span>
-            </div>
-            <div className="kpi">
-              <span>
-                Intensité visuelle
-                <br />
-                <span className="label">{VIBE_SAY[vibe]}</span>
-              </span>
-              <span className="seg">
-                {VIBES.map((v) => (
-                  <button
-                    key={v}
-                    aria-selected={vibe === v}
-                    onClick={() => setVibe(v)}
-                  >
-                    {VIBE_LABEL[v]}
-                  </button>
-                ))}
-              </span>
-            </div>
-            <div className="kpi">
-              <span>{t('settings.language')}</span>
-              <span className="seg">
-                <button aria-selected={lang === 'fr'} onClick={() => setLang('fr')}>
-                  Français
-                </button>
-                <button aria-selected={lang === 'en'} onClick={() => setLang('en')}>
-                  English
-                </button>
-              </span>
-            </div>
-          </div>
-
-          <SettingsGroup title="Identité société">
-            <SettingInput label="Nom" value={settings.companyName} onChange={updateText('companyName')} />
-            <SettingInput label="Adresse" value={settings.companyAddress} onChange={updateText('companyAddress')} />
-            <SettingInput label="Téléphone" value={settings.companyPhone} onChange={updateText('companyPhone')} />
-            <SettingInput label="E-mail" type="email" value={settings.companyEmail} onChange={updateText('companyEmail')} />
-            <SettingInput label="Logo des rapports (URL ou chemin)" value={settings.reportLogo} onChange={updateText('reportLogo')} />
-            <SettingInput label="Pied de page des rapports" value={settings.reportFooter} onChange={updateText('reportFooter')} />
-          </SettingsGroup>
-          <SettingsGroup title="Défauts des nouveaux projets">
-            <SettingInput label="Performance ratio (%)" type="number" value={settings.performanceRatioPercent} onChange={updateNumber('performanceRatioPercent')} />
-            <SettingInput label="LPSP maximale (%)" type="number" value={settings.maxLpspPercent} onChange={updateNumber('maxLpspPercent')} />
-            <SettingInput label="LOLP maximale (%)" type="number" value={settings.maxLolpPercent} onChange={updateNumber('maxLolpPercent')} />
-            <SettingInput label="Rendement onduleur (%)" type="number" value={settings.inverterEfficiencyPercent} onChange={updateNumber('inverterEfficiencyPercent')} />
-            <SettingInput label="Rendement batterie (%)" type="number" value={settings.batteryEfficiencyPercent} onChange={updateNumber('batteryEfficiencyPercent')} />
-            <SettingInput label="Tension batterie (V)" type="number" value={settings.batteryVoltage} onChange={updateNumber('batteryVoltage')} />
-            <SettingInput label="Coût PV (FCFA/kWc)" type="number" value={settings.pvSpecificCost} onChange={updateNumber('pvSpecificCost')} />
-            <SettingInput label="Marge PV (%)" type="number" value={settings.pvMarginPercent} onChange={updateNumber('pvMarginPercent')} />
-            <SettingInput label="Coût batterie (FCFA/kWh)" type="number" value={settings.batterySpecificCost} onChange={updateNumber('batterySpecificCost')} />
-            <SettingInput label="Marge batterie (%)" type="number" value={settings.batteryMarginPercent} onChange={updateNumber('batteryMarginPercent')} />
-            <SettingInput label="Coût onduleur (FCFA/kW)" type="number" value={settings.inverterSpecificCost} onChange={updateNumber('inverterSpecificCost')} />
-            <SettingInput label="Marge onduleur (%)" type="number" value={settings.inverterMarginPercent} onChange={updateNumber('inverterMarginPercent')} />
-            <SettingInput label="TVA (%)" type="number" value={settings.vatPercent} onChange={updateNumber('vatPercent')} />
-            <SettingInput label="Validité de l’offre (jours)" type="number" value={settings.offerValidityDays} onChange={updateNumber('offerValidityDays')} />
-            <SettingInput label="Garantie (mois)" type="number" value={settings.warrantyMonths} onChange={updateNumber('warrantyMonths')} />
-            <SettingInput label="Délai de livraison (jours)" type="number" value={settings.deliveryDays} onChange={updateNumber('deliveryDays')} />
-            <SettingInput label="Remise (%)" type="number" value={settings.discountPercent} onChange={updateNumber('discountPercent')} />
-            <SettingInput label="Acompte (%)" type="number" value={settings.downPaymentPercent} onChange={updateNumber('downPaymentPercent')} />
-            <SettingInput label="Devise" value={settings.currencyCode} maxLength={3} onChange={updateText('currencyCode')} />
-          </SettingsGroup>
-          <div className="rowline"><span className="label">Ces valeurs s’appliquent uniquement aux nouveaux projets.</span><span className="sep" /><button className="btn" onClick={reset}>Valeurs par défaut</button></div>
-        </div>
-      </div>
-      <StatusBar />
-    </div>
-  );
+    <SettingsGroup title={t('settings.companyReports')} onReset={() => resetCategories('company', 'reports')}><TextSetting label={t('settings.companyName')} value={settings.company.name} onCommit={updateCompany('name')} /><TextSetting label={t('settings.companyAddress')} value={settings.company.address} onCommit={updateCompany('address')} /><TextSetting label={t('settings.companyPhone')} value={settings.company.phone} onCommit={updateCompany('phone')} /><TextSetting label={t('settings.companyEmail')} type="email" value={settings.company.email} onCommit={updateCompany('email')} /><TextSetting label={t('settings.logoUrl')} value={settings.reports.logoUrl} onCommit={updateReports('logoUrl')} /><ReportAssetSetting label={t('settings.logoFile')} kind="logo" assetId={settings.reports.logoAssetId} onStored={(id) => updateReports('logoAssetId')(id)} onRemoved={() => settings.updateCategory('reports', { logoAssetId: null })} /><ReportAssetSetting label={t('settings.signatureFile')} kind="signature" assetId={settings.reports.signatureAssetId} onStored={(id) => updateReports('signatureAssetId')(id)} onRemoved={() => settings.updateCategory('reports', { signatureAssetId: null })} /><TextSetting label={t('settings.signature')} value={settings.reports.signatureText} onCommit={updateReports('signatureText')} /><TextSetting label={t('settings.footer')} value={settings.reports.footerText} onCommit={updateReports('footerText')} /></SettingsGroup>
+    <SettingsGroup title={t('settings.reliability')} onReset={() => resetCategories('defaults')}><NumberSetting label={t('settings.performanceRatio')} unit="%" value={settings.defaults.reliability.performanceRatioPercent} onCommit={(value) => updateDefaults({ reliability: { ...settings.defaults.reliability, performanceRatioPercent: value } })} /><NumberSetting label={t('settings.maxLpsp')} unit="%" value={settings.defaults.reliability.maxLpspPercent} onCommit={(value) => updateDefaults({ reliability: { ...settings.defaults.reliability, maxLpspPercent: value } })} /><NumberSetting label={t('settings.maxLolp')} unit="%" value={settings.defaults.reliability.maxLolpPercent} onCommit={(value) => updateDefaults({ reliability: { ...settings.defaults.reliability, maxLolpPercent: value } })} /><NumberSetting label={t('settings.inverterEfficiency')} unit="%" value={settings.defaults.conversion.inverterEfficiencyPercent} onCommit={(value) => updateDefaults({ conversion: { ...settings.defaults.conversion, inverterEfficiencyPercent: value } })} /><NumberSetting label={t('settings.batteryEfficiency')} unit="%" value={settings.defaults.conversion.batteryEfficiencyPercent} onCommit={(value) => updateDefaults({ conversion: { ...settings.defaults.conversion, batteryEfficiencyPercent: value } })} /></SettingsGroup>
+    <SettingsGroup title={t('settings.costs')} onReset={() => resetCategories('defaults')}><NumberSetting label={t('settings.pvCost')} unit="FCFA/kWc" value={settings.defaults.equipmentCosts.pvSpecificCost} onCommit={(value) => updateDefaults({ equipmentCosts: { ...settings.defaults.equipmentCosts, pvSpecificCost: value } })} /><NumberSetting label={t('settings.pvMargin')} unit="%" value={settings.defaults.equipmentCosts.pvMarginPercent} onCommit={(value) => updateDefaults({ equipmentCosts: { ...settings.defaults.equipmentCosts, pvMarginPercent: value } })} /><NumberSetting label={t('settings.batteryCost')} unit="FCFA/kWh" value={settings.defaults.equipmentCosts.batterySpecificCost} onCommit={(value) => updateDefaults({ equipmentCosts: { ...settings.defaults.equipmentCosts, batterySpecificCost: value } })} /><NumberSetting label={t('settings.batteryMargin')} unit="%" value={settings.defaults.equipmentCosts.batteryMarginPercent} onCommit={(value) => updateDefaults({ equipmentCosts: { ...settings.defaults.equipmentCosts, batteryMarginPercent: value } })} /><NumberSetting label={t('settings.inverterCost')} unit="FCFA/kW" value={settings.defaults.equipmentCosts.inverterSpecificCost} onCommit={(value) => updateDefaults({ equipmentCosts: { ...settings.defaults.equipmentCosts, inverterSpecificCost: value } })} /><NumberSetting label={t('settings.inverterMargin')} unit="%" value={settings.defaults.equipmentCosts.inverterMarginPercent} onCommit={(value) => updateDefaults({ equipmentCosts: { ...settings.defaults.equipmentCosts, inverterMarginPercent: value } })} /></SettingsGroup>
+    <SettingsGroup title={t('settings.commercial')} onReset={() => resetCategories('defaults')}><NumberSetting label={t('settings.vat')} unit="%" value={settings.defaults.commercial.vatPercent} onCommit={(value) => updateDefaults({ commercial: { ...settings.defaults.commercial, vatPercent: value } })} /><NumberSetting label={t('settings.validity')} unit={t('settings.days')} value={settings.defaults.commercial.offerValidityDays} onCommit={(value) => updateDefaults({ commercial: { ...settings.defaults.commercial, offerValidityDays: value } })} integer /><NumberSetting label={t('settings.warranty')} unit={t('settings.months')} value={settings.defaults.commercial.warrantyMonths} onCommit={(value) => updateDefaults({ commercial: { ...settings.defaults.commercial, warrantyMonths: value } })} integer /><NumberSetting label={t('settings.delivery')} unit={t('settings.days')} value={settings.defaults.commercial.deliveryDays} onCommit={(value) => updateDefaults({ commercial: { ...settings.defaults.commercial, deliveryDays: value } })} integer /><NumberSetting label={t('settings.discount')} unit="%" value={settings.defaults.commercial.discountPercent} onCommit={(value) => updateDefaults({ commercial: { ...settings.defaults.commercial, discountPercent: value } })} /><NumberSetting label={t('settings.downPayment')} unit="%" value={settings.defaults.commercial.downPaymentPercent} onCommit={(value) => updateDefaults({ commercial: { ...settings.defaults.commercial, downPaymentPercent: value } })} /></SettingsGroup>
+    <SettingsGroup title={t('settings.projectsFiles')} onReset={() => resetCategories('projects')}><NumberSetting label={t('settings.recentLimit')} unit={t('settings.projects')} value={settings.projects.recentProjectLimit} onCommit={(value) => updateProjects({ recentProjectLimit: value })} integer /><label className="kpi"><span>{t('settings.autosave')}</span><select value={settings.projects.autosaveStrategy} onChange={(event) => updateProjects({ autosaveStrategy: event.target.value as 'immediate' | 'debounced' })}><option value="immediate">{t('settings.autosaveImmediate')}</option><option value="debounced">{t('settings.autosaveDebounced')}</option></select></label>{settings.projects.autosaveStrategy === 'debounced' && <NumberSetting label={t('settings.autosaveDelay')} unit="ms" value={settings.projects.autosaveDebounceMs} onCommit={(value) => updateProjects({ autosaveDebounceMs: value })} integer />}<label className="kpi"><span>{t('settings.exportDestination')}</span><select value={settings.projects.exportDestinationMode} onChange={(event) => updateProjects({ exportDestinationMode: event.target.value as 'ask-each-time' | 'platform-handle' })}><option value="ask-each-time">{t('settings.exportAsk')}</option><option value="platform-handle">{t('settings.exportPlatform')}</option></select></label></SettingsGroup>
+    <SettingsGroup title={t('settings.currency')} onReset={() => resetCategories('currency')}><TextSetting label={t('settings.inputCurrency')} value={settings.currency.inputCurrencyCode} maxLength={3} onCommit={(value) => updateCurrency({ inputCurrencyCode: value.toUpperCase() })} /><TextSetting label={t('settings.outputCurrency')} value={settings.currency.outputCurrencyCode} maxLength={3} onCommit={(value) => updateCurrency({ outputCurrencyCode: value.toUpperCase() })} /><TextSetting label={t('settings.exchangeRate')} value={settings.currency.rate?.decimalRate ?? ''} placeholder="ex. 1,00" onCommit={setManualRate} /><div className="kpi"><span>{t('settings.rateSource')}</span><span className="label">{settings.currency.rate ? `${settings.currency.rate.sourceLabel} · ${settings.currency.rate.observedAtIso}` : t('settings.rateUnavailable')}</span></div></SettingsGroup>
+    <SettingsGroup title={t('settings.license')}><div className="kpi"><span>{t('settings.licenseStatus')}</span><span className="label">{licenseLabel(licenseState, t)}</span></div></SettingsGroup>
+    <SettingsGroup title={t('settings.about')}><div className="kpi"><span>{t('settings.release')}</span><span className="label">{applicationReleaseInfo.version} · {applicationReleaseInfo.channel}</span></div><details className="kpi"><summary>{t('settings.changelog')}</summary>{applicationReleaseInfo.changelogEntries.map((entry) => <div key={`${entry.version}-${entry.dateIso}`}><b>{entry.version}</b> · {entry.dateIso}<br /><span className="label">{entry.message}</span></div>)}</details></SettingsGroup>
+    <div className="rowline"><span className="label">{settings.migrationIgnoredKeys.length > 0 ? t('settings.legacyIgnored') + ': ' + settings.migrationIgnoredKeys.join(', ') : ''}</span><span className="sep" />{settings.storageError && <span className="error">{t('settings.persistenceError')}: {settings.storageError}</span>}<button className="btn" onClick={reset}>{t('settings.reset')}</button></div>
+  </div></div><StatusBar /></div>;
 }
 
-function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) { return <div className="kpis settings-group"><div className="kpi kpi-head"><span className="h-sec">{title}</span></div>{children}</div>; }
-function SettingInput({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <label className="kpi"><span>{label}</span><input className="cell-in settings-input" {...props} /></label>; }
+function SettingsGroup({ title, onReset, children }: { title: string; onReset?: () => void; children: ReactNode }) { const t = useT(); return <section className="kpis settings-group"><div className="kpi kpi-head"><span className="h-sec">{title}</span>{onReset && <button type="button" className="btn" onClick={onReset}>{t('settings.resetCategory')}</button>}</div>{children}</section>; }
+function TextSetting({ label, value, onCommit, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; value: string; onCommit: (value: string) => void }) { const [draft, setDraft] = useState(value); useEffect(() => setDraft(value), [value]); return <label className="kpi"><span>{label}</span><input className="cell-in settings-input" {...props} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={() => onCommit(draft.trim())} /></label>; }
+function NumberSetting({ label, unit, value, onCommit, integer = false }: { label: string; unit: string; value: number; onCommit: (value: number) => void; integer?: boolean }) { const t = useT(); const [draft, setDraft] = useState(String(value)); const [error, setError] = useState(false); useEffect(() => setDraft(String(value)), [value]); const commit = () => { const parsed = Number(draft.replace(',', '.')); const valid = Number.isFinite(parsed) && (!integer || Number.isInteger(parsed)); setError(!valid); if (valid) onCommit(parsed); }; return <label className="kpi"><span>{label}<small className="unit">{unit}</small></span><span><input className="cell-in settings-input" type="text" inputMode="decimal" value={draft} aria-invalid={error} onChange={(event) => setDraft(event.target.value)} onBlur={commit} />{error && <small className="error">{t('settings.invalidValue')}</small>}</span></label>; }
+function ReportAssetSetting({ label, kind, assetId, onStored, onRemoved }: { label: string; kind: 'logo' | 'signature'; assetId: string | null; onStored: (id: string) => void; onRemoved: () => void }) { const t = useT(); const [error, setError] = useState<string | null>(null); const previewUrl = useReportAssetUrl(assetId); const onChange = async (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; try { const asset = await reportAssetRepository.store(file, kind); onStored(asset.id); setError(null); } catch { setError(t('settings.assetError')); } }; const remove = async () => { if (!assetId) return; await reportAssetRepository.remove(assetId); onRemoved(); setError(null); }; return <div className="kpi"><span>{label}<small className="label">{t('settings.assetHelp')}</small></span><span>{previewUrl && <img className="report-asset-preview" src={previewUrl} alt={label} />}<input type="file" accept="image/png,image/jpeg,image/svg+xml" aria-label={label} onChange={onChange} aria-describedby={error ? `${kind}-asset-error` : undefined} />{assetId && <><small className="label">{t('settings.assetConfigured')}</small><button type="button" className="btn" onClick={() => void remove()}>{t('settings.assetRemove')}</button></>}{error && <small id={`${kind}-asset-error`} className="error">{error}</small>}</span></div>; }
+function licenseLabel(state: LicenseState, t: (key: string) => string): string { if (state.status === 'unconfigured') return t('settings.licenseUnconfigured'); if (state.status === 'checking') return t('settings.licenseChecking'); if (state.status === 'active') return `${t('settings.licenseActive')} · ${state.edition}`; if (state.status === 'expired') return `${t('settings.licenseExpired')} · ${state.edition}`; if (state.status === 'inactive') return t('settings.licenseInactive'); return t('settings.licenseError'); }

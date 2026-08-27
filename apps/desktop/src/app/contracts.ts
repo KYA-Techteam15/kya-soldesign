@@ -2,6 +2,8 @@ import type { Equipment, PvgisTmyJson, WeatherFileRecord } from '@ksd/catalog';
 import type { CalculationEnvelope, Locality, NormalizedHourlyProfile, SystemKind, WeatherSource } from '@ksd/domain';
 import type { PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress } from '@ksd/engine';
 import type { ProjectFileV1 } from '@ksd/project-format';
+import type { LicenseState } from './models/license.js';
+import type { ApplicationReleaseInfo } from './models/releaseInfo.js';
 
 export type UiLocale = 'fr' | 'en';
 export type RoadmapFeatureId = 'AIO-001' | 'SIM-001' | 'EQP-001' | 'SAFE-001' | 'FIN-001' | 'DOC-001';
@@ -12,9 +14,28 @@ export interface ProjectSessionPort {
   list(): readonly ProjectFileV1[];
   get(id: string): ProjectFileV1 | null;
   create(system: SystemKind, locale: UiLocale): ProjectFileV1;
+  add(project: ProjectFileV1): void;
   replace(project: ProjectFileV1): void;
   remove(id: string): void;
 }
+
+export interface ProjectFileTransferPort {
+  pickTextFile(request: { readonly accept: string }): Promise<{ readonly name: string; readonly text: string } | null>;
+  saveTextFile(request: { readonly filename: string; readonly text: string; readonly mimeType: string }): Promise<void>;
+}
+
+export interface ExchangeRatePort {
+  readonly status: 'unconfigured' | 'available';
+  fetchRate(request: { readonly baseCurrencyCode: string; readonly quoteCurrencyCode: string }): Promise<unknown>;
+}
+
+export interface LicensePort {
+  readState(): Promise<LicenseState>;
+  activate?(): Promise<LicenseState>;
+  deactivate?(): Promise<LicenseState>;
+}
+
+export interface ReleaseInfoPort { read(): Promise<ApplicationReleaseInfo>; }
 
 export interface CatalogQuery {
   readonly text?: string;
@@ -58,6 +79,7 @@ export interface CatalogSummary {
   readonly warnings: number;
   readonly localities: number;
   readonly weatherSources: number;
+  readonly metadata?: { readonly version: string | null; readonly generatedAtIso: string | null; readonly sourceLabel: string };
 }
 
 export type CapabilityState<Output> =

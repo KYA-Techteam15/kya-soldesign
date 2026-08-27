@@ -103,6 +103,7 @@ export class CanonicalCatalog implements CatalogQueryPort {
       warnings: quality.totals.warnings,
       localities: this.localities.length,
       weatherSources: this.weatherSources.length,
+      metadata: { version: null, generatedAtIso: null, sourceLabel: 'equipment.json · snapshots canoniques' },
     };
   }
 }

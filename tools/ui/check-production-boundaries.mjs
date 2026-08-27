@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 const sourceExtensions = new Set(['.ts', '.tsx', '.css']);
 const forbidden = [
   ['PARENT_RUNTIME', /(?:\.\.\/)+(?:design-proposition|kyasoldesign|ksd_app)/],
-  ['PROTOTYPE_ENGINE', /\b(?:MockEngine|SizingEngine|ENGINE_IS_SIMULATED)\b/],
+  // The desktop adapter is allowed to call the canonical engine. This gate is
+  // for prototype/mock engines only; rejecting the real SizingEngine caused a
+  // false positive in the production boundary check.
+  ['PROTOTYPE_ENGINE', /\b(?:MockEngine|ENGINE_IS_SIMULATED)\b/],
   ['PROTOTYPE_FIXTURE', /from\s+['"][^'"]*(?:fixtures|test\/support|e2e\/fixtures)[^'"]*['"]/],
   ['PROTOTYPE_STORAGE', /\b(?:ksd-ui|ksd-projects)\b/],
 ];

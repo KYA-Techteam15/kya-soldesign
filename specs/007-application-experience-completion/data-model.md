@@ -49,7 +49,6 @@ interface ProjectDefaults {
   readonly conversion: {
     readonly inverterEfficiencyPercent: number;
     readonly batteryEfficiencyPercent: number;
-    readonly batteryNominalVoltageV: number;
   };
   readonly equipmentCosts: {
     readonly currencyCode: string;
@@ -175,7 +174,7 @@ type SettingsMigrationResult =
 | reportLogo | migration vers asset si récupérable, sinon fallback et avertissement |
 | reportFooter | reports.footerText |
 | performanceRatioPercent, maxLpspPercent, maxLolpPercent | defaults.reliability.* |
-| inverterEfficiencyPercent, batteryEfficiencyPercent, batteryVoltage | defaults.conversion.* |
+| inverterEfficiencyPercent, batteryEfficiencyPercent | defaults.conversion.* |
 | coûts et marges | defaults.equipmentCosts.* |
 | TVA, validité, garantie, délai, remise, acompte | defaults.commercial.* |
 | currencyCode | inputCurrencyCode et outputCurrencyCode initiaux |

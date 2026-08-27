@@ -8,10 +8,11 @@ interface Props {
   project?: ProjectViewModel | null;
   /** Action principale à droite. */
   primary?: { label: string; onClick: () => void };
+  secondary?: { label: string; onClick: () => void; badge?: string; title?: string };
   back?: string;
 }
 
-export function TopBar({ project, primary, back }: Props) {
+export function TopBar({ project, primary, secondary, back }: Props) {
   const t = useT();
   const nav = useNavigate();
   const { theme, toggleTheme, lang, setLang } = useUi();
@@ -91,6 +92,7 @@ export function TopBar({ project, primary, back }: Props) {
       <button className="btn btn-ghost" onClick={toggleTheme}>
         {theme === 'dark' ? t('app.theme.light') : t('app.theme.dark')}
       </button>
+      {secondary && <button className="btn" onClick={secondary.onClick} title={secondary.title}>{secondary.label}{secondary.badge && <span className="topbar-badge">{secondary.badge}</span>}</button>}
       {primary && (
         <button className="btn btn-primary" onClick={primary.onClick}>
           {primary.label}

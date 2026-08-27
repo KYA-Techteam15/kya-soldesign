@@ -1,37 +1,45 @@
 import { create } from 'zustand';
+import { defaultApplicationSettings, migrateApplicationSettings, validateApplicationSettings, type ApplicationSettingsV2, type SettingsCategory } from '../app/models/applicationSettings.js';
 
-export interface ApplicationSettings {
-  companyName: string; companyAddress: string; companyPhone: string; companyEmail: string;
-  reportLogo: string; reportFooter: string;
-  performanceRatioPercent: number; maxLpspPercent: number; maxLolpPercent: number; inverterEfficiencyPercent: number; batteryEfficiencyPercent: number; batteryVoltage: number;
-  pvSpecificCost: number; batterySpecificCost: number; inverterSpecificCost: number; pvMarginPercent: number; batteryMarginPercent: number; inverterMarginPercent: number;
-  vatPercent: number; offerValidityDays: number; warrantyMonths: number; deliveryDays: number; discountPercent: number; downPaymentPercent: number; currencyCode: string;
+const STORAGE_KEY_V1 = 'kya-sol-design.application-settings.v1';
+const STORAGE_KEY_V2 = 'kya-sol-design.application-settings.v2';
+const RECOVERY_KEY = 'kya-sol-design.application-settings.v1.backup';
+
+interface SettingsStore extends ApplicationSettingsV2 {
+  readonly storageError: string | null;
+  readonly migrationIgnoredKeys: readonly string[];
+  readonly updateCategory: <K extends SettingsCategory>(category: K, patch: Partial<ApplicationSettingsV2[K]>) => void;
+  readonly replace: (settings: unknown) => void;
+  readonly resetCategory: (category: SettingsCategory) => void;
+  readonly reset: () => void;
+  readonly exportJson: () => string;
 }
 
-const STORAGE_KEY = 'kya-sol-design.application-settings.v1';
-export const defaultApplicationSettings: ApplicationSettings = {
-  companyName: 'KYA-SolDesign', companyAddress: '', companyPhone: '', companyEmail: '',
-  reportLogo: '', reportFooter: '',
-  performanceRatioPercent: 80, maxLpspPercent: 5, maxLolpPercent: 5, inverterEfficiencyPercent: 95, batteryEfficiencyPercent: 90, batteryVoltage: 48,
-  pvSpecificCost: 300000, batterySpecificCost: 150000, inverterSpecificCost: 100000, pvMarginPercent: 15, batteryMarginPercent: 15, inverterMarginPercent: 15,
-  vatPercent: 0, offerValidityDays: 30, warrantyMonths: 12, deliveryDays: 0, discountPercent: 0, downPaymentPercent: 0, currencyCode: 'XOF',
-};
-
-function read(): ApplicationSettings {
+function initialState(): Pick<SettingsStore, keyof ApplicationSettingsV2 | 'storageError' | 'migrationIgnoredKeys'> {
+  if (typeof window === 'undefined') return { ...defaultApplicationSettings, storageError: null, migrationIgnoredKeys: [] };
   try {
-    const raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null') as Partial<ApplicationSettings> | null;
-    return raw ? { ...defaultApplicationSettings, ...raw } : defaultApplicationSettings;
-  } catch { return defaultApplicationSettings; }
+    const v2 = window.localStorage.getItem(STORAGE_KEY_V2);
+    if (v2 !== null) return { ...validateApplicationSettings(JSON.parse(v2)), storageError: null, migrationIgnoredKeys: [] };
+    const v1 = window.localStorage.getItem(STORAGE_KEY_V1);
+    if (v1 === null) return { ...defaultApplicationSettings, storageError: null, migrationIgnoredKeys: [] };
+    const migrated = migrateApplicationSettings(JSON.parse(v1));
+    window.localStorage.setItem(RECOVERY_KEY, v1); window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(migrated.settings));
+    return { ...migrated.settings, storageError: null, migrationIgnoredKeys: migrated.ignoredKeys };
+  } catch (error) { return { ...defaultApplicationSettings, storageError: error instanceof Error ? error.message : 'SETTINGS_READ_FAILED', migrationIgnoredKeys: [] }; }
 }
 
-interface SettingsStore extends ApplicationSettings { update: (values: Partial<ApplicationSettings>) => void; reset: () => void; }
-export const useSettings = create<SettingsStore>()((set) => ({
-  ...read(),
-  update: (values) => set((current) => {
-    const next = { ...current, ...values } as SettingsStore;
-    const data = Object.fromEntries(Object.keys(defaultApplicationSettings).map((key) => [key, next[key as keyof ApplicationSettings]]));
-    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* keep session settings */ }
-    return values;
-  }),
-  reset: () => set(() => { try { window.localStorage.removeItem(STORAGE_KEY); } catch { /* keep defaults in memory */ } return defaultApplicationSettings; }),
+function persist(settings: ApplicationSettingsV2): string | null { if (typeof window === 'undefined') return null; try { window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(settings)); return null; } catch (error) { return error instanceof Error ? error.message : 'SETTINGS_WRITE_FAILED'; } }
+
+const initial = initialState();
+export const useSettings = create<SettingsStore>()((set, get) => ({
+  ...initial,
+  updateCategory: (category, patch) => set((current) => { const next = validateApplicationSettings({ ...current, [category]: mergeCategory(current[category], patch), updatedAtIso: new Date().toISOString() }); return { ...next, storageError: persist(next), migrationIgnoredKeys: current.migrationIgnoredKeys }; }),
+  replace: (candidate) => set((current) => { const next = validateApplicationSettings(candidate); return { ...next, storageError: persist(next), migrationIgnoredKeys: current.migrationIgnoredKeys }; }),
+  resetCategory: (category) => set((current) => { const next = validateApplicationSettings({ ...current, [category]: defaultApplicationSettings[category], updatedAtIso: new Date().toISOString() }); return { ...next, storageError: persist(next), migrationIgnoredKeys: current.migrationIgnoredKeys }; }),
+  reset: () => set(() => { try { if (typeof window !== 'undefined') { window.localStorage.removeItem(STORAGE_KEY_V2); window.localStorage.removeItem(STORAGE_KEY_V1); } } catch { /* memory reset remains usable */ } return { ...defaultApplicationSettings, storageError: null, migrationIgnoredKeys: [] }; }),
+  exportJson: () => JSON.stringify({ schema: 'kya-sol-design.settings', version: 2, settings: get() }, null, 2),
 }));
+
+function mergeCategory<T>(base: T, patch: Partial<T>): T { if (typeof base === 'object' && base !== null && typeof patch === 'object' && patch !== null) return { ...base, ...patch } as T; return patch as T; }
+export type { ApplicationSettingsV2 } from '../app/models/applicationSettings.js';
+export { defaultApplicationSettings } from '../app/models/applicationSettings.js';

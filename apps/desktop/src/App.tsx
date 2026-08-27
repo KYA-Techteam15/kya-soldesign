@@ -19,7 +19,7 @@ import { Toasts } from './shell/Toasts';
 import { ConfirmDialog } from './shell/ConfirmDialog';
 import { CommandPalette } from './shell/CommandPalette';
 import { useProjects } from './store/project';
-import { readNavigationSession, writeNavigationSession } from './app/navigationSession';
+import { readNavigationSession, writeNavigationSession, writeProjectResumeTarget } from './app/navigationSession';
 
 export function App() {
   const theme = useUi((s) => s.theme);
@@ -35,6 +35,7 @@ export function App() {
     if (!match) return;
     const project = projects.find((candidate) => candidate.id === match[1]);
     if (!project) return;
+    writeProjectResumeTarget(project.id, location.pathname);
     const session = readNavigationSession(projects);
     writeNavigationSession({
       ...session,

@@ -234,7 +234,7 @@
 }
 [data-vibe='radiant'] .kpi-head {
   background: var(--surface);
-  border-left: 3px solid var(--accent);
+  border-left: 1px solid var(--accent);
 }
 [data-vibe='radiant'] .alert {
   background:
@@ -324,18 +324,6 @@
   box-shadow: var(--lift-2);
   transform: translateY(-2px);
 }
-[data-vibe='radiant'] .sys-card .glyph {
-  background: linear-gradient(140deg, var(--accent-fill-hover), var(--accent-fill));
-  border-color: transparent;
-  color: var(--on-accent);
-  font-weight: 700;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-fill) 42%, transparent);
-}
-[data-vibe='radiant'] .sys-card:disabled .glyph {
-  background: var(--surface-3);
-  color: var(--text-faint);
-  box-shadow: none;
-}
 [data-vibe='radiant'] .proj-row:hover {
   background: linear-gradient(
     90deg,
@@ -393,10 +381,6 @@
    pas la durée de l'animation. Tout est coupé si le système le demande. */
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-vibe='radiant'] .gauge .fill,
-  [data-vibe='radiant'] .bar > i {
-    transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
   [data-vibe='radiant'] .sys-card,
   [data-vibe='radiant'] .nav-item,
   [data-vibe='radiant'] .btn-primary {

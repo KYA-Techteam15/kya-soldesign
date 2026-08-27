@@ -5,6 +5,8 @@ import { useT } from '../i18n';
 import { useProjects } from '../store/project';
 import { useUi } from '../store/ui';
 import { relativeFr } from '../domain/format';
+import { useSettings } from '../store/settings';
+import { readProjectResumeTarget } from '../app/navigationSession';
 import type { SystemType } from '../app/models/projectView';
 import schemaAllInOne from '../assets/systems/standalone-all-in-one.png';
 import schemaInverterController from '../assets/systems/standalone-inverter-controller.png';
@@ -14,49 +16,35 @@ import schemaStreetLight from '../assets/systems/solar-street-light.png';
 import schemaWaterPumping from '../assets/systems/solar-water-pumping.png';
 
 /**
- * `tone` colore le badge par famille technique : autonome, raccordé, hybride,
- * éclairage, pompage. Six badges de la même teinte ne se distinguaient que par
- * leurs trois lettres — la couleur fait le tri avant la lecture.
- *
- * `schema` porte le synoptique de l'architecture. Trois lettres et un titre ne
- * disent pas ce qui distingue deux systèmes autonomes ; le schéma le montre —
+ * `schema` porte le synoptique de l'architecture. Le visuel complète le titre et
+ * montre ce qui distingue deux systèmes autonomes —
  * un seul appareil qui fait tout, ou deux appareils autour d'un parc commun.
  */
 const SYSTEMS: {
   type: SystemType;
-  glyph: string;
   ready: boolean;
-  tone: string;
   schema?: string;
 }[] = [
   {
     type: 'standalone_all_in_one',
-    glyph: 'AIO',
     ready: true,
-    tone: 'solar',
     schema: schemaAllInOne,
   },
   {
     type: 'standalone_inverter_controller',
-    glyph: 'I+R',
     ready: false,
-    tone: 'solar',
     schema: schemaInverterController,
   },
-  { type: 'grid_tied', glyph: 'RES', ready: false, tone: 'grid', schema: schemaGridTied },
-  { type: 'pv_diesel', glyph: 'GE', ready: false, tone: 'hybrid', schema: schemaPvDiesel },
+  { type: 'grid_tied', ready: false, schema: schemaGridTied },
+  { type: 'pv_diesel', ready: false, schema: schemaPvDiesel },
   {
     type: 'solar_street_light',
-    glyph: 'LAM',
     ready: false,
-    tone: 'light',
     schema: schemaStreetLight,
   },
   {
     type: 'solar_water_pumping',
-    glyph: 'PMP',
     ready: false,
-    tone: 'water',
     schema: schemaWaterPumping,
   },
 ];
@@ -67,17 +55,23 @@ export function Home() {
   const projects = useProjects((s) => s.projects);
   const create = useProjects((s) => s.create);
   const notify = useUi((s) => s.notify);
+  const recentLimit = useSettings((s) => s.projects.recentProjectLimit);
 
   const recent = [...projects]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 4);
+    .slice(0, recentLimit);
+
+  const resumeLast = () => {
+    const project = recent[0];
+    if (project) void nav(readProjectResumeTarget(project.id) ?? `/projet/${project.id}/atelier/projet`);
+  };
 
   const start = (type: SystemType, ready: boolean) => {
     if (!ready) {
       notify({
         kind: 'info',
         title: t('home.comingSoon'),
-        detail: `${t(`sys.${type}`)} — non implémenté dans cette version, comme aujourd’hui.`,
+        detail: `${t(`sys.${type}`)} — ${t('home.unavailableDetail')}`,
       });
       return;
     }
@@ -90,6 +84,7 @@ export function Home() {
     // beaucoup. L'atelier, où l'on passe la journée, reste calme.
     <div className="page page-home">
       <TopBar
+        secondary={{ label: t('home.recent'), badge: String(projects.length), onClick: () => nav('/accueil/projets'), title: t('home.allProjects') }}
         primary={{
           label: t('home.newProject'),
           onClick: () => start('standalone_all_in_one', true),
@@ -98,8 +93,15 @@ export function Home() {
       <div className="page-body">
         <div className="page-inner">
           <div>
-            <h1 className="page-title">{t('home.welcome')}</h1>
-            <p className="page-lead">{t('home.subtitle')}</p>
+            <div className="home-hero">
+              <div>
+                <h1 className="page-title">{t('home.welcome')}</h1>
+                <h2 className="home-hero-title">{t('home.heroTitle')}</h2>
+                <p className="page-lead">{t('home.heroLead')}</p>
+                {recent[0] && <button className="btn btn-ok" onClick={resumeLast}>{t('home.resumeLast')}</button>}
+              </div>
+              <div className="home-hero-mark" aria-hidden="true"><span>◎</span><i /></div>
+            </div>
           </div>
 
           <section>
@@ -125,12 +127,7 @@ export function Home() {
                   {s.schema && (
                     <img className="sys-schema" src={s.schema} alt="" aria-hidden="true" />
                   )}
-                  {/* Le badge tient sur la ligne du titre : seul au-dessus, il
-                      coûtait une ligne entière pour trois lettres. */}
-                  <span className="sys-name">
-                    <span className={`glyph g-${s.tone}`}>{s.glyph}</span>
-                    <b>{t(`sys.${s.type}`)}</b>
-                  </span>
+                  <span className="sys-name"><b>{t(`sys.${s.type}`)}</b></span>
                   <span className="sys-desc">{t(`sysd.${s.type}`)}</span>
                   <span className="sys-state">
                     {s.ready ? t('home.available') : t('home.comingSoon')}
@@ -139,17 +136,19 @@ export function Home() {
               ))}
             </div>
             <h3 className="h-sec upcoming-title">{t('home.upcomingSection')}</h3>
+            <p className="label">{t('home.roadmapHint')}</p>
             <div className="sys-grid">
               {SYSTEMS.filter((s) => !s.ready).map((s) => (
                 <button key={s.type} className={'sys-card ' + (s.schema ? 'has-schema' : '')} disabled>
                   {s.schema && <img className="sys-schema" src={s.schema} alt="" aria-hidden="true" />}
-                  <span className="sys-name"><span className={'glyph g-' + s.tone}>{s.glyph}</span><b>{t('sys.' + s.type)}</b></span>
+                  <span className="sys-name"><b>{t('sys.' + s.type)}</b></span>
                   <span className="sys-desc">{t('sysd.' + s.type)}</span>
                   <span className="sys-state">{t('home.comingSoon')}</span>
                 </button>
               ))}
             </div>
           </section>
+
 
           <section>
             <div className="rowline" style={{ marginBottom: 8 }}>
@@ -171,7 +170,7 @@ export function Home() {
                   <button
                     key={p.id}
                     className="proj-row"
-                    onClick={() => nav(`/projet/${p.id}/atelier/projet`)}
+                    onClick={() => nav(readProjectResumeTarget(p.id) ?? `/projet/${p.id}/atelier/projet`)}
                   >
                     <span>
                       <b>{p.name}</b>

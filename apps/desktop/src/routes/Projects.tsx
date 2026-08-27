@@ -6,89 +6,22 @@ import { useProjects } from '../store/project';
 import { useUi } from '../store/ui';
 import { useT } from '../i18n';
 import { relativeFr } from '../domain/format';
+import { browserFileTransfer } from '../app/adapters/browserFileTransfer';
+import { ProjectTransferService } from '../app/services/projectTransfer';
+import type { ImportInspection } from '../app/models/projectTransfer';
 
 export function ProjectsRoute() {
-  const t = useT();
-  const nav = useNavigate();
-  const [q, setQ] = useState('');
-  const projects = useProjects((s) => s.projects);
-  const remove = useProjects((s) => s.remove);
-  const ask = useUi((s) => s.ask);
-  const notify = useUi((s) => s.notify);
-
+  const t = useT(); const nav = useNavigate(); const session = useProjects(); const { projects, remove, addCanonical, replaceCanonical } = session; const { ask, notify } = useUi();
+  const [q, setQ] = useState(''); const [sort, setSort] = useState<'updated' | 'created' | 'name'>('updated'); const [pending, setPending] = useState<ImportInspection | null>(null);
+  const transfer = new ProjectTransferService({ list: () => session.canonicalProjects, get: (id) => session.canonicalProjects.find((project) => project.id === id) ?? null, add: addCanonical, replace: replaceCanonical }, browserFileTransfer);
   const needle = q.trim().toLowerCase();
-  const shown = projects.filter(
-    (p) =>
-      !needle ||
-      p.name.toLowerCase().includes(needle) ||
-      p.details.clientName.toLowerCase().includes(needle) ||
-      p.details.projectNumber.toLowerCase().includes(needle),
-  );
+  const shown = projects.filter((p) => !needle || `${p.name} ${p.details.clientName} ${p.details.projectNumber} ${p.details.projectLocation}`.toLowerCase().includes(needle)).sort((a, b) => sort === 'name' ? a.name.localeCompare(b.name) : sort === 'created' ? b.createdAt.localeCompare(a.createdAt) : b.updatedAt.localeCompare(a.updatedAt));
+  const importProject = async () => { try { const result = await transfer.inspectImport(); if (!result) return; if (result.inspection.status === 'invalid') notify({ kind: 'error', title: t('projects.importFailed'), detail: result.inspection.code }); else if (result.inspection.status === 'valid-conflict') setPending(result.inspection); else { transfer.commitImport(result.inspection, 'replace'); notify({ kind: 'success', title: t('projects.imported') }); } } catch (error) { notify({ kind: 'error', title: t('projects.importFailed'), detail: error instanceof Error ? error.message : t('settings.invalid') }); } };
+  const duplicate = (id: string) => { try { const copy = transfer.duplicate(id); notify({ kind: 'success', title: t('projects.duplicated') }); void nav(`/projet/${copy.id}/atelier/projet`); } catch (error) { notify({ kind: 'error', title: t('projects.duplicateFailed'), detail: error instanceof Error ? error.message : '' }); } };
 
-  return (
-    <div className="page">
-      <TopBar back="/accueil" />
-      <div className="page-body">
-        <div className="page-inner">
-          <div className="rowline">
-            <h1 className="page-title">{t('home.allProjects')}</h1>
-            <span className="sep" />
-            <input
-              className="hdr-search"
-              style={{ width: 240 }}
-              placeholder={t('g.search')}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            <span className="label">{shown.length} projet(s)</span>
-          </div>
-
-          {shown.length === 0 ? (
-            <div className="empty">
-              <b>{t('projects.noneFound')}</b>
-              {needle
-                ? 'Aucun dossier ne correspond à cette recherche.'
-                : 'Créez votre premier projet.'}
-            </div>
-          ) : (
-            <div className="proj-list">
-              {shown.map((p) => (
-                <div key={p.id} className="proj-row">
-                  <button
-                    style={{ textAlign: 'left' }}
-                    onClick={() => nav(`/projet/${p.id}/atelier/projet`)}
-                  >
-                    <b>{p.name}</b>
-                    <small>
-                      {p.details.clientName || 'Client non renseigné'} · n°{' '}
-                      {p.details.projectNumber || '—'}
-                    </small>
-                  </button>
-                  <span className="when">{relativeFr(p.updatedAt)}</span>
-                  <button
-                    className="btn"
-                    onClick={() =>
-                      ask({
-                        title: 'Supprimer ce projet ?',
-                        message: `« ${p.name} » sera définitivement retiré de la liste.`,
-                        confirmLabel: t('g.delete'),
-                        danger: true,
-                        onConfirm: () => {
-                          remove(p.id);
-                          notify({ kind: 'success', title: 'Projet supprimé' });
-                        },
-                      })
-                    }
-                  >
-                    {t('g.delete')}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      <StatusBar />
-    </div>
-  );
+  return <div className="page"><TopBar back="/accueil" primary={{ label: t('home.newProject'), onClick: () => { const id = session.create('standalone_all_in_one'); void nav(`/projet/${id}/atelier/projet`); } }} /><div className="page-body"><div className="page-inner">
+    <div className="rowline"><h1 className="page-title">{t('home.allProjects')}</h1><span className="sep" /><input className="hdr-search" style={{ width: 240 }} placeholder={t('g.search')} value={q} onChange={(e) => setQ(e.target.value)} /><select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label={t('projects.sort')}><option value="updated">{t('projects.sortUpdated')}</option><option value="created">{t('projects.sortCreated')}</option><option value="name">{t('projects.sortName')}</option></select><button className="btn" onClick={importProject}>{t('projects.import')}</button><span className="label">{shown.length} {t('projects.count')}</span></div>
+    {shown.length === 0 ? <div className="empty"><b>{t('projects.noneFound')}</b><span>{needle ? t('projects.noMatch') : t('projects.emptyHint')}</span><button className="btn btn-ok" onClick={() => { const id = session.create('standalone_all_in_one'); void nav(`/projet/${id}/atelier/projet`); }}>{t('home.newProject')}</button></div> : <div className="proj-list">{shown.map((p) => <div key={p.id} className="proj-row"><button style={{ textAlign: 'left' }} onClick={() => nav(`/projet/${p.id}/atelier/projet`)}><b>{p.name}</b><small>{p.details.clientName || t('home.clientMissing')} · {p.details.projectLocation || t('home.locationMissing')} · n° {p.details.projectNumber || '—'}</small></button><span className="when">{relativeFr(p.updatedAt)}</span><button className="btn" onClick={() => duplicate(p.id)}>{t('projects.duplicate')}</button><button className="btn" onClick={() => { void transfer.export(p.id).then(() => notify({ kind: 'success', title: t('projects.exported') })).catch((error: unknown) => notify({ kind: 'error', title: t('projects.exportFailed'), detail: error instanceof Error ? error.message : '' })); }}>{t('projects.export')}</button><button className="btn" onClick={() => ask({ title: t('projects.deleteTitle'), message: `« ${p.name} » ${t('projects.deleteMessage')}`, confirmLabel: t('g.delete'), danger: true, onConfirm: () => { remove(p.id); notify({ kind: 'success', title: t('projects.deleted') }); } })}>{t('g.delete')}</button></div>)}</div>}
+    {pending?.status === 'valid-conflict' && <div className="confirm-inline" role="dialog" aria-labelledby="project-conflict-title"><b id="project-conflict-title">{t('projects.conflictTitle')}</b><p>{t('projects.conflictMessage')}</p><div className="rowline"><button className="btn btn-primary" onClick={() => { transfer.commitImport(pending, 'replace'); setPending(null); notify({ kind: 'success', title: t('projects.imported') }); }}>{t('projects.replace')}</button><button className="btn" onClick={() => { transfer.commitImport(pending, 'copy'); setPending(null); notify({ kind: 'success', title: t('projects.copied') }); }}>{t('projects.copy')}</button><button className="btn" onClick={() => setPending(null)}>{t('g.cancel')}</button></div></div>}
+  </div></div><StatusBar /></div>;
 }

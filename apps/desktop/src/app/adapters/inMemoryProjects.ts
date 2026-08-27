@@ -47,6 +47,12 @@ export class InMemoryProjects implements ProjectSessionPort {
     this.projects = this.projects.with(index, checked);
   }
 
+  public add(project: ProjectFileV1): void {
+    const checked = parseProjectFile(project);
+    if (this.projects.some((current) => current.id === checked.id)) throw new Error('PROJECT_ALREADY_EXISTS');
+    this.projects = [checked, ...this.projects];
+  }
+
   public remove(id: string): void {
     this.projects = this.projects.filter((project) => project.id !== id);
   }

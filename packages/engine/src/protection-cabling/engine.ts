@@ -1,4 +1,4 @@
-import type { CableSizingInput, CableSizingResult, ProtectionSizingInput, ProtectionSizingResult, ProtectionSegment } from './contracts.js';
+import type { CableSizingInput, CableSizingResult, ProtectionSizingInput, ProtectionSizingResult } from './contracts.js';
 export const STANDARD_SECTIONS = [1.5,2.5,4,6,10,16,25,35,50,70,95,120,150,185,240,300,400,500,630] as const;
 const GPV=[2,4,6,8,10,12,15,16,20,25,32,40,50,63,80,100,125,160,200];
 const GG=[10,16,20,25,32,40,50,63,80,100,125,160,200,250];

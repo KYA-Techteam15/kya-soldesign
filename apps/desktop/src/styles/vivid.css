@@ -96,7 +96,7 @@
     color-mix(in srgb, var(--accent) 24%, var(--surface)),
     var(--surface) 88%
   );
-  border-left-width: 3px;
+  border-left-width: 1px;
 }
 [data-vibe='vivid'] .st-done {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
@@ -152,7 +152,7 @@
 /* Les en-têtes de groupe du panneau prennent la couleur de leur sujet */
 [data-vibe='vivid'] .kpi-head {
   background: linear-gradient(90deg, var(--surface-3), var(--surface-2));
-  border-left: 3px solid var(--accent);
+  border-left: 1px solid var(--accent);
 }
 [data-vibe='vivid'] .kpis {
   box-shadow: var(--shadow-card);
@@ -236,12 +236,6 @@
   background: linear-gradient(180deg, var(--accent-soft), var(--surface) 70%);
   transform: translateY(-1px);
 }
-[data-vibe='vivid'] .sys-card .glyph {
-  background: linear-gradient(140deg, var(--accent), var(--accent-hover));
-  border-color: var(--accent-press);
-  color: #1a1a1a;
-  font-weight: 700;
-}
 [data-vibe='vivid'] .page-title {
   background: var(--brand-sweep);
   -webkit-background-clip: text;
@@ -278,10 +272,6 @@
    Discret, et coupé si l'utilisateur ne le veut pas. */
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-vibe='vivid'] .gauge .fill,
-  [data-vibe='vivid'] .bar > i {
-    transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
   [data-vibe='vivid'] .sys-card,
   [data-vibe='vivid'] .nav-item {
     transition:

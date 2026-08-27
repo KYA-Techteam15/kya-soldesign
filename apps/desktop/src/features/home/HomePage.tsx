@@ -11,12 +11,12 @@ import allInOne from '../../assets/systems/standalone-all-in-one.png';
 import controller from '../../assets/systems/standalone-inverter-controller.png';
 
 const systems = [
-  ['system.aio', 'system.aio.description', allInOne, true, 'AIO', 'solar'],
-  ['system.controller', 'system.controller.description', controller, false, 'I+R', 'solar'],
-  ['system.grid', 'system.grid.description', gridTied, false, 'RES', 'grid'],
-  ['system.diesel', 'system.diesel.description', pvDiesel, false, 'GE', 'hybrid'],
-  ['system.light', 'system.light.description', streetLight, false, 'LAM', 'light'],
-  ['system.pump', 'system.pump.description', waterPumping, false, 'PMP', 'water'],
+  ['system.aio', 'system.aio.description', allInOne, true],
+  ['system.controller', 'system.controller.description', controller, false],
+  ['system.grid', 'system.grid.description', gridTied, false],
+  ['system.diesel', 'system.diesel.description', pvDiesel, false],
+  ['system.light', 'system.light.description', streetLight, false],
+  ['system.pump', 'system.pump.description', waterPumping, false],
 ] as const;
 
 export function HomePage() {
@@ -28,9 +28,9 @@ export function HomePage() {
       <div><h1 className="page-title">{t('home.title')}</h1><p className="page-lead">{t('home.lede')}</p></div>
       <section aria-labelledby="systems-title">
         <div className="rowline" style={{ marginBottom: 8 }}><h2 className="h-sec" id="systems-title">{t('home.systems')}</h2><span className="sep" /><button className="btn" onClick={() => navigate('/catalogue')}>{t('nav.catalog')}</button><button className="btn" onClick={() => navigate('/reglages')}>{t('nav.settings')}</button></div>
-        <div className="sys-grid">{systems.map(([name, description, image, enabled, glyph, tone]) => <button key={name} className="sys-card has-schema" disabled={!enabled} onClick={enabled ? create : undefined} aria-describedby={`${name}-description`}>
+        <div className="sys-grid">{systems.map(([name, description, image, enabled]) => <button key={name} className="sys-card has-schema" disabled={!enabled} onClick={enabled ? create : undefined} aria-describedby={`${name}-description`}>
           <img className="sys-schema" src={image} alt="" aria-hidden="true" />
-          <span className="sys-name"><span className={`glyph g-${tone}`}>{glyph}</span><b>{t(name)}</b></span>
+          <span className="sys-name"><b>{t(name)}</b></span>
           <span className="sys-desc" id={`${name}-description`}>{t(description)}</span><span className="sys-state">{enabled ? 'Disponible' : t('system.comingSoon')}</span>
         </button>)}</div>
       </section>

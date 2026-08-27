@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NAVIGATION_SESSION_STORAGE_KEY, readNavigationSession, writeNavigationSession } from '../../src/app/navigationSession.js';
+import { NAVIGATION_SESSION_STORAGE_KEY, PROJECT_RESUME_STORAGE_KEY, readNavigationSession, readProjectResumeTarget, writeNavigationSession, writeProjectResumeTarget } from '../../src/app/navigationSession.js';
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -31,5 +31,17 @@ describe('navigation session', () => {
     expect(readNavigationSession([{ id: 'p' }], storage).route).toBeNull();
     storage.setItem(NAVIGATION_SESSION_STORAGE_KEY, '{bad');
     expect(readNavigationSession([{ id: 'p' }], storage).currentProjectId).toBeNull();
+  });
+
+  it('stores a safe resume route per project and ignores deleted or malformed routes', () => {
+    const storage = new MemoryStorage();
+    writeProjectResumeTarget('p', '/projet/p/atelier/dossier', storage);
+    expect(storage.getItem(PROJECT_RESUME_STORAGE_KEY)).toContain('/atelier/dossier');
+    expect(readProjectResumeTarget('p', storage)).toBe('/projet/p/atelier/dossier');
+    writeProjectResumeTarget('p', '/accueil', storage);
+    expect(readProjectResumeTarget('p', storage)).toBe('/projet/p/atelier/dossier');
+    expect(readProjectResumeTarget('deleted', storage)).toBeNull();
+    storage.setItem(PROJECT_RESUME_STORAGE_KEY, '{bad');
+    expect(readProjectResumeTarget('p', storage)).toBeNull();
   });
 });

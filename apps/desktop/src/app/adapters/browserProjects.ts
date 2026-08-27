@@ -54,6 +54,12 @@ export class BrowserProjects implements ProjectSessionPort {
     this.commit(this.projects.with(index, checked));
   }
 
+  public add(project: ProjectFileV1): void {
+    const checked = parseProjectFile(project);
+    if (this.projects.some((current) => current.id === checked.id)) throw new Error('PROJECT_ALREADY_EXISTS');
+    this.commit([checked, ...this.projects]);
+  }
+
   public remove(id: string): void {
     this.commit(this.projects.filter((project) => project.id !== id));
   }

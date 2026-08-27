@@ -39,6 +39,12 @@ export function CatalogRoute() {
   const resetFilters = () => { setQ(''); setFilters(emptyCatalogFilters); setPage(1); };
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const primaryLabel = tab === 'batteries' ? t('catalog.primaryCapacity') : t('catalog.primaryPower');
+  const activeFilters = ([
+    ['manufacturer', filters.manufacturer],
+    [tab === 'inverters' ? 'type' : 'technology', tab === 'inverters' ? filters.type : filters.technology],
+    ['minPower', filters.minPower], ['maxPower', filters.maxPower], ['minVoltage', filters.minVoltage], ['maxVoltage', filters.maxVoltage],
+  ] as const).filter((entry) => entry[1]);
   useEffect(() => { setPage((value) => Math.min(value, pageCount)); }, [pageCount]);
 
   return (
@@ -50,26 +56,26 @@ export function CatalogRoute() {
             <h1 className="page-title">{t('home.catalog')}</h1>
             <div className="seg">
               <button aria-selected={tab === 'modules'} onClick={() => { setTab('modules'); resetFilters(); }}>
-                Modules ({modules.length})
+                {t('catalog.modules')} ({modules.length})
               </button>
               <button
                 aria-selected={tab === 'batteries'}
                 onClick={() => { setTab('batteries'); resetFilters(); }}
               >
-                Batteries ({batteries.length})
+                {t('catalog.batteries')} ({batteries.length})
               </button>
               <button
                 aria-selected={tab === 'inverters'}
                 onClick={() => { setTab('inverters'); resetFilters(); }}
               >
-                Onduleurs ({inverters.length})
+                {t('catalog.inverters')} ({inverters.length})
               </button>
             </div>
             <span className="sep" />
             <input
               className="hdr-search"
               style={{ width: 260 }}
-              placeholder="Filtrer par code ou fabricant…"
+              placeholder={t('catalog.searchPlaceholder')}
               value={q}
               onChange={(e) => { setPage(1); setQ(e.target.value); }}
             />
@@ -79,12 +85,14 @@ export function CatalogRoute() {
             <select value={filters.manufacturer} onChange={(e) => setFilter('manufacturer', e.target.value)} aria-label={t('catalog.manufacturer')}><option value="">{t('catalog.filter.manufacturers')}</option>{options.manufacturers.map((value) => <option key={value}>{value}</option>)}</select>
             {tab !== 'inverters' && <select value={filters.technology} onChange={(e) => setFilter('technology', e.target.value)} aria-label={t('catalog.technology')}><option value="">{t('catalog.filter.technologies')}</option>{options.technologies.map((value) => <option key={value}>{value}</option>)}</select>}
             {tab === 'inverters' && <select value={filters.type} onChange={(e) => setFilter('type', e.target.value)} aria-label={t('catalog.type')}><option value="">{t('catalog.filter.types')}</option>{options.types.map((value) => <option key={value}>{value}</option>)}</select>}
-            <input inputMode="decimal" placeholder={t('catalog.filter.minPower')} aria-label={t('catalog.filter.minPower')} value={filters.minPower} onChange={(e) => setFilter('minPower', e.target.value)} />
-            <input inputMode="decimal" placeholder={t('catalog.filter.maxPower')} aria-label={t('catalog.filter.maxPower')} value={filters.maxPower} onChange={(e) => setFilter('maxPower', e.target.value)} />
+            <input inputMode="decimal" placeholder={tab === 'batteries' ? t('catalog.filter.minCapacity') : t('catalog.filter.minPower')} aria-label={`${primaryLabel} min.`} value={filters.minPower} onChange={(e) => setFilter('minPower', e.target.value)} />
+            <input inputMode="decimal" placeholder={tab === 'batteries' ? t('catalog.filter.maxCapacity') : t('catalog.filter.maxPower')} aria-label={`${primaryLabel} max.`} value={filters.maxPower} onChange={(e) => setFilter('maxPower', e.target.value)} />
             <input inputMode="decimal" placeholder={t('catalog.filter.minVoltage')} aria-label={t('catalog.filter.minVoltage')} value={filters.minVoltage} onChange={(e) => setFilter('minVoltage', e.target.value)} />
             <input inputMode="decimal" placeholder={t('catalog.filter.maxVoltage')} aria-label={t('catalog.filter.maxVoltage')} value={filters.maxVoltage} onChange={(e) => setFilter('maxVoltage', e.target.value)} />
             <button className="btn" onClick={resetFilters}>{t('catalog.filter.reset')}</button>
           </div>}
+
+          {status === 'ready' && activeFilters.length > 0 && <div className="catalog-active" aria-label={t('catalog.activeFilters')}><span className="label">{t('catalog.activeFilters')}</span>{activeFilters.map(([key, value]) => <button className="filter-chip" key={key} onClick={() => setFilter(key as keyof CatalogFilterState, '')}>{value} ×<span className="sr-only"> {t('catalog.removeFilter')}</span></button>)}</div>}
 
           <div className="tbl-wrap">
             {status === 'loading' && (
@@ -103,21 +111,20 @@ export function CatalogRoute() {
                   <tr>
                     <th>{t('catalog.reference')}</th>
                     <th>{t('catalog.manufacturer')}</th>
+                    <th>{t('catalog.primaryPower')}<span className="unit">Wc</span></th>
                     <th>
-                      Puissance<span className="unit">Wc</span>
+                      {t('catalog.vmp')}<span className="unit">V</span>
                     </th>
                     <th>
-                      Vmp<span className="unit">V</span>
+                      {t('catalog.voc')}<span className="unit">V</span>
                     </th>
                     <th>
-                      Voc<span className="unit">V</span>
+                      {t('catalog.imp')}<span className="unit">A</span>
                     </th>
                     <th>
-                      Imp<span className="unit">A</span>
+                      {t('catalog.surface')}<span className="unit">m²</span>
                     </th>
-                    <th>
-                      Surface<span className="unit">m²</span>
-                    </th>
+                    <th>{t('catalog.provenance')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -132,6 +139,7 @@ export function CatalogRoute() {
                         <td className="num">{fmt(m.openCircuitVoltageV, 2)}</td>
                         <td className="num">{fmt(m.currentAtMaximumPowerA, 2)}</td>
                         <td className="num">{m.areaM2 === null ? '—' : fmt(m.areaM2, 2)}</td>
+                        <td><details><summary>{t('catalog.source')}</summary><small>{m.provenance.sourceId}</small></details></td>
                       </tr>
                     ))}
                 </tbody>
@@ -146,17 +154,18 @@ export function CatalogRoute() {
                     <th>{t('catalog.manufacturer')}</th>
                     <th>{t('catalog.technology')}</th>
                     <th>
-                      Capacité<span className="unit">Ah</span>
+                      {t('catalog.primaryCapacity')}<span className="unit">Ah</span>
                     </th>
                     <th>
-                      Tension<span className="unit">V</span>
+                      {t('catalog.voltage')}<span className="unit">V</span>
                     </th>
                     <th>
-                      DoD<span className="unit">%</span>
+                      {t('catalog.dod')}<span className="unit">%</span>
                     </th>
                     <th>
-                      Rendement<span className="unit">%</span>
+                      {t('catalog.efficiency')}<span className="unit">%</span>
                     </th>
+                    <th>{t('catalog.provenance')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -171,6 +180,7 @@ export function CatalogRoute() {
                         <td className="num">{fmt(b.nominalVoltageV)}</td>
                         <td className="num">{b.usableDepthOfDischargeRatio === null ? '—' : fmt(b.usableDepthOfDischargeRatio * 100)}</td>
                         <td className="num">{b.roundTripEfficiencyRatio === null ? '—' : fmt(b.roundTripEfficiencyRatio * 100)}</td>
+                        <td><details><summary>{t('catalog.source')}</summary><small>{b.provenance.sourceId}</small></details></td>
                       </tr>
                     ))}
                 </tbody>
@@ -188,14 +198,15 @@ export function CatalogRoute() {
                       Puissance<span className="unit">W</span>
                     </th>
                     <th>
-                      Vdc<span className="unit">V</span>
+                      {t('catalog.vdc')}<span className="unit">V</span>
                     </th>
                     <th>
-                      Rendement<span className="unit">%</span>
+                      {t('catalog.efficiency')}<span className="unit">%</span>
                     </th>
                     <th>
-                      PV max<span className="unit">W</span>
+                      {t('catalog.pvMax')}<span className="unit">W</span>
                     </th>
+                    <th>{t('catalog.provenance')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -210,6 +221,7 @@ export function CatalogRoute() {
                         <td className="num">{fmt(i.nominalDcVoltageV)}</td>
                         <td className="num">{i.efficiencyRatio === null ? '—' : fmt(i.efficiencyRatio * 100)}</td>
                         <td className="num">{i.pvArrayMaxPowerW === null ? '—' : fmt(i.pvArrayMaxPowerW)}</td>
+                        <td><details><summary>{t('catalog.source')}</summary><small>{i.provenance.sourceId}</small></details></td>
                       </tr>
                     ))}
                 </tbody>
@@ -217,9 +229,9 @@ export function CatalogRoute() {
             )}
           </div>
           {status === 'ready' && filtered.length === 0 && <div className="empty" role="status"><b>{t('catalog.noResults')}</b><button className="btn" onClick={resetFilters}>{t('catalog.filter.reset')}</button></div>}
-          {status === 'ready' && filtered.length > 0 && <div className="rowline catalog-pagination"><span className="label">Page {page} / {pageCount}</span><button className="btn" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>←</button><button className="btn" disabled={page === pageCount} onClick={() => setPage((value) => value + 1)}>→</button></div>}
+          {status === 'ready' && filtered.length > 0 && <div className="rowline catalog-pagination"><span className="label">{t('catalog.page')} {page} / {pageCount}</span><button className="btn" disabled={page === 1} onClick={() => setPage((value) => value - 1)} aria-label={t('catalog.previous')}>←</button><button className="btn" disabled={page === pageCount} onClick={() => setPage((value) => value + 1)} aria-label={t('catalog.next')}>→</button></div>}
           <p className="label">
-            {filtered.length} résultat(s) — données canoniques validées
+            {filtered.length} {t('catalog.results')} — {t('catalog.validatedData')}
             {summary && ` · ${summary.warnings} avertissement(s) qualité`}
           </p>
         </div>
