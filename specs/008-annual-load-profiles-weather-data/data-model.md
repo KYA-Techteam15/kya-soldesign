@@ -6,15 +6,49 @@
 - les grandeurs canoniques portent leurs unités ;
 - une série calculée ne devient pas une entrée éditable concurrente ;
 - les imports sont des candidats jusqu’à validation complète ;
+- une seule branche de besoin est active et calculée ;
+- le dialogue composé travaille sur un brouillon sans référence mutable au projet ;
+- la fréquence graphique n’est jamais une fréquence de calcul ;
 - pays et localités utilisent des identités stables, pas leur libellé courant ;
 - les données météo et projets sont rattachés atomiquement.
+
+## LoadDefinitionV2
+
+```ts
+interface LoadDefinitionV2 {
+  readonly version: 2;
+  readonly activeMode: 'simple' | 'composed';
+  readonly simple: SimpleAnnualLoadV2;
+  readonly composed: ComposedAnnualLoadV2 | null;
+}
+
+interface SimpleAnnualLoadV2 {
+  readonly activeSource: 'equipment' | 'hourly' | 'meter';
+  readonly equipmentItems: readonly EquipmentLoadRowV2[];
+  readonly hourlyProfile: DirectDailyLoadProfileV2;
+  readonly meter: MeterLoadInputV1 | null;
+}
+
+interface ComposedAnnualLoadV2 {
+  readonly organization:
+    | 'workweek-weekend'
+    | 'periods'
+    | 'periods-by-day-type';
+  readonly calendar: LoadCalendarV2;
+  readonly profiles: readonly DirectDailyLoadProfileV2[];
+}
+```
+
+Invariants : `activeMode` désigne l’unique autorité du calcul ; `simple` reste
+conservé lorsque `composed` est actif ; aucun champ équipement ou facture
+n’existe dans `ComposedAnnualLoadV2`.
 
 ## LoadCalendarV2
 
 ```ts
 interface LoadCalendarV2 {
   readonly version: 2;
-  readonly mode: 'annual' | 'workweek-weekend' | 'periods-by-day-type';
+  readonly mode: 'workweek-weekend' | 'periods' | 'periods-by-day-type';
   readonly dayGroups: readonly DayGroupV1[];
   readonly periods: readonly LoadPeriodV1[];
   readonly assignments: readonly LoadProfileAssignmentV1[];
@@ -41,30 +75,55 @@ interface LoadProfileAssignmentV1 {
 }
 ```
 
-Invariants : partition exacte des sept jours ; couverture exacte de l’année ;
-unicité du couple `(periodId, dayGroupId)` ; profil existant pour chaque couple.
+Invariants : partition exacte des sept jours lorsqu’il existe plusieurs groupes ;
+`periods` utilise un groupe `all-days` ; couverture exacte de l’année ; unicité
+du couple `(periodId, dayGroupId)` ; profil direct existant pour chaque couple.
 
-## HourlyLoadProfileV2
+## DirectDailyLoadProfileV2
 
 ```ts
-interface HourlyLoadProfileV2 {
+interface DirectDailyLoadProfileV2 {
   readonly id: string;
   readonly name: string;
-  readonly source: 'equipment' | 'hourly' | 'meter';
   readonly hourlyPoints: readonly HourlyLoadPointV1[]; // 24
-  readonly equipmentItems: readonly EquipmentLoadRowV2[];
-  readonly meter: MeterLoadInputV1 | null;
   readonly provenance: ProfileProvenanceV1;
 }
 
 interface HourlyLoadPointV1 {
   readonly hourIndex: number; // entier 0..23
   readonly activePowerW: number; // >= 0
-  readonly peakPowerW: number;   // >= activePowerW
+  readonly peakPowerW: number | null; // null ou >= activePowerW
 }
 ```
 
-Pour les modes non annuels, `source` vaut obligatoirement `hourly`.
+À la normalisation, `peakPowerW = null` devient `activePowerW` et produit
+`PEAK_DEFAULTED_TO_AVERAGE`. Le profil direct ne contient jamais équipements,
+facture, durée d’usage, rendement ou coefficient de démarrage.
+
+## ComposedLoadDraftV1
+
+```ts
+interface ComposedLoadDraftV1 {
+  readonly baseProjectUpdatedAtIso: string;
+  readonly initial: ComposedAnnualLoadV2 | null;
+  readonly candidate: ComposedAnnualLoadV2;
+  readonly migration: {
+    readonly retainedProfileIds: readonly string[];
+    readonly copiedProfileIds: readonly string[];
+    readonly orphanedProfileIds: readonly string[];
+  };
+  readonly validation: ComposerValidationV1;
+  readonly dirty: boolean;
+}
+
+type ComposerValidationV1 =
+  | { readonly status: 'valid'; readonly warnings: readonly ComposerIssueV1[] }
+  | { readonly status: 'invalid'; readonly issues: readonly ComposerIssueV1[] };
+```
+
+Le brouillon est créé à l’ouverture du dialogue. `Cancel` le détruit. `Apply`
+vérifie la révision du projet, normalise les pointes, valide toutes les
+combinaisons puis remplace atomiquement la branche composée.
 
 ## EquipmentLoadRowV2
 
@@ -106,6 +165,50 @@ interface AnnualLoadSeriesV1 {
 
 La série utilise les horodatages météo comme squelette et doit avoir la même
 longueur que la série POA validée.
+
+## AnnualChartQueryV1 et AnnualChartSeriesV1
+
+```ts
+type AnnualChartRangeV1 =
+  | { readonly kind: 'year' }
+  | { readonly kind: 'period'; readonly periodId: string }
+  | { readonly kind: 'month'; readonly year: number; readonly month: number }
+  | { readonly kind: 'week'; readonly startLocalDateIso: string }
+  | { readonly kind: 'day'; readonly localDateIso: string }
+  | { readonly kind: 'custom-range'; readonly startLocalDateIso: string; readonly endLocalDateIso: string };
+
+type AnnualChartFrequencyV1 = 'auto' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+
+interface AnnualChartQueryV1 {
+  readonly range: AnnualChartRangeV1;
+  readonly frequency: AnnualChartFrequencyV1;
+  readonly visibleSeries: readonly ('average-power' | 'peak-power' | 'energy' | 'poa')[];
+}
+
+interface AnnualChartPointV1 {
+  readonly intervalStartIso: string;
+  readonly intervalEndIso: string;
+  readonly energyWh: number;
+  readonly averagePowerW: number;
+  readonly peakPowerW: number;
+  readonly meanPoaWm2: number | null;
+  readonly periodIds: readonly string[];
+  readonly profileIds: readonly string[];
+}
+
+interface AnnualChartSeriesV1 {
+  readonly requestedFrequency: AnnualChartFrequencyV1;
+  readonly resolvedFrequency: Exclude<AnnualChartFrequencyV1, 'auto'>;
+  readonly range: AnnualChartRangeV1;
+  readonly points: readonly AnnualChartPointV1[];
+  readonly sourcePointCount: number;
+}
+```
+
+Règles : la requête ne modifie pas `AnnualLoadSeriesV1` ; énergie = somme ;
+puissance moyenne = énergie divisée par la durée totale ; pointe = maximum.
+La réduction de rendu éventuelle conserve au minimum premier, dernier, minimum
+et maximum par bucket et n’est jamais exposée comme donnée exportable.
 
 ## AnnualYEnResultV1
 
@@ -222,8 +325,13 @@ pas les formules ou la structure métier du projet.
 ## Migration V1 → V2
 
 - accepter puis ignorer `details.projectImageRef` avec une entrée de migration ;
-- convertir `load.granularity = annual` vers calendrier annuel ;
+- convertir le besoin existant vers `LoadDefinitionV2.simple` et
+  `activeMode = simple` ;
 - convertir les profils existants sans perdre équipement, horaire ou facture ;
+- ne créer `composed` qu’après validation explicite du dialogue ;
 - convertir `simultaneityRatio = 1` en absence du champ ;
 - refuser ou signaler toute ancienne valeur différente de 1 avant suppression ;
 - ne pas activer une organisation multi-profils sans affectations complètes.
+- migrer un ancien `workweek-weekend` compatible vers deux profils directs ;
+- traiter toute ancienne composition contenant équipement/facture comme
+  `migration-required`, sans l’activer silencieusement.

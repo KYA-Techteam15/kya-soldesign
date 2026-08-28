@@ -1,4 +1,5 @@
-export type AnnualCalendarMode = 'annual' | 'workweek-weekend' | 'periods-by-day-type';
+/** The annual mode remains supported for migration; composed profiles use the explicit modes. */
+export type AnnualCalendarMode = 'annual' | 'workweek-weekend' | 'periods' | 'periods-by-day-type';
 
 export interface AnnualDayGroup {
   readonly id: string;
@@ -121,6 +122,12 @@ export function validateAnnualCalendar(calendar: AnnualLoadCalendar): readonly C
   }
   if (calendar.mode === 'workweek-weekend' && (calendar.dayGroups.length !== 2 || calendar.periods.length !== 1)) {
     issues.push(issue('CALENDAR_WEEKEND_SHAPE_INVALID', 'mode', 'Workweek/weekend mode requires two day groups and one period'));
+  }
+  if (calendar.mode === 'periods' && calendar.dayGroups.length !== 1) {
+    issues.push(issue('CALENDAR_PERIODS_SHAPE_INVALID', 'mode', 'Periods mode requires one all-days group'));
+  }
+  if (calendar.mode === 'periods' && calendar.dayGroups.some((group) => group.kind !== 'all-days')) {
+    issues.push(issue('CALENDAR_PERIODS_GROUP_INVALID', 'dayGroups', 'Periods mode requires an all-days group'));
   }
   if (calendar.mode === 'periods-by-day-type' && calendar.dayGroups.length !== 2) {
     issues.push(issue('CALENDAR_PERIOD_DAY_TYPE_SHAPE_INVALID', 'mode', 'Period/day-type mode requires workweek and weekend groups'));

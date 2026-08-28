@@ -22,6 +22,14 @@ Ces identifiants sont soumis à approbation avant implémentation.
 - `γ[p,τ] = Eload,f,p,τ / Eload,T,p,τ` lorsque le dénominateur est positif ;
 - `W[p,τ] = N[p,τ] × Eload,T,p,τ`, poids énergétique annuel en Wh.
 
+Pour l’organisation `periods`, `T = { all-days }`. Pour
+`workweek-weekend`, `P` contient la période annuelle unique. La même équation
+s’applique donc aux trois organisations composées sans cas de calcul parallèle.
+
+Le besoin simple est normalisé en une période annuelle et un type `all-days`
+uniquement à la frontière moteur ; ses équipements ou sa facture ne sont jamais
+injectés dans le modèle composé éditable.
+
 ## Équation normative
 
 ```text

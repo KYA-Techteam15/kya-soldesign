@@ -1,16 +1,19 @@
 # Implementation Plan: Profils annuels, échanges de charges et données météo durables
 
 **Branch**: `008-annual-load-profiles-weather-data`  
-**Date**: 2026-08-27  
+**Date**: 2026-08-28
 **Spec**: [spec.md](./spec.md)
 
 ## Summary
 
-Introduire un modèle temporel V2 séparant profils, calendrier et affectations ;
-ajouter des frontières Excel strictes ; calculer le YEn annuel dans le moteur pur ;
-puis remplacer les URLs réseau relatives au serveur Vite par des adaptateurs de
-plateforme configurables. La persistance reste derrière des ports et converge
-vers SQLite sous Tauri tout en conservant un JSON projet portable.
+Introduire un modèle V2 séparant le besoin simple du besoin composé, puis séparer
+profils, calendrier et affectations dans la branche composée. Toute composition
+est éditée dans un dialogue transactionnel exclusivement horaire. Ajouter des
+frontières Excel strictes, calculer le YEn annuel dans le moteur pur et dériver
+des séries de présentation à plage/fréquence variables sans altérer les 8 760
+points horaires. Remplacer enfin les URLs relatives au serveur Vite par des
+adaptateurs de plateforme configurables. La persistance reste derrière des ports
+et converge vers SQLite sous Tauri tout en conservant un JSON projet portable.
 
 ## Technical Context
 
@@ -34,14 +37,16 @@ formule React ; aucun runtime vers `ksd_app` ; import sans mutation partielle.
 | Assurance scientifique | PASS conditionnel | golden datasets à approuver avant fermeture |
 | Gates autonomes | PASS | `verify:phase` par phase, `verify` en fermeture |
 | Migration sûre | PASS conditionnel | `ProjectInputsV2` exige approbation humaine |
-| Discipline de périmètre | PASS | trois organisations seulement, pas de SOC annuel |
+| Discipline de périmètre | PASS | trois organisations composées, pas de SOC annuel |
+| Autorité des entrées | PASS conditionnel | branche simple ou composée active, jamais les deux |
+| Transaction UI | PASS conditionnel | brouillon isolé, validation puis commit unique |
 
 ## Architecture cible
 
 ```text
-React — formulaires, aperçu, graphes
-  ↓ view/form models
-Application services — import, calendrier, météo, transactions
+React — besoin simple | dialogue composé | graphes de résultats
+  ↓ view/form/query models
+Application services — brouillons, import, calendrier, agrégation visuelle, transactions
   ↓ ports
 Project format | Engine | Catalog | Platform adapters
                    ↓
@@ -49,10 +54,20 @@ Project format | Engine | Catalog | Platform adapters
        IndexedDB transition / Tauri SQLite
 ```
 
+## Contrats de référence
+
+- [Dialogue de profils composés](./contracts/annual-profile-composer.md)
+- [Visualisation annuelle multi-fréquence](./contracts/annual-chart.md)
+- [Classeurs de charges](./contracts/load-workbooks.md)
+- [Facteur YEn annuel](./contracts/annual-yen.md)
+- [Localisation et météo](./contracts/location-weather.md)
+- [Persistance](./contracts/persistence.md)
+
 ## Phase 1 — Contrats et migration
 
 1. Ajouter les contrats temporels et d’import sans les brancher à React.
-2. Définir `ProjectInputsV2`, la lecture V1 et la suppression migrée de
+2. Définir `LoadDefinitionV2` avec branches simple/composée, `ProjectInputsV2`,
+   la lecture V1 et la suppression migrée de
    `projectImageRef` et de `simultaneityRatio` pour ce flux.
 3. Figer le registre `CALC-P1-012/013` et les golden datasets du YEn annuel.
 4. Ajouter les ports localisation, météo, bibliothèque et transaction projet.
@@ -68,7 +83,8 @@ Project format | Engine | Catalog | Platform adapters
 
 ## Phase 3 — Calendrier et YEn annuel
 
-1. Implémenter partitions de jours, périodes, croisements et résolveur de date.
+1. Implémenter les organisations ouvrés/week-end, périodes seules et
+   périodes × types de jour, leurs partitions et le résolveur de date.
 2. Développer les profils en série alignée sur les horodatages météo.
 3. Implémenter facteurs locaux, poids énergétiques et agrégation annuelle.
 4. Ajouter tests unitaires, propriétés, bornes et goldens.
@@ -76,12 +92,20 @@ Project format | Engine | Catalog | Platform adapters
 
 ## Phase 4 — Parcours et visualisations
 
-1. Remplacer le dialogue de granularité par le parcours à trois organisations.
-2. Ajouter affectation, copie, saisie/import et contrôles de couverture.
-3. Ajouter vues annuelle agrégée et journalière sans calcul React.
-4. Retirer photo, encadré facture et filets gauches d’alerte.
-5. Vérifier français, anglais, clavier et fenêtres contraintes.
-6. Exécuter `pnpm verify:phase`.
+1. Remplacer l’éditeur intégré à la page par un dialogue unique de composition.
+2. Implémenter un brouillon isolé, annulation sans mutation, migration explicite
+   et commit atomique après vérification globale.
+3. Ajouter organisation, jours, périodes, matrice, navigation par combinaison,
+   saisie 0 h–23 h, import/export, copie et réutilisation dans ce dialogue.
+4. Masquer équipements et facture en mode composé et afficher une synthèse
+   compacte ; conserver la branche simple inactive sans perte.
+5. Construire la série horaire annuelle puis un service pur de requête graphique
+   pour plage et fréquence, avec agrégations énergie/moyenne/pointe explicites.
+6. Ajouter vue année/période/mois/semaine/jour/plage libre, fréquence auto/horaire/
+   journalière/hebdomadaire/mensuelle, zoom et détail journalier.
+7. Retirer photo, encadré facture et filets gauches d’alerte.
+8. Vérifier français, anglais, clavier et fenêtres contraintes.
+9. Exécuter `pnpm verify:phase`.
 
 ## Phase 5 — Localisation, météo et persistance
 
@@ -106,8 +130,13 @@ Project format | Engine | Catalog | Platform adapters
 - confusion entre moyenne de facteurs et facteur d’une série moyenne ;
 - décalage UTC/local et années de 8 784 heures ;
 - perte de profils lors d’un changement d’organisation ;
+- mutation du projet avant confirmation du dialogue ;
+- confusion entre besoin simple conservé et branche composée active ;
+- exposition accidentelle d’équipements ou facture dans une combinaison ;
+- confusion entre fréquence d’affichage et fréquence du calcul scientifique ;
+- agrégation incorrecte entre énergie, puissance moyenne et pointe ;
+- réduction graphique qui efface une pointe rare sur 8 760 heures ;
 - import Excel partiellement appliqué ;
 - passerelle disponible en dev mais absente après déploiement du `dist` ;
 - double sauvegarde météo dans bibliothèque et projet ;
 - référentiel pays obsolète copié depuis l’ancien logiciel.
-

@@ -39,10 +39,18 @@ Format `.xlsx` ou `.csv` selon l’action ; exactement trois colonnes :
 |---|---|
 | `heure` | entier unique `0..23` |
 | `puissance_moyenne_kW` | fini, `>= 0` |
-| `puissance_pointe_kW` | fini, `>= puissance_moyenne_kW` |
+| `puissance_pointe_kW` | vide ou fini, `>= puissance_moyenne_kW` |
 
 Exactement 24 lignes utiles sont exigées. Les lignes vides terminales sont
 ignorées ; toute autre ligne ou colonne utile est contrôlée.
+
+Une pointe vide est normalisée vers `puissance_moyenne_kW` et produit
+`PEAK_DEFAULTED_TO_AVERAGE`. La colonne reste obligatoire afin de conserver un
+contrat à trois colonnes stable ; seules ses cellules peuvent être vides.
+
+Pour une composition annuelle, l’inspection cible explicitement la combinaison
+sélectionnée dans le dialogue. Le candidat ne modifie jamais le profil simple ou
+une autre combinaison avant confirmation globale du dialogue.
 
 ## Langues
 
@@ -59,4 +67,3 @@ ouvrir → parser → normaliser → valider toutes les cellules → prévisuali
 
 Aucune structure mutable du projet n’est passée au parseur. Un résultat invalide
 n’expose aucune commande de commit.
-

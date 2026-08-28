@@ -6,7 +6,7 @@ import { useUi, type Toast } from '../../store/ui';
 import { StepHead } from '../../ui/Flow';
 import { fmt } from '../../domain/format';
 import { useGridNav } from '../../ui/useGridNav';
-import type { Granularity, LoadSource, NamedProfile } from '../../app/models/projectView';
+import type { LoadCompositionView, LoadSource, NamedProfile } from '../../app/models/projectView';
 import { useCalculationState } from '../../app/CalculationProvider';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
 import { useT } from '../../i18n';
@@ -14,10 +14,10 @@ import { useCatalog } from '../../app/CatalogProvider';
 import { OperatingHoursDialog } from './OperatingHoursDialog';
 import { Dialog } from '../../ui/Dialog';
 import { isDecimalDraft } from '../../app/models/formValues';
-import { AnnualCalendarEditor, calendarForMode } from './AnnualCalendarEditor';
 import { exportEquipmentWorkbook, inspectEquipmentWorkbook, exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
 import { buildAnnualLoadPresentation } from '../../app/models/annualLoadPresentation';
 import { AnnualLoadChart } from './AnnualLoadChart';
+import { ComposedProfilesDialog } from './ComposedProfilesDialog';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -26,12 +26,6 @@ const MODES: { key: LoadSource; label: string }[] = [
   { key: 'equipments', label: 'Recenser les appareils' },
   { key: 'hourly', label: 'Saisir heure par heure' },
   { key: 'meter', label: 'Partir de la facture' },
-];
-
-const GRANULARITIES: { key: Granularity; label: string; n: string; hint: string; implemented: boolean }[] = [
-  { key: 'annual', label: 'Annuel', n: '1', hint: 'Un seul profil pour toute l’année', implemented: true },
-  { key: 'workweek-weekend', label: 'Ouvrés / week-end', n: '2', hint: 'Un profil pour les jours ouvrés et un pour le week-end', implemented: true },
-  { key: 'periods-by-day-type', label: 'Périodes × jours', n: '×', hint: 'Périodes saisonnières croisées avec ouvrés et week-end', implemented: true },
 ];
 
 function DraftNumberInput({
@@ -88,7 +82,8 @@ export function SectionBesoins() {
   const update = useProjects((s) => s.update);
   const notify = useUi((s) => s.notify);
   const { loadProfiles } = useCatalog();
-  const [showGranularity, setShowGranularity] = useState(false);
+  const [showComposer, setShowComposer] = useState(false);
+  const [confirmSimpleSwitch, setConfirmSimpleSwitch] = useState(false);
   const [filter, setFilter] = useState('');
   const [hoursEditor, setHoursEditor] = useState(false);
   const [bulkEditor, setBulkEditor] = useState(false);
@@ -99,6 +94,7 @@ export function SectionBesoins() {
   const profile = project.load.profiles.find(
     (p) => p.id === project.load.activeProfileId,
   )!;
+  const composedActive = project.load.activeMode === 'composed' && project.load.composition !== null;
   const calculation = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
   const solarCalculation = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
   const annualPresentation = useMemo(() => buildAnnualLoadPresentation(project, solarCalculation.status === 'ready' ? solarCalculation.envelope.output : null), [project, solarCalculation]);
@@ -178,17 +174,10 @@ export function SectionBesoins() {
       }),
     );
 
-  const addProfile = () => update((draft) => {
-    const source = draft.load.profiles.find((item) => item.id === draft.load.activeProfileId);
-    if (!source) return;
-    const id = `profile-${Date.now()}`;
-    draft.load.profiles.push({ ...structuredClone(source), id, name: `Profil ${draft.load.profiles.length + 1}` });
-    draft.load.activeProfileId = id;
-  });
-
-  const changeCalendarMode = (mode: 'annual' | 'workweek-weekend' | 'periods-by-day-type') => update((draft) => {
-    draft.load.granularity = mode;
-    draft.load.calendar = calendarForMode(mode, draft.load.activeProfileId);
+  const applyComposition = (composition: LoadCompositionView) => update((draft) => {
+    draft.load.activeMode = 'composed';
+    draft.load.composition = structuredClone(composition);
+    draft.load.granularity = composition.organization;
   });
 
   const downloadWorkbook = (bytes: Uint8Array, filename: string) => {
@@ -278,35 +267,23 @@ export function SectionBesoins() {
         slug="besoins"
         aside={
           <>
-            <div className="seg" role="tablist">
-              {MODES.map((m) => (
-                <button
-                  key={m.key}
-                  role="tab"
-                  aria-selected={profile.source === m.key}
-                  onClick={() => switchMode(m.key)}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <button className="btn" onClick={() => setShowGranularity(true)}>
-              Profils : {GRANULARITIES.find((g) => g.key === project.load.granularity)?.label}
-            </button>
+            {!composedActive && <div className="seg" role="tablist">
+              {MODES.map((m) => <button key={m.key} role="tab" aria-selected={profile.source === m.key} onClick={() => switchMode(m.key)}>{m.label}</button>)}
+            </div>}
+            <button className="btn" onClick={() => setShowComposer(true)}>{composedActive ? 'Modifier les profils composés' : 'Configurer des profils annuels'}</button>
+            {composedActive && <button className="btn btn-ghost" onClick={() => setConfirmSimpleSwitch(true)}>{t('loads.composedBackToSimple')}</button>}
           </>
         }
       />
 
-      <AnnualCalendarEditor
-        calendar={project.load.calendar}
-        profiles={project.load.profiles}
-        activeProfileId={project.load.activeProfileId}
-        onChange={(calendar) => update((draft) => { draft.load.calendar = calendar; })}
-        onActivateProfile={(profileId) => update((draft) => { draft.load.activeProfileId = profileId; })}
-        onAddProfile={addProfile}
-      />
+      {composedActive && project.load.composition && <section className="composed-summary" aria-label={t('loads.composedActive')}>
+        <div><b>{t('loads.composedActive')}</b><span>{project.load.composition.organization === 'workweek-weekend' ? t('loads.calendarWorkweek') : project.load.composition.organization === 'periods' ? t('loads.composedPeriods') : t('loads.composedPeriodDays')}</span></div>
+        <div><b>{project.load.composition.profiles.length}</b><span>profils horaires · {project.load.composition.calendar.periods.length} période(s)</span></div>
+        <p>Le dimensionnement utilise uniquement les puissances saisies de 00 h à 23 h et répète automatiquement chaque combinaison sur l’année.</p>
+      </section>}
       <AnnualLoadChart presentation={annualPresentation} />
 
+      {!composedActive && <>
       {profile.source === 'equipments' && (
         <div style={{ display: 'grid', gap: 'var(--sp-4)' }}>
           <section>
@@ -604,45 +581,10 @@ export function SectionBesoins() {
           </div>
         </section>
       )}
+      </>}
 
-      {showGranularity && (
-        <div className="scrim" onClick={() => setShowGranularity(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <header>{t('loads.granularity')}</header>
-            <div className="body">
-              <div className="proj-list">
-                {GRANULARITIES.map((g) => (
-                  <button
-                    key={g.key}
-                    className="proj-row"
-                    disabled={!g.implemented}
-                    onClick={() => {
-                      if (!g.implemented) return;
-                      if (g.key === 'annual' || g.key === 'workweek-weekend' || g.key === 'periods-by-day-type') changeCalendarMode(g.key);
-                      setShowGranularity(false);
-                      notify({ kind: 'success', title: `Granularité : ${g.label}` });
-                    }}
-                  >
-                    <span>
-                      <b>{g.label}</b>
-                      <small>{g.hint} · {g.implemented ? 'disponible' : 'indisponible dans cette version'}</small>
-                    </span>
-                    <span className="when">{g.n}</span>
-                    <span className="badge">
-                      {project.load.granularity === g.key ? 'actif' : ''}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <footer>
-              <button className="btn btn-ghost" onClick={() => setShowGranularity(false)}>
-                {t('g.close')}
-              </button>
-            </footer>
-          </div>
-        </div>
-      )}
+      <ComposedProfilesDialog open={showComposer} initial={project.load.composition} onCancel={() => setShowComposer(false)} onApply={(composition) => { applyComposition(composition); setShowComposer(false); notify({ kind: 'success', title: 'Profils composés enregistrés', detail: 'Le calendrier annuel a été recalculé.' }); }} />
+      {confirmSimpleSwitch && <Dialog title={t('loads.composedSwitchTitle')} onClose={() => setConfirmSimpleSwitch(false)} footer={<><button className="btn btn-ghost" onClick={() => setConfirmSimpleSwitch(false)}>{t('g.cancel')}</button><button className="btn btn-ok" onClick={() => { update((draft) => { draft.load.activeMode = 'simple'; }); setConfirmSimpleSwitch(false); }}>{t('g.confirm')}</button></>}><p>{t('loads.composedSwitchBody')}</p></Dialog>}
 
       {bulkEditor && <Dialog title="Édition en masse du profil horaire" lead="appliquer une puissance moyenne et une pointe sur une plage" onClose={() => setBulkEditor(false)} footer={<><button className="btn btn-ghost" onClick={() => setBulkEditor(false)}>{t('g.cancel')}</button><button className="btn btn-ok" onClick={() => { mutateProfile((target) => { target.hourly.forEach((point) => { const included = bulkRange.start <= bulkRange.end ? point.hour >= bulkRange.start && point.hour < bulkRange.end : point.hour >= bulkRange.start || point.hour < bulkRange.end; if (included) { point.realPower = bulkRange.meanKw; point.peakPower = Math.max(bulkRange.meanKw, bulkRange.peakKw); } }); }); setBulkEditor(false); notify({ kind: 'success', title: 'Profil horaire mis à jour', detail: `${String(bulkRange.start).padStart(2, '0')} h → ${String(bulkRange.end).padStart(2, '0')} h` }); }}>{t('loads.apply')}</button></>}>
         <div className="form-rows"><label><span>{t('loads.startHour')}</span><input type="number" min={0} max={23} value={bulkRange.start} onChange={(event) => setBulkRange((current) => ({ ...current, start: clampHour(Number(event.target.value)) }))} /></label><label><span>{t('loads.endHourExcluded')}</span><input type="number" min={0} max={24} value={bulkRange.end} onChange={(event) => setBulkRange((current) => ({ ...current, end: Math.min(24, Math.max(0, Number(event.target.value))) }))} /></label><label><span>{t('loads.averagePower')}</span><span className="uf"><input inputMode="decimal" value={bulkRange.meanKw} onChange={(event) => setBulkRange((current) => ({ ...current, meanKw: num(event.target.value) }))} /><span className="uf-unit">kW</span></span></label><label><span>{t('loads.peakPower')}</span><span className="uf"><input inputMode="decimal" value={bulkRange.peakKw} onChange={(event) => setBulkRange((current) => ({ ...current, peakKw: num(event.target.value) }))} /><span className="uf-unit">kW</span></span></label></div>
@@ -710,6 +652,6 @@ async function importHourlyWorkbook(
     notify({ kind: 'error', title: 'Import refusé', detail: result.issues.slice(0, 3).map((issue) => `${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') });
     return;
   }
-  mutate((profile) => { result.candidate.forEach((point) => { profile.hourly[point.hourIndex] = { hour: point.hourIndex, realPower: point.activePowerKw, peakPower: point.peakPowerKw }; }); });
+  mutate((profile) => { result.candidate.forEach((point) => { profile.hourly[point.hourIndex] = { hour: point.hourIndex, realPower: point.activePowerKw, peakPower: point.peakPowerKw ?? point.activePowerKw }; }); });
   notify({ kind: 'success', title: 'Profil horaire importé', detail: '24 heures validées et remplacées atomiquement.' });
 }

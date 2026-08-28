@@ -30,6 +30,10 @@ le nouvel état React qu’après succès. Les tests injectent une panne à chaq
 La commande porte `expectedProjectUpdatedAtIso`. Une révision différente produit
 `PROJECT_REVISION_CONFLICT`; elle n’écrase pas les changements plus récents.
 
+La confirmation du dialogue de profils composés applique la même règle : le
+brouillon porte la révision lue à l’ouverture et remplace la branche composée
+dans une révision unique. Son annulation ne crée aucune révision.
+
 ## Déduplication
 
 Deux téléchargements de même SHA-256 réutilisent le même artefact météo. Une
@@ -40,4 +44,3 @@ localité peut référencer plusieurs sources/version/orientations sans écrasem
 L’export projet reste autoportant conformément au format public approuvé. Si la
 série météo est externalisée en stockage opérationnel, l’adaptateur d’export doit
 la réhydrater dans l’enveloppe avant validation et écriture du fichier.
-

@@ -4,11 +4,12 @@ import { useT } from '../../i18n';
 const MODE_LABELS: Record<LoadCalendarView['mode'], string> = {
   annual: 'Profil unique pour toute l’année',
   'workweek-weekend': 'Ouvrés et week-end',
+  periods: 'Périodes',
   'periods-by-day-type': 'Périodes × types de jour',
 };
 
 export function calendarForMode(mode: LoadCalendarView['mode'], profileId: string): LoadCalendarView {
-  const dayGroups = mode === 'annual'
+  const dayGroups = mode === 'annual' || mode === 'periods'
     ? [{ id: 'all-days', kind: 'all-days' as const, weekdaysIso: [1, 2, 3, 4, 5, 6, 7] }]
     : [{ id: 'workweek', kind: 'workweek' as const, weekdaysIso: [1, 2, 3, 4, 5] }, { id: 'weekend', kind: 'weekend' as const, weekdaysIso: [6, 7] }];
   const periods = [{ id: 'annual', name: 'Année', startMonthDay: '01-01', endMonthDay: '12-31' }];

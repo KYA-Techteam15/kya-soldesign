@@ -1,7 +1,7 @@
 import type { SystemKind } from '@ksd/domain';
 import { parseProjectFile, type ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from './projectInputs.js';
-import type { LoadCalendarView, ProjectViewModel, SystemType } from './projectView.js';
+import type { DirectLoadProfileView, LoadCalendarView, LoadCompositionView, ProjectViewModel, SystemType } from './projectView.js';
 
 const systemToCanonical: Readonly<Record<Exclude<SystemType, 'undefined'>, SystemKind>> = {
   standalone_all_in_one: 'standalone-all-in-one',
@@ -35,6 +35,7 @@ const DEFAULT_LOAD_CALENDAR: LoadCalendarView = {
 };
 
 function loadCalendar(input: ProjectInputsV1): LoadCalendarView {
+  if (input.load.activeMode === 'composed' && input.load.composed !== undefined && input.load.composed !== null) return structuredClone(input.load.composed.calendar);
   if (input.load.calendar !== undefined) return structuredClone(input.load.calendar);
   if (input.load.granularity === 'weekly') {
     const weekdayProfile = input.load.profiles[0]?.id ?? input.load.activeProfileId;
@@ -54,6 +55,42 @@ function loadCalendar(input: ProjectInputsV1): LoadCalendarView {
     };
   }
   return structuredClone(DEFAULT_LOAD_CALENDAR);
+}
+
+function directProfileToView(profile: { id: string; name: string; displayColor: string; hourlyPoints: { hourIndex: number; activePowerW: number; peakPowerW: number | null }[] }): DirectLoadProfileView {
+  return {
+    id: profile.id,
+    name: profile.name,
+    color: profile.displayColor,
+    hourly: profile.hourlyPoints.map((point) => ({
+      hour: point.hourIndex,
+      realPower: point.activePowerW / 1000,
+      peakPower: (point.peakPowerW ?? point.activePowerW) / 1000,
+    })),
+  };
+}
+
+function compositionToView(input: ProjectInputsV1): LoadCompositionView | null {
+  const composed = input.load.composed;
+  if (composed === undefined || composed === null) return null;
+  return {
+    organization: composed.organization,
+    calendar: structuredClone(composed.calendar),
+    profiles: composed.profiles.map(directProfileToView),
+  };
+}
+
+function directProfileToInput(profile: DirectLoadProfileView) {
+  return {
+    id: profile.id,
+    name: profile.name,
+    displayColor: profile.color,
+    hourlyPoints: profile.hourly.map((point) => ({
+      hourIndex: point.hour,
+      activePowerW: point.realPower * 1000,
+      peakPowerW: point.peakPower * 1000,
+    })),
+  };
 }
 
 // Defaults used by the historical Page 2 workflow when a new/legacy project
@@ -229,6 +266,8 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     },
     load: {
       granularity: input.load.granularity,
+      activeMode: input.load.activeMode ?? 'simple',
+      composition: compositionToView(input),
       calendar: loadCalendar(input),
       profiles: profileViews,
       activeProfileId: input.load.activeProfileId,
@@ -356,6 +395,12 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
     },
     load: {
       granularity: view.load.granularity,
+      activeMode: view.load.activeMode,
+      composed: view.load.composition === null ? null : {
+        organization: view.load.composition.organization,
+        calendar: view.load.composition.calendar,
+        profiles: view.load.composition.profiles.map(directProfileToInput),
+      },
       calendar: view.load.calendar,
       activeProfileId: view.load.activeProfileId,
       minimumOperatingIrradianceWPerM2: view.load.irMin,

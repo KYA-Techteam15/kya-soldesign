@@ -33,21 +33,29 @@ incorrectes listées ; aucune mutation tant que le fichier est invalide.
 
 ## Scénario C — Ouvrés et week-end
 
-1. Choisir l’organisation ouvrés/week-end.
-2. Affecter lundi–vendredi aux ouvrés et samedi–dimanche au week-end.
-3. Saisir deux profils.
-4. Déplacer un jour et vérifier la partition.
+1. Depuis la page, ouvrir « Configurer les profils… ».
+2. Choisir l’organisation ouvrés/week-end dans le dialogue unique.
+3. Affecter lundi–vendredi aux ouvrés et samedi–dimanche au week-end.
+4. Saisir directement les valeurs 0 h–23 h des deux journées types.
+5. Vérifier qu’aucune entrée équipement ou facture n’est disponible.
+6. Déplacer un jour et vérifier la partition.
+7. Annuler puis vérifier que le projet est inchangé ; refaire et appliquer.
 
-**Attendu**: sept jours exactement ; série annuelle résolue sans trou.
+**Attendu**: deux profils exactement ; sept jours couverts ; annulation sans
+mutation ; commit unique ; série annuelle répétant le bon profil par date.
 
-## Scénario D — Périodes × types de jour
+## Scénario D — Périodes seules et périodes × types de jour
 
-1. Créer une période novembre–février et une période mars–octobre.
-2. Vérifier les quatre combinaisons.
-3. Copier un profil puis en modifier un autre.
-4. Créer volontairement un trou et un chevauchement.
+1. Choisir périodes seules puis créer novembre–février et mars–octobre.
+2. Vérifier deux combinaisons `all-days` et saisir deux journées types.
+3. Passer à périodes × types de jour via l’aperçu de migration.
+4. Vérifier les quatre combinaisons ouvrés/week-end.
+5. Copier un profil, réutiliser un autre puis tester une modification partagée.
+6. Créer volontairement un trou et un chevauchement.
+7. Fermer avec `Escape`, refuser l’abandon, puis appliquer après correction.
 
-**Attendu**: passage d’année accepté ; trou/chevauchement bloqués ; aucun profil perdu.
+**Attendu**: passage d’année accepté ; nombres de profils exacts ; trou/
+chevauchement bloqués ; copie indépendante ; partage annoncé ; aucun profil perdu.
 
 ## Scénario E — Golden YEn annuel
 
@@ -59,16 +67,31 @@ incorrectes listées ; aucune mutation tant que le fichier est invalide.
 
 **Attendu**: tolérance `1e-12` ; réduction exacte au facteur local ; zéro total indisponible.
 
-## Scénario F — Vues annuelle et journalière
+## Scénario F — Plages et fréquences du graphe
 
-1. Ouvrir la vue annuelle.
-2. Choisir une date de chaque combinaison.
-3. Refaire avec un profil unique.
+1. Ouvrir la vue annuelle : confirmer année entière + fréquence automatique/jour.
+2. Sélectionner une période, un mois, une semaine, une journée et une plage libre.
+3. Pour chaque plage, tester auto, horaire, journalier, hebdomadaire et mensuel.
+4. En année horaire, zoomer sur une pointe rare et vérifier qu’elle est conservée.
+5. Choisir une date de chaque combinaison et vérifier les 24 heures.
+6. Exporter une vue journalière puis mensuelle et recomposer l’énergie horaire.
+7. Refaire avec un besoin simple puis avec un profil composé.
 
-**Attendu**: agrégation quotidienne lisible ; détail 24 heures fidèle ; météo
-différente selon la date même lorsque la charge est répétée.
+**Attendu**: calcul/YEn/hash inchangés par les contrôles ; agrégations exactes ;
+année horaire navigable ; extrema conservés ; export fidèle ; détail 24 heures.
 
-## Scénario G — Web sans proxy Vite implicite
+## Scénario G — Autorité simple/composée
+
+1. Renseigner équipements, profil simple et facture puis mémoriser les valeurs.
+2. Activer une composition ouvrés/week-end et appliquer.
+3. Vérifier que les formulaires simples sont remplacés par une synthèse et ne
+   modifient plus le calcul.
+4. Revenir au besoin simple après confirmation.
+
+**Attendu**: une seule autorité active ; aucune donnée simple perdue ; retour
+exact aux valeurs précédentes ; aucun mélange entre facture et profils composés.
+
+## Scénario H — Web sans proxy Vite implicite
 
 1. Lancer le développement et tester la passerelle Vite.
 2. Construire pour un environnement web avec passerelle configurée.
@@ -78,7 +101,7 @@ différente selon la date même lorsque la charge est répétée.
 **Attendu**: aucune requête production vers `/external/*` ; succès avec la
 passerelle ; état `unconfigured` explicite sans elle.
 
-## Scénario H — Météo durable
+## Scénario I — Météo durable
 
 1. Rechercher une localité, télécharger et prévisualiser.
 2. Fermer sans confirmer et vérifier l’absence d’écriture.
@@ -89,7 +112,7 @@ passerelle ; état `unconfigured` explicite sans elle.
 **Attendu**: aucune écriture à la prévisualisation ; météo et projet restaurés
 après confirmation ; aucune moitié de transaction visible.
 
-## Scénario I — Pays et localités bilingues
+## Scénario J — Pays et localités bilingues
 
 1. Parcourir tous les pays en français puis en anglais.
 2. Télécharger une localité avec les deux noms disponibles.
@@ -98,7 +121,7 @@ après confirmation ; aucune moitié de transaction visible.
 
 **Attendu**: code stable, tri et libellé localisés, repli vers le nom original.
 
-## Scénario J — Nettoyage visuel
+## Scénario K — Nettoyage visuel
 
 1. Vérifier projet, facture et alertes dans les deux thèmes.
 2. Naviguer au clavier et provoquer erreur, avertissement et succès.
@@ -120,4 +143,3 @@ pnpm verify:phase
 pnpm verify
 git diff --check
 ```
-

@@ -30,7 +30,7 @@ export interface EquipmentWorkbookRow {
 export interface HourlyWorkbookPoint {
   readonly hourIndex: number;
   readonly activePowerKw: number;
-  readonly peakPowerKw: number;
+  readonly peakPowerKw: number | null;
 }
 
 const EQUIPMENT_COLUMNS = ['id', 'label', 'quantity', 'useful_power_w', 'efficiency_ratio', 'startup_power_multiplier', 'duration_hours', ...Array.from({ length: 24 }, (_, hour) => `h${String(hour).padStart(2, '0')}`)];
@@ -122,15 +122,20 @@ export function inspectHourlyProfileWorkbook(buffer: ArrayBuffer | Uint8Array): 
     if (row.every(blank)) continue;
     const hour = number(row[index.get('hour')!]);
     const activePowerKw = number(row[index.get('average_power_kw')!]);
-    const peakPowerKw = number(row[index.get('peak_power_kw')!]);
+    const peakCell = row[index.get('peak_power_kw')!];
+    const peakPowerKw = blank(peakCell) ? null : number(peakCell);
     if (!Number.isInteger(hour) || hour < 0 || hour > 23) issues.push(cellIssue('HOUR_INVALID', parsed.sheetName, rowIndex + 1, 'hour', 'hour', row[index.get('hour')!], 'Entier de 0 à 23 attendu'));
     if (!Number.isFinite(activePowerKw) || activePowerKw < 0) issues.push(cellIssue('RANGE_INVALID', parsed.sheetName, rowIndex + 1, 'average_power_kw', 'average_power_kw', row[index.get('average_power_kw')!], 'Nombre >= 0 attendu'));
-    if (!Number.isFinite(peakPowerKw) || peakPowerKw < activePowerKw) issues.push(cellIssue('PEAK_BELOW_AVERAGE', parsed.sheetName, rowIndex + 1, 'peak_power_kw', 'peak_power_kw', row[index.get('peak_power_kw')!], 'La pointe doit être >= à la moyenne'));
+    if (peakPowerKw !== null && (!Number.isFinite(peakPowerKw) || peakPowerKw < activePowerKw)) issues.push(cellIssue('PEAK_BELOW_AVERAGE', parsed.sheetName, rowIndex + 1, 'peak_power_kw', 'peak_power_kw', peakCell, 'La pointe doit être >= à la moyenne'));
     points.push({ hourIndex: hour, activePowerKw, peakPowerKw });
   }
   if (points.length !== 24) issues.push(cellIssue('HOURS_COUNT_INVALID', parsed.sheetName, 0, 'hour', 'hour', points.length, '24 heures uniques sont obligatoires'));
   if (new Set(points.map((point) => point.hourIndex)).size !== points.length) issues.push(cellIssue('HOUR_DUPLICATE', parsed.sheetName, 0, 'hour', 'hour', points.map((point) => point.hourIndex), 'Chaque heure doit être unique'));
-  return issues.length > 0 ? { status: 'invalid', issues } : { status: 'valid', candidate: points.sort((left, right) => left.hourIndex - right.hourIndex), warnings: [] };
+  if (issues.length > 0) return { status: 'invalid', issues };
+  const warnings = points.some((point) => point.peakPowerKw === null)
+    ? [cellIssue('PEAK_DEFAULTED', parsed.sheetName, 0, 'peak_power_kw', 'peak_power_kw', undefined, 'Les pointes vides seront normalisées à la puissance moyenne', 'warning')]
+    : [];
+  return { status: 'valid', candidate: points.sort((left, right) => left.hourIndex - right.hourIndex), warnings };
 }
 
 function writeWorkbook(sheetName: string, data: readonly (readonly unknown[])[]): Uint8Array {

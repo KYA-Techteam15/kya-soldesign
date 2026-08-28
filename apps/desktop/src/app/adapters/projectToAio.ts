@@ -1,5 +1,5 @@
 import type { AioSizingRequestV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { adjustHourlyFractionsToGamma, analyzeSolarResource, buildAnnualLoadSeries, calculateAnnualYEn, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import { adjustHourlyFractionsToGamma, analyzeSolarResource, buildAnnualLoadSeries, calculateAnnualYEn, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
@@ -177,6 +177,14 @@ export function projectToSolarAnalysis(project: ProjectFileV1, references: Page1
 }
 
 function normalizeActiveLoad(input: ProjectInputsV1, references: Page1References, meanHourlyPoaWm2: readonly number[] | null): Page1LoadNormalization {
+  if (input.load.activeMode === 'composed' && input.load.composed !== undefined && input.load.composed !== null) {
+    const profileId = input.load.composed.calendar.assignments[0]?.profileId;
+    const composedProfile = input.load.composed.profiles.find((candidate) => candidate.id === profileId) ?? input.load.composed.profiles[0];
+    if (composedProfile === undefined) return { status: 'blocked', issues: [{ code: 'COMPOSED_PROFILE_MISSING', path: 'load.composed.profiles', message: 'At least one composed profile is required' }] };
+    if (input.site.timezoneIana === null) return { status: 'blocked', issues: [{ code: 'SITE_TIMEZONE_MISSING', path: 'site.timezoneIana', message: 'A project timezone is required' }] };
+    const typicalDay = composedTypicalDay(input.load.composed, composedProfile.id);
+    return normalizeDirectHourlyRows({ timezoneIana: input.site.timezoneIana, hourlyPowerW: typicalDay.hourlyPowerW, hourlyPeakPowerW: typicalDay.hourlyPeakPowerW });
+  }
   const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId)!;
   if (input.site.timezoneIana === null) return { status: 'blocked', issues: [{ code: 'SITE_TIMEZONE_MISSING', path: 'site.timezoneIana', message: 'A project timezone is required' }] };
   return profile.source === 'equipment'
@@ -188,6 +196,26 @@ function normalizeActiveLoad(input: ProjectInputsV1, references: Page1References
     : profile.source === 'hourly'
       ? normalizeDirectHourlyRows({ timezoneIana: input.site.timezoneIana, hourlyPowerW: profile.hourlyPoints.map((point) => point.activePowerW), hourlyPeakPowerW: profile.hourlyPoints.map((point) => point.peakPowerW) })
       : normalizeMeterLoad(input, references, meanHourlyPoaWm2);
+}
+
+function composedTypicalDay(composed: NonNullable<ProjectInputsV1['load']['composed']>, fallbackProfileId: string) {
+  const profiles = new Map(composed.profiles.map((profile) => [profile.id, profile]));
+  const totals = Array.from({ length: 24 }, () => 0);
+  const peaks = Array.from({ length: 24 }, () => 0);
+  let dayCount = 0;
+  for (let month = 0; month < 12; month += 1) {
+    const count = new Date(Date.UTC(2021, month + 1, 0)).getUTCDate();
+    for (let day = 1; day <= count; day += 1) {
+      const dateIso = `2021-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const assignment = resolveAnnualAssignment(composed.calendar, dateIso);
+      const profile = profiles.get(assignment === null ? fallbackProfileId : composed.calendar.assignments.find((item) => item.periodId === assignment.periodId && item.dayGroupId === assignment.dayGroupId)?.profileId ?? fallbackProfileId) ?? profiles.get(fallbackProfileId);
+      if (profile === undefined) continue;
+      dayCount += 1;
+      profile.hourlyPoints.forEach((point) => { totals[point.hourIndex] += point.activePowerW; peaks[point.hourIndex] += point.peakPowerW ?? point.activePowerW; });
+    }
+  }
+  const divisor = Math.max(1, dayCount);
+  return { hourlyPowerW: totals.map((value) => value / divisor), hourlyPeakPowerW: peaks.map((value) => value / divisor) };
 }
 
 function normalizeMeterLoad(input: ProjectInputsV1, references: Page1References, meanHourlyPoaWm2: readonly number[] | null): Page1LoadNormalization {
@@ -208,13 +236,12 @@ function normalizeMeterLoad(input: ProjectInputsV1, references: Page1References,
 
 function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNormalization | null, references?: Page1References): SolarResourceAnalysisEnvelopeV1 | null {
   const resource = input.site.solarResource;
-  const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId)!;
   if (resource === null || resource.datasetOrDocument.trim().length === 0 || resource.versionOrDate.trim().length === 0 || resource.locator.trim().length === 0 || resource.retrievedAtIso.length === 0
     || resource.weatherFileId === undefined || resource.sourceSha256 === undefined || resource.timezoneOffsetMinutes === undefined || resource.albedo === undefined || resource.hourlyIrradiance === undefined
     || input.site.latitudeDeg === null || input.site.longitudeDeg === null || input.site.arrayTiltDeg === null || input.site.arrayAzimuthDeg === null) return null;
   const provenance: Provenance = { sourceId: resource.weatherFileId, sourceRecordId: resource.locator, sourceSha256: resource.sourceSha256, transformationVersion: '1.1.0' };
   const load = normalization?.status === 'ready' ? normalization.load : null;
-  const peak = load === null ? null : deriveHourlyPeakPower(profile.source, profile.hourlyPoints.map((point) => point.peakPowerW), load.hourlyEnergyWh, load.startupEvents);
+  const peak = load === null ? null : deriveProjectPeakPower(input, load.hourlyEnergyWh, load.startupEvents);
   const analysis = analyzeSolarResource({
     latitudeDeg: input.site.latitudeDeg, longitudeDeg: input.site.longitudeDeg,
     surfaceTiltDeg: input.site.arrayTiltDeg, surfaceAzimuthDeg: input.site.arrayAzimuthDeg,
@@ -232,9 +259,13 @@ function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNor
 
 function annualGammaForProject(input: ProjectInputsV1, references: Page1References, hourlyPoaWm2: readonly number[]) {
   const resource = input.site.solarResource;
-  if (resource?.hourlyIrradiance === undefined || resource.hourlyIrradiance.length !== hourlyPoaWm2.length || input.site.timezoneIana === null || input.load.calendar === undefined) return null;
+  const calendar = input.load.activeMode === 'composed' ? input.load.composed?.calendar : input.load.calendar;
+  if (resource?.hourlyIrradiance === undefined || resource.hourlyIrradiance.length !== hourlyPoaWm2.length || input.site.timezoneIana === null || calendar === undefined) return null;
   const profiles: AnnualHourlyProfile[] = [];
-  for (const profile of input.load.profiles) {
+  const sourceProfiles = input.load.activeMode === 'composed' && input.load.composed !== undefined && input.load.composed !== null
+    ? input.load.composed.profiles.map((profile) => ({ ...profile, source: 'hourly' as const, items: [], meter: null }))
+    : input.load.profiles;
+  for (const profile of sourceProfiles) {
     let hourlyEnergyWh: readonly number[];
     if (profile.source === 'equipment') {
       const normalized = normalizeEquipmentRows({ timezoneIana: input.site.timezoneIana, rows: profile.items.map((item) => ({ id: item.id, label: item.label, quantity: item.quantity, usefulPowerW: item.usefulPowerW, efficiencyRatio: item.efficiencyRatio, simultaneityRatio: item.simultaneityRatio, hourlyOperatingFractions: item.hourlyOperatingFractions, startupPowerMultiplier: item.startupPowerMultiplier })) });
@@ -252,11 +283,22 @@ function annualGammaForProject(input: ProjectInputsV1, references: Page1Referenc
   if (profiles.length === 0) return null;
   try {
     const weather = resource.hourlyIrradiance.map((point, index) => ({ timestampUtcIso: point.timestampUtcIso, poaWm2: hourlyPoaWm2[index]! }));
-    const series = buildAnnualLoadSeries({ timezoneIana: input.site.timezoneIana, weather, calendar: input.load.calendar, profiles });
+    const series = buildAnnualLoadSeries({ timezoneIana: input.site.timezoneIana, weather, calendar, profiles });
     return calculateAnnualYEn({ series, poaByTimestamp: new Map(weather.map((point) => [point.timestampUtcIso, point.poaWm2])), thresholdWm2: input.load.minimumOperatingIrradianceWPerM2 ?? 10 });
   } catch {
     return null;
   }
+}
+
+function deriveProjectPeakPower(input: ProjectInputsV1, hourlyMeanPowerW: readonly number[], startupEvents: readonly { readonly hourIndex: number; readonly runningPowerW: number; readonly startupPowerMultiplier: number | null }[]): number[] | null {
+  if (input.load.activeMode === 'composed' && input.load.composed !== undefined && input.load.composed !== null) {
+    const profileId = input.load.composed.calendar.assignments[0]?.profileId;
+    const profile = input.load.composed.profiles.find((candidate) => candidate.id === profileId) ?? input.load.composed.profiles[0];
+    return profile?.hourlyPoints.map((point, hour) => point.peakPowerW ?? hourlyMeanPowerW[hour]!) ?? null;
+  }
+  const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId);
+  if (profile === undefined) return null;
+  return deriveHourlyPeakPower(profile.source, profile.hourlyPoints.map((point) => point.peakPowerW), hourlyMeanPowerW, startupEvents);
 }
 
 async function declaredProvenance(sourceId: string, sourceRecordId: string, value: unknown): Promise<Provenance> {
