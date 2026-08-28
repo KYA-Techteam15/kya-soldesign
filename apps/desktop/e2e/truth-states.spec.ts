@@ -14,18 +14,18 @@ test('keeps Page 1 active and future calculated surfaces explicitly unavailable'
   await expect(page.locator('.pane-right')).toContainText('Ajoutez des appareils à l’étape Besoins et chargez une série météo à l’étape Site.');
 
   await page.locator('.nav-item').nth(3).click();
-  await expect(page.getByRole('button', { name: 'Prédimensionnement indisponible' })).toBeDisabled();
-  await expect(page.locator('.pane-center')).toContainText('UI-AIO-001B');
+  await expect(page.getByRole('button', { name: 'Lancer le prédimensionnement' })).toBeEnabled();
+  await expect(page.locator('.pane-center')).toContainText('Prédimensionnement');
 
   await page.locator('.nav-item').nth(4).click();
-  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par EQP-001');
+  await expect(page.locator('.pane-center')).toContainText('Dimensionnement');
 
   await page.locator('.nav-item').nth(5).click();
-  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par SAFE-001');
+  await expect(page.locator('.pane-center')).toContainText('Choix des éléments de protection');
 
   await page.locator('.nav-item').nth(6).click();
-  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par FIN-001');
+  await expect(page.locator('.pane-center')).toContainText('Évaluation financière');
 
   await page.locator('.nav-item').nth(7).click();
-  await expect(page.locator('.pane-center')).toContainText('Intégration prévue par DOC-001');
+  await expect(page.locator('.pane-center')).toContainText('Vue synoptique et rapports');
 });

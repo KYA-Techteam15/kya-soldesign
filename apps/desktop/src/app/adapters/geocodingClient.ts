@@ -1,3 +1,5 @@
+import { weatherGatewayUrl } from './weatherGateway.js';
+
 export interface GeocodedSite {
   readonly name: string;
   readonly countryCode: string;
@@ -35,7 +37,7 @@ export class GeocodingClient {
       format: 'json',
       countryCode: request.countryCode,
     });
-    const document = await this.fetchJson(`/external/open-meteo/geocoding?${query}`, request.signal) as { results?: unknown[] };
+    const document = await this.fetchJson(weatherGatewayUrl(`/external/open-meteo/geocoding?${query}`), request.signal) as { results?: unknown[] };
     const candidates = (document.results ?? []).flatMap(parseNameResult);
     const found = candidates.find((candidate) => candidate.countryCode === request.countryCode) ?? candidates[0];
     if (!found) throw new GeocodingError('GEOCODING_NOT_FOUND');
@@ -55,8 +57,8 @@ export class GeocodingClient {
       timezone: 'auto',
     });
     const [place, zone] = await Promise.all([
-      this.fetchJson(`/external/bigdatacloud/reverse-geocode?${reverseQuery}`, request.signal),
-      this.fetchJson(`/external/open-meteo/forecast?${timezoneQuery}`, request.signal),
+      this.fetchJson(weatherGatewayUrl(`/external/bigdatacloud/reverse-geocode?${reverseQuery}`), request.signal),
+      this.fetchJson(weatherGatewayUrl(`/external/open-meteo/forecast?${timezoneQuery}`), request.signal),
     ]);
     const name = firstString(place.locality, place.city, place.principalSubdivision);
     const countryCode = firstString(place.countryCode)?.toUpperCase();

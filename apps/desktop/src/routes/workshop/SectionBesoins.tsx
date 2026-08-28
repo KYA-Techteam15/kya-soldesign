@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
 import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary, type SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
@@ -14,6 +14,10 @@ import { useCatalog } from '../../app/CatalogProvider';
 import { OperatingHoursDialog } from './OperatingHoursDialog';
 import { Dialog } from '../../ui/Dialog';
 import { isDecimalDraft } from '../../app/models/formValues';
+import { AnnualCalendarEditor, calendarForMode } from './AnnualCalendarEditor';
+import { exportEquipmentWorkbook, inspectEquipmentWorkbook, exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
+import { buildAnnualLoadPresentation } from '../../app/models/annualLoadPresentation';
+import { AnnualLoadChart } from './AnnualLoadChart';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -26,11 +30,8 @@ const MODES: { key: LoadSource; label: string }[] = [
 
 const GRANULARITIES: { key: Granularity; label: string; n: string; hint: string; implemented: boolean }[] = [
   { key: 'annual', label: 'Annuel', n: '1', hint: 'Un seul profil pour toute l’année', implemented: true },
-  { key: 'weekly', label: 'Hebdomadaire', n: '2', hint: 'Semaine et week-end séparés', implemented: false },
-  { key: 'daily', label: 'Journalier', n: '7', hint: 'Un profil par jour de la semaine', implemented: false },
-  { key: 'monthly', label: 'Mensuel', n: '12', hint: 'Un profil par mois', implemented: false },
-  { key: 'periodic', label: 'Périodes', n: 'N', hint: 'Périodes saisonnières personnalisées', implemented: false },
-  { key: 'combined', label: 'Combiné', n: '×', hint: 'Hebdomadaire × périodes, jusqu’à 12 profils', implemented: false },
+  { key: 'workweek-weekend', label: 'Ouvrés / week-end', n: '2', hint: 'Un profil pour les jours ouvrés et un pour le week-end', implemented: true },
+  { key: 'periods-by-day-type', label: 'Périodes × jours', n: '×', hint: 'Périodes saisonnières croisées avec ouvrés et week-end', implemented: true },
 ];
 
 function DraftNumberInput({
@@ -93,12 +94,14 @@ export function SectionBesoins() {
   const [bulkEditor, setBulkEditor] = useState(false);
   const [bulkRange, setBulkRange] = useState({ start: 8, end: 18, meanKw: 0, peakKw: 0 });
   const hourlyImportRef = useRef<HTMLInputElement>(null);
+  const equipmentImportRef = useRef<HTMLInputElement>(null);
 
   const profile = project.load.profiles.find(
     (p) => p.id === project.load.activeProfileId,
   )!;
   const calculation = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
   const solarCalculation = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
+  const annualPresentation = useMemo(() => buildAnnualLoadPresentation(project, solarCalculation.status === 'ready' ? solarCalculation.envelope.output : null), [project, solarCalculation]);
 
   const mutateProfile = (fn: (p: NamedProfile) => void) =>
     update((draft) => {
@@ -174,6 +177,42 @@ export function SectionBesoins() {
         opHours: 2,
       }),
     );
+
+  const addProfile = () => update((draft) => {
+    const source = draft.load.profiles.find((item) => item.id === draft.load.activeProfileId);
+    if (!source) return;
+    const id = `profile-${Date.now()}`;
+    draft.load.profiles.push({ ...structuredClone(source), id, name: `Profil ${draft.load.profiles.length + 1}` });
+    draft.load.activeProfileId = id;
+  });
+
+  const changeCalendarMode = (mode: 'annual' | 'workweek-weekend' | 'periods-by-day-type') => update((draft) => {
+    draft.load.granularity = mode;
+    draft.load.calendar = calendarForMode(mode, draft.load.activeProfileId);
+  });
+
+  const downloadWorkbook = (bytes: Uint8Array, filename: string) => {
+    const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+  };
+
+  const exportEquipment = () => downloadWorkbook(exportEquipmentWorkbook([...profile.classic, ...profile.inductive].map((row) => ({
+    id: row.id, label: row.name, quantity: row.qty, usefulPowerW: row.unitPower, efficiencyRatio: row.yield ?? 1,
+    startupPowerMultiplier: 'startupCoef' in row ? (row.startupCoef as number | null) : null, durationHours: row.opHours, hourlyOperatingFractions: row.operatingFractions,
+  }))), 'equipements.xlsx');
+
+  const importEquipment = async (file: File) => {
+    const result = inspectEquipmentWorkbook(await file.arrayBuffer());
+    if (result.status === 'invalid') { notify({ kind: 'error', title: 'Import refusé', detail: result.issues.slice(0, 3).map((issue) => `${issue.sheetName || 'Feuille'} ${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') }); return; }
+    update((draft) => {
+      const target = draft.load.profiles.find((item) => item.id === draft.load.activeProfileId); if (!target) return;
+      target.classic = result.candidate.filter((row) => row.startupPowerMultiplier === null).map((row) => ({ id: row.id, name: row.label, qty: row.quantity, unitPower: row.usefulPowerW, yield: row.efficiencyRatio, simultaneity: 1, operatingFractions: [...row.hourlyOperatingFractions] as number[], opHours: row.durationHours }));
+      target.inductive = result.candidate.filter((row) => row.startupPowerMultiplier !== null).map((row) => ({ id: row.id, name: row.label, qty: row.quantity, unitPower: row.usefulPowerW, yield: row.efficiencyRatio, simultaneity: 1, operatingFractions: [...row.hourlyOperatingFractions] as number[], opHours: row.durationHours, startupCoef: row.startupPowerMultiplier }));
+    });
+    notify({ kind: 'success', title: 'Inventaire Excel importé', detail: `${result.candidate.length} lignes validées${result.warnings.length ? ' · horaires par défaut appliqués' : ''}` });
+  };
+
+  const exportHourly = () => downloadWorkbook(exportHourlyProfileWorkbook(profile.hourly.map((point) => ({ hourIndex: point.hour, activePowerKw: point.realPower, peakPowerKw: point.peakPower }))), 'profil-horaire.xlsx');
 
   const CLASSIC_COLS = ['name', 'qty', 'unitPower', 'yield', 'opHours'] as const;
   const INDUCT_COLS = ['name', 'qty', 'unitPower', 'yield', 'startupCoef', 'opHours'] as const;
@@ -258,6 +297,16 @@ export function SectionBesoins() {
         }
       />
 
+      <AnnualCalendarEditor
+        calendar={project.load.calendar}
+        profiles={project.load.profiles}
+        activeProfileId={project.load.activeProfileId}
+        onChange={(calendar) => update((draft) => { draft.load.calendar = calendar; })}
+        onActivateProfile={(profileId) => update((draft) => { draft.load.activeProfileId = profileId; })}
+        onAddProfile={addProfile}
+      />
+      <AnnualLoadChart presentation={annualPresentation} />
+
       {profile.source === 'equipments' && (
         <div style={{ display: 'grid', gap: 'var(--sp-4)' }}>
           <section>
@@ -290,6 +339,9 @@ export function SectionBesoins() {
               >
                 Aide au collage
               </button>
+              <input ref={equipmentImportRef} type="file" accept=".xlsx,.xls" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importEquipment(file); event.target.value = ''; }} />
+              <button className="btn" onClick={() => equipmentImportRef.current?.click()}>{t('loads.importExcel')}</button>
+              <button className="btn" onClick={exportEquipment}>{t('loads.exportExcel')}</button>
             </div>
             <div
               className="tbl-wrap"
@@ -489,8 +541,9 @@ export function SectionBesoins() {
             <button className="btn" onClick={() => setBulkEditor(true)}>
               Édition en masse…
             </button>
-            <input ref={hourlyImportRef} type="file" accept=".csv,text/csv" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importHourlyCsv(file, mutateProfile, notify); event.target.value = ''; }} />
-            <button className="btn" onClick={() => hourlyImportRef.current?.click()}>{t('loads.importCsv')}</button>
+            <input ref={hourlyImportRef} type="file" accept=".xlsx,.xls,.csv,text/csv" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void (file.name.toLowerCase().endsWith('.csv') ? importHourlyCsv(file, mutateProfile, notify) : importHourlyWorkbook(file, mutateProfile, notify)); event.target.value = ''; }} />
+            <button className="btn" onClick={() => hourlyImportRef.current?.click()}>{t('loads.importExcel')}</button>
+            <button className="btn" onClick={exportHourly}>{t('loads.exportExcel')}</button>
           </div>
           {[0, 12].map((offset) => (
             <div className="hourgrid" key={offset} style={{ marginBottom: 'var(--sp-3)' }}>
@@ -527,9 +580,6 @@ export function SectionBesoins() {
             <h2 className="h-sec">Estimation depuis la facture d'électricité</h2>
           </div>
           <div className="form-rows">
-            <div className="alert" role="note" style={{ gridColumn: '1 / -1' }}>
-              <b>{t('loads.currentCalculation')}</b> {t('loads.meterCalculationNote')}
-            </div>
             <label>
               <span>{t('loads.observedEnergy')}</span>
               <span className="uf">
@@ -548,7 +598,7 @@ export function SectionBesoins() {
               {profile.meter.forceYEn && <label><span>{t('loads.targetYEn')}</span><span className="uf"><DraftNumberInput value={profile.meter.targetYEn === null ? null : profile.meter.targetYEn * 100} nullable format={(value) => fmt(value, 1)} onCommit={(value) => mutateProfile((p) => { p.meter!.targetYEn = value === null ? null : Math.min(100, Math.max(0, value)) / 100; })} /><span className="uf-unit">%</span></span></label>}
               <div className="yen-result" role="status">
                 <span>{t('loads.calculatedYEn')}</span>
-                <b>{solarCalculation.status === 'ready' && solarCalculation.envelope.output.gamma.status === 'available' ? (fmt(solarCalculation.envelope.output.gamma.value * 100, 1) + ' %') : '—'}</b>
+                <b>{annualPresentation?.yEn.status === 'available' ? (fmt(annualPresentation.yEn.annualGammaRatio * 100, 1) + ' %') : solarCalculation.status === 'ready' && solarCalculation.envelope.output.gamma.status === 'available' ? (fmt(solarCalculation.envelope.output.gamma.value * 100, 1) + ' %') : '—'}</b>
               </div>
             </div>
           </div>
@@ -568,7 +618,7 @@ export function SectionBesoins() {
                     disabled={!g.implemented}
                     onClick={() => {
                       if (!g.implemented) return;
-                      update((d) => { d.load.granularity = g.key; });
+                      if (g.key === 'annual' || g.key === 'workweek-weekend' || g.key === 'periods-by-day-type') changeCalendarMode(g.key);
                       setShowGranularity(false);
                       notify({ kind: 'success', title: `Granularité : ${g.label}` });
                     }}
@@ -648,4 +698,18 @@ async function importHourlyCsv(
   } catch {
     notify({ kind: 'error', title: 'Import CSV refusé', detail: 'Attendu : 24 lignes uniques « heure; moyenne_kW; pointe_kW », avec pointe ≥ moyenne.' });
   }
+}
+
+async function importHourlyWorkbook(
+  file: File,
+  mutate: (change: (profile: NamedProfile) => void) => void,
+  notify: (toast: Omit<Toast, 'id'>) => void,
+): Promise<void> {
+  const result = inspectHourlyProfileWorkbook(await file.arrayBuffer());
+  if (result.status === 'invalid') {
+    notify({ kind: 'error', title: 'Import refusé', detail: result.issues.slice(0, 3).map((issue) => `${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') });
+    return;
+  }
+  mutate((profile) => { result.candidate.forEach((point) => { profile.hourly[point.hourIndex] = { hour: point.hourIndex, realPower: point.activePowerKw, peakPower: point.peakPowerKw }; }); });
+  notify({ kind: 'success', title: 'Profil horaire importé', detail: '24 heures validées et remplacées atomiquement.' });
 }

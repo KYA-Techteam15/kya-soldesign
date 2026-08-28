@@ -103,10 +103,26 @@ export const loadProfileInputV1Schema = z.object({
 }).strict();
 
 export const loadInputV1Schema = z.object({
-  granularity: z.enum(['annual', 'weekly', 'daily', 'monthly', 'periodic', 'combined']),
+  granularity: z.enum(['annual', 'weekly', 'daily', 'monthly', 'periodic', 'combined', 'workweek-weekend', 'periods-by-day-type']),
   activeProfileId: z.string().min(1),
   minimumOperatingIrradianceWPerM2: z.number().finite().min(0).nullable(),
   profiles: z.array(loadProfileInputV1Schema).min(1),
+  calendar: z.object({
+    version: z.literal(2),
+    mode: z.enum(['annual', 'workweek-weekend', 'periods-by-day-type']),
+    dayGroups: z.array(z.object({
+      id: z.string().min(1),
+      kind: z.enum(['all-days', 'workweek', 'weekend']),
+      weekdaysIso: z.array(z.number().int().min(1).max(7)).min(1),
+    }).strict()).min(1),
+    periods: z.array(z.object({
+      id: z.string().min(1), name: z.string().min(1),
+      startMonthDay: z.string().regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/u),
+      endMonthDay: z.string().regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/u),
+      displayColor: z.string().min(1).optional(),
+    }).strict()).min(1),
+    assignments: z.array(z.object({ periodId: z.string().min(1), dayGroupId: z.string().min(1), profileId: z.string().min(1) }).strict()),
+  }).strict().optional(),
 }).strict().superRefine((value, context) => {
   if (!value.profiles.some((profile) => profile.id === value.activeProfileId)) {
     context.addIssue({

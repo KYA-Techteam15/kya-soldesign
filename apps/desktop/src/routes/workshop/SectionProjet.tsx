@@ -92,12 +92,6 @@ export function SectionProjet() {
             value={d.clientEmail}
             onChange={(v) => update((p) => { p.details.clientEmail = v; })}
           />
-          <TextField
-            label="Photo du site (chemin)"
-            value={d.projectImage}
-            placeholder="optionnel"
-            onChange={(v) => update((p) => { p.details.projectImage = v; })}
-          />
         </Group>
       </div>
 

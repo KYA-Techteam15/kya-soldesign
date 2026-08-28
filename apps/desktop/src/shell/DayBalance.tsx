@@ -59,7 +59,7 @@ export function DayBalance({ project, defaultOpen = false, pinned = false }: {
       peakLoadKw: Math.max(...load, 0),
       peakStartupKw: Math.max(...peak, 0),
       peakHour: peak.indexOf(Math.max(...peak, 0)),
-      gamma: output?.gamma.status === 'available' ? output.gamma.value : null,
+      gamma: output?.annualGamma?.status === 'available' ? output.annualGamma.annualGammaRatio : output?.gamma?.status === 'available' ? output.gamma.value : null,
     };
   }, [solarState]);
 

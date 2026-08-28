@@ -1,5 +1,5 @@
 import type { AioSizingRequestV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { adjustHourlyFractionsToGamma, analyzeSolarResource, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import { adjustHourlyFractionsToGamma, analyzeSolarResource, buildAnnualLoadSeries, calculateAnnualYEn, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
@@ -19,7 +19,7 @@ export async function projectToAioInput(project: ProjectFileV1, references: Page
   const input = parseProjectInputsV1(project.inputs);
   if (input.site.timezoneIana === null) return blocked('SITE_TIMEZONE_MISSING', 'site.timezoneIana', 'A project timezone is required to align the 24-hour load profile');
 
-  const resourceOnly = analyzeProjectSolar(input, null);
+  const resourceOnly = analyzeProjectSolar(input, null, references);
   const normalized = normalizeActiveLoad(input, references, resourceOnly?.output.meanHourlyPoaWm2 ?? null);
   if (normalized.status === 'blocked') return normalized;
 
@@ -27,7 +27,7 @@ export async function projectToAioInput(project: ProjectFileV1, references: Page
   const locality = references.localities.find((candidate) => candidate.id === input.site.localityId);
   const weatherSource = references.weatherSources.find((candidate) => candidate.id === input.site.weatherSourceId);
   const resource = input.site.solarResource;
-  const solarAnalysis = analyzeProjectSolar(input, normalized);
+  const solarAnalysis = analyzeProjectSolar(input, normalized, references);
   const solarProvenance = solarAnalysis?.provenance[0] ?? null;
   const designMonth = input.site.designMonth;
   const selectedPoa = designMonth === null ? null : solarAnalysis?.output.monthlyAverageDailyPoaKWhM2Day[designMonth - 1] ?? null;
@@ -75,7 +75,9 @@ export async function projectToPresizingInput(project: ProjectFileV1, references
   if (adapted.status === 'blocked') return adapted;
   const solar = adapted.solarAnalysis;
   if (solar === null) return { status: 'blocked', issues: [{ code: 'WEATHER_FILE_MISSING', path: 'site.solarResource', message: 'Local hourly weather data is required' }] };
-  if (solar.output.gamma.status !== 'available') return { status: 'blocked', issues: [{ code: 'YEN_UNAVAILABLE', path: 'load.activeProfileId', message: 'YEn requires a non-zero active load profile' }] };
+  const gamma = solar.output.annualGamma?.status === 'available' ? solar.output.annualGamma : solar.output.gamma;
+  if (gamma.status !== 'available') return { status: 'blocked', issues: [{ code: 'YEN_UNAVAILABLE', path: 'load.activeProfileId', message: 'YEn requires a non-zero active load profile' }] };
+  const gammaValue = 'annualGammaRatio' in gamma ? gamma.annualGammaRatio : gamma.value;
   const storedAssumptions = parseProjectInputsV1(project.inputs).assumptions;
   const assumptions = {
     ...storedAssumptions,
@@ -105,7 +107,7 @@ export async function projectToPresizingInput(project: ProjectFileV1, references
   const load = adapted.input.load;
   const peakPowerW = solar.output.loadHourlyPeakPowerW === null ? Math.max(...load.hourlyEnergyWh) : Math.max(...solar.output.loadHourlyPeakPowerW);
   return { status: 'ready', input: {
-    dailyEnergyWh: load.hourlyEnergyWh.reduce((sum, item) => sum + item, 0), yEn: solar.output.gamma.value, hourlyLoadWh: load.hourlyEnergyWh,
+    dailyEnergyWh: load.hourlyEnergyWh.reduce((sum, item) => sum + item, 0), yEn: gammaValue, hourlyLoadWh: load.hourlyEnergyWh,
     hourlyPoaWm2: solar.output.hourlyPoaWm2, peakPowerW, lpspMax: value.lpspMax, lolpMax: value.lolpMax, systemPr: value.systemPr,
     inverterEfficiency: value.inverterEfficiency, batteryEfficiency: value.batteryEfficiency,
     pvSpecificCostPerKw: value.pvCost * (1 + assumptions.pvMarginRatio),
@@ -171,7 +173,7 @@ export async function projectToFinanceInput(project: ProjectFileV1, references: 
 export function projectToSolarAnalysis(project: ProjectFileV1, references: Page1References): SolarResourceAnalysisEnvelopeV1 | null {
   const input = parseProjectInputsV1(project.inputs);
   const resourceOnly = analyzeProjectSolar(input, null);
-  return analyzeProjectSolar(input, normalizeActiveLoad(input, references, resourceOnly?.output.meanHourlyPoaWm2 ?? null));
+  return analyzeProjectSolar(input, normalizeActiveLoad(input, references, resourceOnly?.output.meanHourlyPoaWm2 ?? null), references);
 }
 
 function normalizeActiveLoad(input: ProjectInputsV1, references: Page1References, meanHourlyPoaWm2: readonly number[] | null): Page1LoadNormalization {
@@ -204,7 +206,7 @@ function normalizeMeterLoad(input: ProjectInputsV1, references: Page1References,
   return { ...normalized, warnings: [...normalized.warnings, { code: 'LOAD_METER_YEN_ADJUSTED', message: 'The sourced hourly profile was adjusted to the declared YEn target using local weather data' }] };
 }
 
-function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNormalization | null): SolarResourceAnalysisEnvelopeV1 | null {
+function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNormalization | null, references?: Page1References): SolarResourceAnalysisEnvelopeV1 | null {
   const resource = input.site.solarResource;
   const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId)!;
   if (resource === null || resource.datasetOrDocument.trim().length === 0 || resource.versionOrDate.trim().length === 0 || resource.locator.trim().length === 0 || resource.retrievedAtIso.length === 0
@@ -213,7 +215,7 @@ function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNor
   const provenance: Provenance = { sourceId: resource.weatherFileId, sourceRecordId: resource.locator, sourceSha256: resource.sourceSha256, transformationVersion: '1.1.0' };
   const load = normalization?.status === 'ready' ? normalization.load : null;
   const peak = load === null ? null : deriveHourlyPeakPower(profile.source, profile.hourlyPoints.map((point) => point.peakPowerW), load.hourlyEnergyWh, load.startupEvents);
-  return analyzeSolarResource({
+  const analysis = analyzeSolarResource({
     latitudeDeg: input.site.latitudeDeg, longitudeDeg: input.site.longitudeDeg,
     surfaceTiltDeg: input.site.arrayTiltDeg, surfaceAzimuthDeg: input.site.arrayAzimuthDeg,
     albedo: resource.albedo, intervalMinutes: 60, timestampConvention: 'interval-center', timezoneOffsetMinutes: resource.timezoneOffsetMinutes,
@@ -223,6 +225,38 @@ function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNor
     minimumOperationalIrradianceWm2: input.load.minimumOperatingIrradianceWPerM2 ?? 10,
     provenance,
   });
+  if (references === undefined) return analysis;
+  const annualGamma = annualGammaForProject(input, references, analysis.output.hourlyPoaWm2);
+  return { ...analysis, output: { ...analysis.output, ...(annualGamma === null ? {} : { annualGamma }) } };
+}
+
+function annualGammaForProject(input: ProjectInputsV1, references: Page1References, hourlyPoaWm2: readonly number[]) {
+  const resource = input.site.solarResource;
+  if (resource?.hourlyIrradiance === undefined || resource.hourlyIrradiance.length !== hourlyPoaWm2.length || input.site.timezoneIana === null || input.load.calendar === undefined) return null;
+  const profiles: AnnualHourlyProfile[] = [];
+  for (const profile of input.load.profiles) {
+    let hourlyEnergyWh: readonly number[];
+    if (profile.source === 'equipment') {
+      const normalized = normalizeEquipmentRows({ timezoneIana: input.site.timezoneIana, rows: profile.items.map((item) => ({ id: item.id, label: item.label, quantity: item.quantity, usefulPowerW: item.usefulPowerW, efficiencyRatio: item.efficiencyRatio, simultaneityRatio: item.simultaneityRatio, hourlyOperatingFractions: item.hourlyOperatingFractions, startupPowerMultiplier: item.startupPowerMultiplier })) });
+      if (normalized.status === 'blocked') continue;
+      hourlyEnergyWh = normalized.load.hourlyEnergyWh;
+    } else if (profile.source === 'hourly') {
+      hourlyEnergyWh = profile.hourlyPoints.map((point) => point.activePowerW);
+    } else {
+      const normalized = normalizeMeterLoad(input, references, null);
+      if (normalized.status === 'blocked') continue;
+      hourlyEnergyWh = normalized.load.hourlyEnergyWh;
+    }
+    profiles.push({ id: profile.id, hourlyEnergyWh, hourlyPeakPowerW: profile.hourlyPoints.map((point) => point.peakPowerW ?? point.activePowerW) });
+  }
+  if (profiles.length === 0) return null;
+  try {
+    const weather = resource.hourlyIrradiance.map((point, index) => ({ timestampUtcIso: point.timestampUtcIso, poaWm2: hourlyPoaWm2[index]! }));
+    const series = buildAnnualLoadSeries({ timezoneIana: input.site.timezoneIana, weather, calendar: input.load.calendar, profiles });
+    return calculateAnnualYEn({ series, poaByTimestamp: new Map(weather.map((point) => [point.timestampUtcIso, point.poaWm2])), thresholdWm2: input.load.minimumOperatingIrradianceWPerM2 ?? 10 });
+  } catch {
+    return null;
+  }
 }
 
 async function declaredProvenance(sourceId: string, sourceRecordId: string, value: unknown): Promise<Provenance> {

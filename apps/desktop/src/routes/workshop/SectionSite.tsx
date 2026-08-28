@@ -122,7 +122,7 @@ export function SectionSite() {
             <span>{t('site.locality')}</span>
             <button className="pickfield" onClick={() => setPickLocality(true)}>
               <b>{s.region || 'Choisir une localité…'}</b>
-              <small>{s.country || '—'}</small>
+              <small>{s.countryCode ? countryName(s.countryCode, lang) : s.country || '—'}</small>
             </button>
           </label>
           {/* Le pays et les coordonnées descendent de la localité : les
@@ -130,7 +130,7 @@ export function SectionSite() {
               choix de localité écraserait sans prévenir. */}
           <ReadField
             label="Pays"
-            value={s.country || '—'}
+            value={s.countryCode ? countryName(s.countryCode, lang) : s.country || '—'}
             prov={{
               title: 'Pays',
               rows: [
@@ -562,18 +562,6 @@ export function SectionSite() {
         <WeatherDownload
           lang={lang}
           onClose={() => setAskDownload(false)}
-          onStore={async (result) => {
-            await saveWeather(createSavedWeatherRecord({
-              siteName: result.siteName,
-              countryCode: result.countryCode,
-              sourceName: result.sourceName,
-              locator: result.locator,
-              optimalTilt: result.optimalTilt,
-              optimalAzimuth: result.optimalAzimuth,
-              timezoneIana: result.timezoneIana,
-              file: result.file,
-            }));
-          }}
           onSave={async (result) => {
             // Enregistrer, c'est écrire la localité, la série et l'orientation
             // par défaut d'un seul tenant — comme `save_weather_source`. La

@@ -29,7 +29,7 @@ test('keeps downloaded weather locally and lists only localities backed by a fil
   await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
   await page.getByRole('button', { name: 'Télécharger', exact: true }).click();
   await expect(page.getByText(/^SHA-256 [0-9a-f]+…$/u)).toBeVisible();
-  await page.getByRole('button', { name: 'Annuler', exact: true }).click();
+  await page.getByRole('button', { name: 'Enregistrer dans le dossier', exact: true }).click();
   await page.goto('/accueil');
   await page.reload();
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();

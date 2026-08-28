@@ -1,4 +1,5 @@
 import type { CalculationEnvelope, CalculationIssue, CalculationTraceEntry, Provenance } from '@ksd/domain';
+import type { AnnualYEnResult } from '../load-profile/annual.js';
 
 export interface SolarPosition {
   readonly zenithDeg: number;
@@ -35,6 +36,7 @@ export interface SolarResourceAnalysisOutputV1 {
   readonly annualPoaKWhM2: number;
   readonly designMonth: number | null;
   readonly gamma: GammaResult;
+  readonly annualGamma?: AnnualYEnResult;
   readonly albedo: number;
   readonly loadHourlyEnergyWh: readonly number[] | null;
   readonly loadHourlyPeakPowerW: readonly number[] | null;

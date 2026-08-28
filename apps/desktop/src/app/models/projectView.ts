@@ -8,8 +8,16 @@ export type SystemType =
   | 'undefined';
 export type ApplicationType = 'residential' | 'commercial' | 'industrial' | 'agricultural';
 export type LoadSource = 'equipments' | 'hourly' | 'meter';
-export type Granularity = 'annual' | 'weekly' | 'daily' | 'monthly' | 'periodic' | 'combined';
+export type Granularity = 'annual' | 'weekly' | 'daily' | 'monthly' | 'periodic' | 'combined' | 'workweek-weekend' | 'periods-by-day-type';
 export type CableSegment = 'pv_inverter' | 'inverter_battery' | 'inverter_load';
+
+export interface LoadCalendarView {
+  version: 2;
+  mode: 'annual' | 'workweek-weekend' | 'periods-by-day-type';
+  dayGroups: { id: string; kind: 'all-days' | 'workweek' | 'weekend'; weekdaysIso: number[] }[];
+  periods: { id: string; name: string; startMonthDay: string; endMonthDay: string; displayColor?: string }[];
+  assignments: { periodId: string; dayGroupId: string; profileId: string }[];
+}
 
 export interface NamedProfile {
   id: string;
@@ -33,7 +41,7 @@ export interface ProjectViewModel {
   currency: string;
   details: { clientName: string; clientAddress: string; clientTel: string; clientEmail: string; followerName: string; applicationType: ApplicationType; projectDate: string; projectNumber: string; projectLocation: string; projectImage: string };
   site: { country: string; countryCode: string; localityId: string | null; region: string; latitude: number; longitude: number; tilt: number; azimuth: number; irradiation: number; monthlyIrradiation: (number | null)[]; weatherSourceId: string | null; timezoneIana: string | null; designMonth: number | null; irradiationBasis: { tilt: number; azimuth: number } | null; downloadedSource: { name: string; provider: string; versionOrDate: string; locator: string; retrievedAtIso: string; qualityFlags: string[]; weatherFileId?: string; sourceSha256?: string; timezoneOffsetMinutes?: number; albedo?: number; hourlyIrradiance?: { timestampUtcIso: string; ghiWm2: number; dniWm2: number; dhiWm2: number }[] } | null };
-  load: { granularity: Granularity; profiles: NamedProfile[]; activeProfileId: string; irMin: number };
+  load: { granularity: Granularity; calendar: LoadCalendarView; profiles: NamedProfile[]; activeProfileId: string; irMin: number };
   assumptions: { lpspMax: number; lolpMax: number; systemPr: number; inverterYield: number; batteryYield: number; batteryVoltage: number; batteryDod: number; pvSpecificCost: number; pvMargin: number; batterySpecificCost: number; batteryMargin: number; inverterSpecificCost: number; inverterMargin: number; projectLifetime: number; pvLifetime: number; batteryLifetime: number; inverterLifetime: number; pvMaintenance: number; batteryMaintenance: number; inverterMaintenance: number; actualizationRate: number; lcoeGrid: number; emissionFactor: number; autoConsumptionRate: number; dieselSpecificCost: number };
   selection: { moduleId: string | null; batteryId: string | null; inverterId: string | null };
   cables: { segment: CableSegment; length: number; material: 'copper' | 'aluminium'; installation: 'buried' | 'not_buried' }[];

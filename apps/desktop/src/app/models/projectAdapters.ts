@@ -1,7 +1,7 @@
 import type { SystemKind } from '@ksd/domain';
 import { parseProjectFile, type ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from './projectInputs.js';
-import type { ProjectViewModel, SystemType } from './projectView.js';
+import type { LoadCalendarView, ProjectViewModel, SystemType } from './projectView.js';
 
 const systemToCanonical: Readonly<Record<Exclude<SystemType, 'undefined'>, SystemKind>> = {
   standalone_all_in_one: 'standalone-all-in-one',
@@ -25,6 +25,36 @@ const ratio = (percent: number): number => percent / 100;
 const percent = (value: number | null): number => value === null ? 0 : value * 100;
 const valueOrZero = (value: number | null): number => value ?? 0;
 const SEGMENTS = ['pv-inverter', 'inverter-battery', 'inverter-load'] as const;
+
+const DEFAULT_LOAD_CALENDAR: LoadCalendarView = {
+  version: 2,
+  mode: 'annual',
+  dayGroups: [{ id: 'all-days', kind: 'all-days', weekdaysIso: [1, 2, 3, 4, 5, 6, 7] }],
+  periods: [{ id: 'annual', name: 'Année', startMonthDay: '01-01', endMonthDay: '12-31' }],
+  assignments: [{ periodId: 'annual', dayGroupId: 'all-days', profileId: 'profile-1' }],
+};
+
+function loadCalendar(input: ProjectInputsV1): LoadCalendarView {
+  if (input.load.calendar !== undefined) return structuredClone(input.load.calendar);
+  if (input.load.granularity === 'weekly') {
+    const weekdayProfile = input.load.profiles[0]?.id ?? input.load.activeProfileId;
+    const weekendProfile = input.load.profiles[1]?.id ?? weekdayProfile;
+    return {
+      version: 2,
+      mode: 'workweek-weekend',
+      dayGroups: [
+        { id: 'workweek', kind: 'workweek', weekdaysIso: [1, 2, 3, 4, 5] },
+        { id: 'weekend', kind: 'weekend', weekdaysIso: [6, 7] },
+      ],
+      periods: [{ id: 'annual', name: 'Année', startMonthDay: '01-01', endMonthDay: '12-31' }],
+      assignments: [
+        { periodId: 'annual', dayGroupId: 'workweek', profileId: weekdayProfile },
+        { periodId: 'annual', dayGroupId: 'weekend', profileId: weekendProfile },
+      ],
+    };
+  }
+  return structuredClone(DEFAULT_LOAD_CALENDAR);
+}
 
 // Defaults used by the historical Page 2 workflow when a new/legacy project
 // has not yet collected an explicit engineering assumption.
@@ -199,6 +229,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     },
     load: {
       granularity: input.load.granularity,
+      calendar: loadCalendar(input),
       profiles: profileViews,
       activeProfileId: input.load.activeProfileId,
       irMin: valueOrZero(input.load.minimumOperatingIrradianceWPerM2),
@@ -325,6 +356,7 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
     },
     load: {
       granularity: view.load.granularity,
+      calendar: view.load.calendar,
       activeProfileId: view.load.activeProfileId,
       minimumOperatingIrradianceWPerM2: view.load.irMin,
       profiles: view.load.profiles.map((profile) => ({

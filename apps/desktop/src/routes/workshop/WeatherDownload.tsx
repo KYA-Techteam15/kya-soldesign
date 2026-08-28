@@ -11,9 +11,9 @@ import type { CanonicalWeatherFile } from '../../app/contracts';
 import { PvgisClient, WeatherAcquisitionError } from '../../app/adapters/pvgisClient';
 import { useT } from '../../i18n';
 import { isDecimalDraft } from '../../app/models/formValues';
+import { ISO_ALPHA2_COUNTRIES } from '../../app/models/countryReference';
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-const COUNTRY_CODES = ['TG', 'BJ', 'BF', 'CI', 'GH', 'GN', 'ML', 'NE', 'NG', 'SN', 'CM', 'GA', 'CD', 'CG', 'MA', 'DZ', 'FR'];
 
 export interface WeatherResult {
   readonly siteName: string;
@@ -34,10 +34,9 @@ export interface WeatherResult {
   readonly file: CanonicalWeatherFile;
 }
 
-export function WeatherDownload({ lang, onClose, onStore, onSave }: {
+export function WeatherDownload({ lang, onClose, onSave }: {
   readonly lang: 'fr' | 'en';
   readonly onClose: () => void;
-  readonly onStore: (result: WeatherResult) => Promise<void>;
   readonly onSave: (result: WeatherResult) => void | Promise<void>;
 }) {
   const t = useT();
@@ -60,7 +59,7 @@ export function WeatherDownload({ lang, onClose, onStore, onSave }: {
   const pvgis = useMemo(() => new PvgisClient(), []);
   const geocoding = useMemo(() => new GeocodingClient(), []);
   const max = Math.max(...(preview?.monthly ?? [1]), 0.001);
-  const countries = useMemo(() => [...new Set([...COUNTRY_CODES, ...localities.map((item) => item.countryCode)])]
+  const countries = useMemo(() => [...new Set([...ISO_ALPHA2_COUNTRIES, ...localities.map((item) => item.countryCode)])]
     .map((code) => ({ code, name: countryName(code, lang) }))
     .sort((left, right) => left.name.localeCompare(right.name, lang)), [lang, localities]);
 
@@ -78,11 +77,6 @@ export function WeatherDownload({ lang, onClose, onStore, onSave }: {
   };
   const storePreview = async (result: WeatherResult) => {
     setPreview(result);
-    try {
-      await onStore(result);
-    } catch (cause) {
-      throw new WeatherStorageError(cause);
-    }
   };
 
   const search = async () => {
@@ -163,7 +157,7 @@ export function WeatherDownload({ lang, onClose, onStore, onSave }: {
       const acquired = await pvgis.downloadTmy({ latitudeDeg: hit.latitudeDeg, longitudeDeg: hit.longitudeDeg, timezoneIana: hit.timezoneIana, signal: controller.signal });
       await storePreview(buildResult({ file: acquired.file, siteName: siteName.trim() || hit.name, countryCode: hit.countryCode, projectTimezoneIana: hit.timezoneIana, sourceName: `${siteName.trim() || hit.name} PVGIS-TMY`, weatherSourceId: acquired.file.metadata.weatherSourceId, locator: acquired.locator }));
     } catch (cause) {
-      if (!(cause instanceof WeatherStorageError)) setPreview(null);
+      setPreview(null);
       setError(weatherErrorMessage(cause));
     } finally {
       setBusy(false);
@@ -183,14 +177,10 @@ export function WeatherDownload({ lang, onClose, onStore, onSave }: {
       const acquired = await pvgis.parseTmyJson({ text, filename: file.name, timezoneIana });
       setOpenedFileName(file.name);
       await storePreview(buildResult({ file: acquired.file, siteName: siteName.trim(), countryCode, projectTimezoneIana: timezoneIana, sourceName: `${siteName.trim()} PVGIS-TMY`, weatherSourceId: acquired.file.metadata.weatherSourceId, locator: acquired.locator }));
-    } catch (cause) {
-      if (cause instanceof WeatherStorageError) {
-        setError(weatherErrorMessage(cause));
-      } else {
-        setOpenedFileName(null);
-        setPreview(null);
-        setError('Fichier refusé : fournissez le JSON TMY horaire original de PVGIS, avec 8 760 lignes G(h), Gb(n) et Gd(h).');
-      }
+    } catch {
+      setOpenedFileName(null);
+      setPreview(null);
+      setError('Fichier refusé : fournissez le JSON TMY horaire original de PVGIS, avec 8 760 lignes G(h), Gb(n) et Gd(h).');
     } finally {
       setBusy(false);
     }
@@ -275,16 +265,12 @@ function distanceKm(latitudeA: number, longitudeA: number, latitudeB: number, lo
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 function weatherErrorMessage(cause: unknown): string {
-  if (cause instanceof WeatherStorageError) return 'Le fichier météo a été téléchargé, mais son enregistrement local a échoué. Réessayez avant de fermer cette fenêtre.';
   if (!(cause instanceof WeatherAcquisitionError)) return 'PVGIS n’a pas fourni un JSON TMY 5.3 valide. Vérifiez le fichier ou la connexion.';
   if (cause.code === 'PVGIS_TIMEOUT') return 'PVGIS n’a pas répondu en 30 secondes. Réessayez.';
   if (cause.code === 'PVGIS_ABORTED') return 'Le téléchargement PVGIS a été annulé.';
   if (cause.code === 'PVGIS_HTTP') return 'PVGIS a refusé la requête. Vérifiez les coordonnées puis réessayez.';
   if (cause.code === 'PVGIS_UNAVAILABLE') return 'PVGIS est momentanément inaccessible. Vérifiez la connexion puis réessayez.';
   return 'PVGIS n’a pas fourni un JSON TMY 5.3 valide.';
-}
-class WeatherStorageError extends Error {
-  public constructor(cause: unknown) { super('WEATHER_STORAGE_FAILED', { cause }); }
 }
 function geocodingErrorMessage(cause: unknown, mode: 'town' | 'gps' | 'file', town: string): string {
   if (!(cause instanceof GeocodingError)) return 'Le service de localisation est momentanément inaccessible. Vérifiez la connexion puis réessayez.';

@@ -49,13 +49,13 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
 
   await page.locator('.nav-item').nth(2).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
-  await expect(page.getByLabel('Nom').first()).toHaveValue('Nouvel appareil');
-  await expect(page.getByLabel('Rendement').first()).toHaveValue('0,90');
-  await expect(page.getByLabel("Heures d'usage").first()).toHaveValue('4');
+  await expect(page.locator('.t-classic').getByLabel('Nom').first()).toHaveValue('Nouvel appareil');
+  await expect(page.locator('.t-classic').getByLabel('Rendement').first()).toHaveValue('0,90');
+  await expect(page.locator('.t-classic').getByLabel("Heures d'usage").first()).toHaveValue('4');
   await expect(page.locator('.t-classic tbody .derived').nth(2)).toHaveText('444');
 
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).last().click();
-  await expect(page.getByLabel('Nom').nth(1)).toHaveValue('Nouveau moteur');
+  await expect(page.locator('.t-induct').getByLabel('Nom').first()).toHaveValue('Nouveau moteur');
   await expect(page.getByLabel('Coefficient de démarrage')).toHaveValue('3,0');
   await expect(page.locator('.t-induct tbody .derived').nth(2)).toHaveText('1 176');
 

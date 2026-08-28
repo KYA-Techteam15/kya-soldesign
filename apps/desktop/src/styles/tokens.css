@@ -1077,12 +1077,11 @@ tfoot td:first-child {
   padding: 7px 10px;
   margin-bottom: var(--sp-3);
   border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
-  border-left-width: 3px;
-  border-left-color: var(--danger);
+  border-left-width: 1px;
+  border-left-color: color-mix(in srgb, var(--danger) 28%, var(--border));
   border-radius: var(--r-md);
-  /* Aplat plein, l'encart couvrait près de neuf dixièmes de sa bande en
-     couleur et écrasait tout le reste du panneau. Le filet de gauche suffit
-     à désigner la gravité ; le fond n'a plus qu'à porter le texte. */
+  /* La gravité est portée par le texte, l'icône et le fond ; aucune barre
+     latérale colorée ne doit perturber la lecture du panneau. */
   background: color-mix(in srgb, var(--danger-soft) 45%, var(--surface));
   font-size: var(--fs-sm);
   color: var(--text);
@@ -1091,7 +1090,7 @@ tfoot td:first-child {
    l'utilisateur, la couleur le dit sans crier à l'erreur. */
 .alert.warn {
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
-  border-left-color: var(--accent-fill);
+  border-left-color: color-mix(in srgb, var(--accent) 28%, var(--border));
   background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
 }
 .alert b {
