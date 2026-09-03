@@ -9,6 +9,12 @@ const baseEquipmentSchema = z.object({
   manufacturer: z.string().min(1),
   model: z.string().min(1),
   provenance: provenanceSchema,
+  origin: z.enum(['kya', 'user']).optional(),
+  version: z.number().int().positive().optional(),
+  derivedFromId: z.string().min(1).nullable().optional(),
+  supersedesVersion: z.number().int().positive().nullable().optional(),
+  calculationEligibility: z.object({ state: z.enum(['eligible', 'ineligible']), codes: z.array(z.string().min(1)) }).strict().optional(),
+  archivedAt: z.string().datetime({ offset: true }).nullable().optional(),
 }).strict();
 
 export const pvModuleSchema = baseEquipmentSchema.extend({
@@ -134,4 +140,3 @@ export function validateEquipment(value: unknown): EquipmentValidationResult {
   }
   return { equipment, issues };
 }
-

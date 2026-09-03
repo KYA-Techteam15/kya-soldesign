@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
 import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary, type SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
@@ -15,8 +15,6 @@ import { OperatingHoursDialog } from './OperatingHoursDialog';
 import { Dialog } from '../../ui/Dialog';
 import { isDecimalDraft } from '../../app/models/formValues';
 import { exportEquipmentWorkbook, inspectEquipmentWorkbook, exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
-import { buildAnnualLoadPresentation } from '../../app/models/annualLoadPresentation';
-import { AnnualLoadChart } from './AnnualLoadChart';
 import { ComposedProfilesDialog } from './ComposedProfilesDialog';
 
 const MODES: { key: LoadSource; label: string }[] = [
@@ -97,7 +95,6 @@ export function SectionBesoins() {
   const composedActive = project.load.activeMode === 'composed' && project.load.composition !== null;
   const calculation = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
   const solarCalculation = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
-  const annualPresentation = useMemo(() => buildAnnualLoadPresentation(project, solarCalculation.status === 'ready' ? solarCalculation.envelope.output : null), [project, solarCalculation]);
 
   const mutateProfile = (fn: (p: NamedProfile) => void) =>
     update((draft) => {
@@ -281,8 +278,6 @@ export function SectionBesoins() {
         <div><b>{project.load.composition.profiles.length}</b><span>profils horaires · {project.load.composition.calendar.periods.length} période(s)</span></div>
         <p>Le dimensionnement utilise uniquement les puissances saisies de 00 h à 23 h et répète automatiquement chaque combinaison sur l’année.</p>
       </section>}
-      <AnnualLoadChart presentation={annualPresentation} />
-
       {!composedActive && <>
       {profile.source === 'equipments' && (
         <div style={{ display: 'grid', gap: 'var(--sp-4)' }}>
@@ -575,7 +570,7 @@ export function SectionBesoins() {
               {profile.meter.forceYEn && <label><span>{t('loads.targetYEn')}</span><span className="uf"><DraftNumberInput value={profile.meter.targetYEn === null ? null : profile.meter.targetYEn * 100} nullable format={(value) => fmt(value, 1)} onCommit={(value) => mutateProfile((p) => { p.meter!.targetYEn = value === null ? null : Math.min(100, Math.max(0, value)) / 100; })} /><span className="uf-unit">%</span></span></label>}
               <div className="yen-result" role="status">
                 <span>{t('loads.calculatedYEn')}</span>
-                <b>{annualPresentation?.yEn.status === 'available' ? (fmt(annualPresentation.yEn.annualGammaRatio * 100, 1) + ' %') : solarCalculation.status === 'ready' && solarCalculation.envelope.output.gamma.status === 'available' ? (fmt(solarCalculation.envelope.output.gamma.value * 100, 1) + ' %') : '—'}</b>
+                <b>{solarCalculation.status === 'ready' && solarCalculation.envelope.output.gamma.status === 'available' ? (fmt(solarCalculation.envelope.output.gamma.value * 100, 1) + ' %') : '—'}</b>
               </div>
             </div>
           </div>

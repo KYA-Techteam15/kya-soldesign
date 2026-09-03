@@ -25,6 +25,11 @@ const ratio = (percent: number): number => percent / 100;
 const percent = (value: number | null): number => value === null ? 0 : value * 100;
 const valueOrZero = (value: number | null): number => value ?? 0;
 const SEGMENTS = ['pv-inverter', 'inverter-battery', 'inverter-load'] as const;
+const DEFAULT_PROTECTION_TYPE: Record<ProjectViewModel['protections'][number]['segment'], ProjectViewModel['protections'][number]['type']> = {
+  pv_inverter: 'Fusible gPV',
+  inverter_battery: 'Fusible gG',
+  inverter_load: 'Disjoncteur AC',
+};
 
 const DEFAULT_LOAD_CALENDAR: LoadCalendarView = {
   version: 2,
@@ -283,10 +288,19 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       batteryDod: percent(input.assumptions.batteryDodRatio ?? PRESIZING_DEFAULTS.batteryDodRatio),
       pvSpecificCost: valueOrZero(input.assumptions.pvSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.pvSpecificCostMinorPerKw),
       pvMargin: percent(input.assumptions.pvMarginRatio ?? PRESIZING_DEFAULTS.pvMarginRatio),
+      pvCostInputMode: input.assumptions.pvCostInputMode ?? 'specific',
+      pvReferencePowerW: input.assumptions.pvReferencePowerW ?? null,
+      pvReferencePrice: input.assumptions.pvReferencePriceMinor ?? null,
       batterySpecificCost: valueOrZero(input.assumptions.batterySpecificCostMinorPerKwh ?? PRESIZING_DEFAULTS.batterySpecificCostMinorPerKwh),
       batteryMargin: percent(input.assumptions.batteryMarginRatio ?? PRESIZING_DEFAULTS.batteryMarginRatio),
+      storageCostInputMode: input.assumptions.storageCostInputMode ?? 'specific',
+      storageReferencePrice: input.assumptions.storageReferencePriceMinor ?? null,
+      storageReferenceKwh: input.assumptions.storageReferenceKwh ?? null,
       inverterSpecificCost: valueOrZero(input.assumptions.inverterSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.inverterSpecificCostMinorPerKw),
       inverterMargin: percent(input.assumptions.inverterMarginRatio ?? PRESIZING_DEFAULTS.inverterMarginRatio),
+      inverterCostInputMode: input.assumptions.inverterCostInputMode ?? 'specific',
+      inverterReferencePowerW: input.assumptions.inverterReferencePowerW ?? null,
+      inverterReferencePrice: input.assumptions.inverterReferencePriceMinor ?? null,
       projectLifetime: valueOrZero(input.assumptions.projectLifetimeYears ?? PRESIZING_DEFAULTS.projectLifetimeYears),
       pvLifetime: valueOrZero(input.assumptions.pvLifetimeYears ?? PRESIZING_DEFAULTS.pvLifetimeYears),
       batteryLifetime: valueOrZero(input.assumptions.batteryLifetimeYears ?? PRESIZING_DEFAULTS.batteryLifetimeYears),
@@ -307,11 +321,12 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     },
     cables: SEGMENTS.map((segment) => {
       const choice = input.cableChoices.find((item) => item.segment === segment);
-      return { segment: segment.replaceAll('-', '_') as ProjectViewModel['cables'][number]['segment'], length: valueOrZero(choice?.lengthM ?? null), material: choice?.material ?? 'copper', installation: (choice?.installation ?? 'not-buried').replace('-', '_') as ProjectViewModel['cables'][number]['installation'] };
+      return { segment: segment.replaceAll('-', '_') as ProjectViewModel['cables'][number]['segment'], length: valueOrZero(choice?.lengthM ?? null), material: choice?.material ?? 'copper', installation: (choice?.installation ?? 'not-buried').replace('-', '_') as ProjectViewModel['cables'][number]['installation'], maxVoltageDropPercent: choice?.maxVoltageDropPercent ?? (segment === 'pv-inverter' ? 2 : 1) };
     }),
     protections: SEGMENTS.map((segment) => {
       const choice = input.protectionChoices.find((item) => item.segment === segment);
-      return { segment: segment.replaceAll('-', '_') as ProjectViewModel['protections'][number]['segment'], caliberA: choice?.ratingA ?? null };
+      const canonicalSegment = segment.replaceAll('-', '_') as ProjectViewModel['protections'][number]['segment'];
+      return { segment: canonicalSegment, caliberA: choice?.ratingA ?? null, type: choice ? (choice.selectedType ?? null) : DEFAULT_PROTECTION_TYPE[canonicalSegment] };
     }),
     costing: {
       useGlobalCost: input.costing.useGlobalCost,
@@ -455,6 +470,15 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
       inverterEfficiencyRatio: ratio(view.assumptions.inverterYield),
       batteryEfficiencyRatio: ratio(view.assumptions.batteryYield),
       batteryNominalVoltageV: view.assumptions.batteryVoltage || null,
+      pvCostInputMode: view.assumptions.pvCostInputMode,
+      pvReferencePowerW: view.assumptions.pvReferencePowerW,
+      pvReferencePriceMinor: view.assumptions.pvReferencePrice,
+      storageCostInputMode: view.assumptions.storageCostInputMode,
+      storageReferencePriceMinor: view.assumptions.storageReferencePrice,
+      storageReferenceKwh: view.assumptions.storageReferenceKwh,
+      inverterCostInputMode: view.assumptions.inverterCostInputMode,
+      inverterReferencePowerW: view.assumptions.inverterReferencePowerW,
+      inverterReferencePriceMinor: view.assumptions.inverterReferencePrice,
       batteryDodRatio: ratio(view.assumptions.batteryDod),
       pvSpecificCostMinorPerKw: Math.round(view.assumptions.pvSpecificCost),
       pvMarginRatio: ratio(view.assumptions.pvMargin),
@@ -480,10 +504,12 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
       lengthM: choice.length,
       material: choice.material,
       installation: choice.installation.replaceAll('_', '-'),
+      maxVoltageDropPercent: choice.maxVoltageDropPercent,
     })),
     protectionChoices: view.protections.map((choice) => ({
       segment: choice.segment.replaceAll('_', '-'),
       ratingA: choice.caliberA,
+      selectedType: choice.type,
     })),
     costing: {
       useGlobalCost: view.costing.useGlobalCost,

@@ -9,6 +9,7 @@ import { useCatalog } from '../../app/CatalogProvider';
 import { fmt } from '../../domain/format';
 import { Dialog } from '../../ui/Dialog';
 import type { ProjectViewModel } from '../../app/models/projectView';
+import { catalogOptions, emptyCatalogFilters, filterEquipment, type CatalogFilterState } from '../../app/models/catalogFilters';
 import { useT } from '../../i18n';
 
 export type Kind = 'module' | 'battery' | 'inverter';
@@ -93,6 +94,7 @@ export function EquipmentPicker({
 }) {
   const t = useT();
   const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<CatalogFilterState>(emptyCatalogFilters);
   const { equipment: catalogEquipment } = useCatalog();
   const equipment = availableEquipment ?? catalogEquipment;
   const current = kind === 'module'
@@ -100,19 +102,17 @@ export function EquipmentPicker({
     : kind === 'battery'
       ? project.selection.batteryId
       : project.selection.inverterId;
-  const needle = query.trim().toLocaleLowerCase();
+  const familyEquipment = useMemo(() => equipment.filter((item) => item.kind === canonicalKind[kind]
+    && (kind !== 'inverter' || compatibleIds === undefined || compatibleIds.includes(item.id))), [compatibleIds, equipment, kind]);
+  const options = useMemo(() => catalogOptions(familyEquipment, query, filters), [familyEquipment, filters, query]);
   const rows = useMemo(() => {
-    const matching = equipment.filter((item) => {
-      if (item.kind !== canonicalKind[kind]) return false;
-      if (kind === 'inverter' && compatibleIds !== undefined && !compatibleIds.includes(item.id)) return false;
-      const technical = details(item).technology;
-      return needle.length === 0
-        || `${item.model} ${item.manufacturer} ${technical}`.toLocaleLowerCase().includes(needle);
-    });
+    const matching = filterEquipment(familyEquipment, query, filters);
     const currentIndex = matching.findIndex((item) => item.id === current);
     if (currentIndex <= 0) return matching.slice(0, 24);
     return [matching[currentIndex]!, ...matching.filter((_, index) => index !== currentIndex).slice(0, 23)];
-  }, [current, equipment, kind, needle]);
+  }, [current, familyEquipment, filters, query]);
+  const setFilter = (key: keyof CatalogFilterState, value: string) => setFilters((before) => ({ ...before, [key]: value }));
+  const resetFilters = () => { setQuery(''); setFilters(emptyCatalogFilters); };
 
   return (
     <Dialog
@@ -134,6 +134,16 @@ export function EquipmentPicker({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
+      <div className="catalog-filters picker-filters" aria-label={t('catalog.filters')}>
+        <select value={filters.manufacturer} onChange={(event) => setFilter('manufacturer', event.target.value)} aria-label={t('catalog.manufacturer')}><option value="">{t('catalog.filter.manufacturers')}</option>{options.manufacturers.map((value) => <option key={value}>{value}</option>)}</select>
+        {kind !== 'inverter' && <select value={filters.technology} onChange={(event) => setFilter('technology', event.target.value)} aria-label={t('catalog.technology')}><option value="">{t('catalog.filter.technologies')}</option>{options.technologies.map((value) => <option key={value}>{value}</option>)}</select>}
+        {kind === 'inverter' && <select value={filters.type} onChange={(event) => setFilter('type', event.target.value)} aria-label={t('catalog.type')}><option value="">{t('catalog.filter.types')}</option>{options.types.map((value) => <option key={value}>{value}</option>)}</select>}
+        <input inputMode="decimal" placeholder={kind === 'battery' ? t('catalog.filter.minCapacity') : t('catalog.filter.minPower')} value={filters.minPower} onChange={(event) => setFilter('minPower', event.target.value)} />
+        <input inputMode="decimal" placeholder={kind === 'battery' ? t('catalog.filter.maxCapacity') : t('catalog.filter.maxPower')} value={filters.maxPower} onChange={(event) => setFilter('maxPower', event.target.value)} />
+        <input inputMode="decimal" placeholder={t('catalog.filter.minVoltage')} value={filters.minVoltage} onChange={(event) => setFilter('minVoltage', event.target.value)} />
+        <input inputMode="decimal" placeholder={t('catalog.filter.maxVoltage')} value={filters.maxVoltage} onChange={(event) => setFilter('maxVoltage', event.target.value)} />
+        <button type="button" className="btn" onClick={resetFilters}>{t('catalog.filter.reset')}</button>
+      </div>
       <div className="pick-columns" aria-hidden="true">
         <span>Référence catalogue</span>
         <span>Caractéristiques</span>

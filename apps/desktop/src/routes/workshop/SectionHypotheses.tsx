@@ -8,6 +8,7 @@ import { Dialog } from '../../ui/Dialog';
 import { useCalculationService, useCalculationState } from '../../app/CalculationProvider';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
 import { useT } from '../../i18n';
+import { EconomicAssumptionsPanel } from './EconomicAssumptionsPanel';
 
 const FAMILIES = [
   { key: 'tech', label: 'Technique', hint: 'rendements et seuils de simulation' },
@@ -92,15 +93,7 @@ export function SectionHypotheses() {
         <NumField label="Rendement batterie" unit="%" value={assumptions.batteryYield} onChange={set('batteryYield')} decimals={1} />
         <NumField label="Seuil d’irradiance minimale" unit="W/m²" value={project.load.irMin} onChange={(value) => update((draft) => { draft.load.irMin = value; })} />
       </div>}
-      {family === 'costs' && <div className="form-rows">
-        <NumField label="Coût PV" unit="FCFA/kWc" value={assumptions.pvSpecificCost} onChange={set('pvSpecificCost')} />
-        <NumField label="Marge PV" unit="%" value={assumptions.pvMargin} onChange={set('pvMargin')} decimals={1} />
-        <NumField label="Coût batterie" unit="FCFA/kWh" value={assumptions.batterySpecificCost} onChange={set('batterySpecificCost')} />
-        <NumField label="Marge batterie" unit="%" value={assumptions.batteryMargin} onChange={set('batteryMargin')} decimals={1} />
-        <NumField label="Coût onduleur" unit="FCFA/kW" value={assumptions.inverterSpecificCost} onChange={set('inverterSpecificCost')} />
-        <NumField label="Marge onduleur" unit="%" value={assumptions.inverterMargin} onChange={set('inverterMargin')} decimals={1} />
-        <NumField label="Facteur d’émission" unit="kgCO₂/kWh" value={assumptions.emissionFactor} onChange={set('emissionFactor')} decimals={2} />
-      </div>}
+      {family === 'costs' && <EconomicAssumptionsPanel assumptions={assumptions} onSet={(key, value) => set(key)(value)} onSetMode={(component, mode) => update((draft) => { if (component === 'pv') draft.assumptions.pvCostInputMode = mode; else if (component === 'storage') draft.assumptions.storageCostInputMode = mode; else draft.assumptions.inverterCostInputMode = mode; })} onApplyReference={(component, price, size, specificCost) => update((draft) => { if (component === 'pv') { draft.assumptions.pvReferencePrice = price; draft.assumptions.pvReferencePowerW = size; draft.assumptions.pvSpecificCost = specificCost; draft.assumptions.pvCostInputMode = 'component'; } else if (component === 'storage') { draft.assumptions.storageReferencePrice = price; draft.assumptions.storageReferenceKwh = size; draft.assumptions.batterySpecificCost = specificCost; draft.assumptions.storageCostInputMode = 'component'; } else { draft.assumptions.inverterReferencePrice = price; draft.assumptions.inverterReferencePowerW = size; draft.assumptions.inverterSpecificCost = specificCost; draft.assumptions.inverterCostInputMode = 'component'; } })} />}
       {family === 'life' && <div className="form-rows">
         <NumField label="Durée de vie du projet" unit="ans" value={assumptions.projectLifetime} onChange={set('projectLifetime')} />
         <NumField label="Modules PV" unit="ans" value={assumptions.pvLifetime} onChange={set('pvLifetime')} />

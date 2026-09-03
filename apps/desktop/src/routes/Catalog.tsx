@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Equipment } from '@ksd/catalog';
+import { asEquipmentRecord, type Equipment, type EquipmentRecordV2 } from '@ksd/catalog';
 import { TopBar } from '../shell/TopBar';
 import { StatusBar } from '../shell/StatusBar';
 import { fmt } from '../domain/format';
 import { useT } from '../i18n';
 import { useCatalog } from '../app/CatalogProvider';
 import { catalogOptions, emptyCatalogFilters, filterEquipment, type CatalogFilterState } from '../app/models/catalogFilters';
+import { EquipmentEditor } from './catalog/EquipmentEditor';
 
 type Tab = 'modules' | 'batteries' | 'inverters';
 type PvModule = Extract<Equipment, { readonly kind: 'pv-module' }>;
@@ -14,11 +15,13 @@ type Inverter = Extract<Equipment, { readonly kind: 'inverter' }>;
 
 export function CatalogRoute() {
   const t = useT();
-  const { equipment, status, errorCode, retry, summary } = useCatalog();
+  const { equipment, status, errorCode, retry, summary, createUserEquipment, duplicateUserEquipment, updateUserEquipment, archiveUserEquipment } = useCatalog();
   const [tab, setTab] = useState<Tab>('modules');
   const [q, setQ] = useState('');
   const [filters, setFilters] = useState<CatalogFilterState>(emptyCatalogFilters);
   const [page, setPage] = useState(1);
+  const [editor, setEditor] = useState<{ readonly kind: Equipment['kind']; readonly source?: EquipmentRecordV2 } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const pageSize = 60;
   const modules = useMemo(
     () => equipment.filter((item): item is PvModule => item.kind === 'pv-module'),
@@ -40,6 +43,9 @@ export function CatalogRoute() {
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const primaryLabel = tab === 'batteries' ? t('catalog.primaryCapacity') : t('catalog.primaryPower');
+  const activeKind: Equipment['kind'] = tab === 'modules' ? 'pv-module' : tab === 'batteries' ? 'battery' : 'inverter';
+  const duplicate = async (item: Equipment) => { setActionError(null); try { await duplicateUserEquipment(item); } catch (error) { setActionError(error instanceof Error ? error.message : 'EQUIPMENT_DUPLICATE_FAILED'); } };
+  const archive = async (item: EquipmentRecordV2) => { if (!window.confirm(`${t('equipment.actions.archiveConfirm')} « ${item.model} » ?`)) return; setActionError(null); try { await archiveUserEquipment(item); } catch (error) { setActionError(error instanceof Error ? error.message : 'EQUIPMENT_ARCHIVE_FAILED'); } };
   const activeFilters = ([
     ['manufacturer', filters.manufacturer],
     [tab === 'inverters' ? 'type' : 'technology', tab === 'inverters' ? filters.type : filters.technology],
@@ -72,6 +78,7 @@ export function CatalogRoute() {
               </button>
             </div>
             <span className="sep" />
+            <button className="btn" onClick={() => setEditor({ kind: activeKind })}>+ {t('equipment.actions.add')}</button>
             <input
               className="hdr-search"
               style={{ width: 260 }}
@@ -93,6 +100,7 @@ export function CatalogRoute() {
           </div>}
 
           {status === 'ready' && activeFilters.length > 0 && <div className="catalog-active" aria-label={t('catalog.activeFilters')}><span className="label">{t('catalog.activeFilters')}</span>{activeFilters.map(([key, value]) => <button className="filter-chip" key={key} onClick={() => setFilter(key as keyof CatalogFilterState, '')}>{value} ×<span className="sr-only"> {t('catalog.removeFilter')}</span></button>)}</div>}
+          {actionError && <div className="form-errors" role="alert">{actionError}</div>}
 
           <div className="tbl-wrap">
             {status === 'loading' && (
@@ -125,6 +133,7 @@ export function CatalogRoute() {
                       {t('catalog.surface')}<span className="unit">m²</span>
                     </th>
                     <th>{t('catalog.provenance')}</th>
+                    <th>{t('equipment.actions.title')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -140,6 +149,7 @@ export function CatalogRoute() {
                         <td className="num">{fmt(m.currentAtMaximumPowerA, 2)}</td>
                         <td className="num">{m.areaM2 === null ? '—' : fmt(m.areaM2, 2)}</td>
                         <td><details><summary>{t('catalog.source')}</summary><small>{m.provenance.sourceId}</small></details></td>
+                        <td><CatalogActions item={m} onDuplicate={() => void duplicate(m)} onEdit={() => setEditor({ kind: m.kind, source: asEquipmentRecord(m) })} onArchive={() => void archive(asEquipmentRecord(m))} /></td>
                       </tr>
                     ))}
                 </tbody>
@@ -166,6 +176,7 @@ export function CatalogRoute() {
                       {t('catalog.efficiency')}<span className="unit">%</span>
                     </th>
                     <th>{t('catalog.provenance')}</th>
+                    <th>{t('equipment.actions.title')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -181,6 +192,7 @@ export function CatalogRoute() {
                         <td className="num">{b.usableDepthOfDischargeRatio === null ? '—' : fmt(b.usableDepthOfDischargeRatio * 100)}</td>
                         <td className="num">{b.roundTripEfficiencyRatio === null ? '—' : fmt(b.roundTripEfficiencyRatio * 100)}</td>
                         <td><details><summary>{t('catalog.source')}</summary><small>{b.provenance.sourceId}</small></details></td>
+                        <td><CatalogActions item={b} onDuplicate={() => void duplicate(b)} onEdit={() => setEditor({ kind: b.kind, source: asEquipmentRecord(b) })} onArchive={() => void archive(asEquipmentRecord(b))} /></td>
                       </tr>
                     ))}
                 </tbody>
@@ -207,6 +219,7 @@ export function CatalogRoute() {
                       {t('catalog.pvMax')}<span className="unit">W</span>
                     </th>
                     <th>{t('catalog.provenance')}</th>
+                    <th>{t('equipment.actions.title')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -222,6 +235,7 @@ export function CatalogRoute() {
                         <td className="num">{i.efficiencyRatio === null ? '—' : fmt(i.efficiencyRatio * 100)}</td>
                         <td className="num">{i.pvArrayMaxPowerW === null ? '—' : fmt(i.pvArrayMaxPowerW)}</td>
                         <td><details><summary>{t('catalog.source')}</summary><small>{i.provenance.sourceId}</small></details></td>
+                        <td><CatalogActions item={i} onDuplicate={() => void duplicate(i)} onEdit={() => setEditor({ kind: i.kind, source: asEquipmentRecord(i) })} onArchive={() => void archive(asEquipmentRecord(i))} /></td>
                       </tr>
                     ))}
                 </tbody>
@@ -234,9 +248,16 @@ export function CatalogRoute() {
             {filtered.length} {t('catalog.results')} — {t('catalog.validatedData')}
             {summary && ` · ${summary.warnings} avertissement(s) qualité`}
           </p>
+          {editor && <EquipmentEditor kind={editor.kind} source={editor.source} onClose={() => setEditor(null)} onSave={async (draft) => { if (editor.source) await updateUserEquipment(editor.source, draft); else await createUserEquipment(draft); }} />}
         </div>
       </div>
       <StatusBar />
     </div>
   );
+}
+
+function CatalogActions({ item, onDuplicate, onEdit, onArchive }: { readonly item: Equipment; readonly onDuplicate: () => void; readonly onEdit: () => void; readonly onArchive: () => void }) {
+  const t = useT();
+  const userOwned = item.origin === 'user';
+  return <div className="catalog-actions"><button type="button" className="btn btn-ghost" onClick={onDuplicate}>{t('equipment.actions.duplicate')}</button>{userOwned && <><button type="button" className="btn btn-ghost" onClick={onEdit}>{t('equipment.actions.edit')}</button><button type="button" className="btn btn-ghost" onClick={onArchive}>{t('equipment.actions.archive')}</button></>}</div>;
 }

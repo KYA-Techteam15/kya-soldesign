@@ -1,4 +1,4 @@
-import type { Equipment, PvgisTmyJson, WeatherFileRecord } from '@ksd/catalog';
+import type { Equipment, EquipmentRecordV2, PvgisTmyJson, WeatherFileRecord } from '@ksd/catalog';
 import type { CalculationEnvelope, Locality, NormalizedHourlyProfile, SystemKind, WeatherSource } from '@ksd/domain';
 import type { PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress } from '@ksd/engine';
 import type { ProjectFileV1 } from '@ksd/project-format';
@@ -49,6 +49,13 @@ export interface CatalogQueryPort {
   listWeatherFiles(): Promise<readonly CanonicalWeatherFile[]>;
   listLoadProfiles(): Promise<readonly NormalizedHourlyProfile[]>;
   summary(): Promise<CatalogSummary>;
+}
+
+export interface UserCatalogPort {
+  list(): Promise<readonly EquipmentRecordV2[]>;
+  create(record: EquipmentRecordV2): Promise<void>;
+  replace(record: EquipmentRecordV2, expectedVersion: number): Promise<void>;
+  archive(id: string, expectedVersion: number): Promise<void>;
 }
 
 export interface CanonicalWeatherFile {

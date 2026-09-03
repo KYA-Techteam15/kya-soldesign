@@ -163,6 +163,15 @@ export const assumptionInputV1Schema = z.object({
   inverterEfficiencyRatio: nullableRatio,
   batteryEfficiencyRatio: nullableRatio,
   batteryNominalVoltageV: nullablePositive,
+  pvCostInputMode: z.enum(['specific', 'component']).optional(),
+  pvReferencePowerW: nullablePositive.optional(),
+  pvReferencePriceMinor: nullableInteger.optional(),
+  storageCostInputMode: z.enum(['specific', 'component']).optional(),
+  storageReferencePriceMinor: nullableInteger.optional(),
+  storageReferenceKwh: nullablePositive.optional(),
+  inverterCostInputMode: z.enum(['specific', 'component']).optional(),
+  inverterReferencePowerW: nullablePositive.optional(),
+  inverterReferencePriceMinor: nullableInteger.optional(),
   batteryDodRatio: nullableRatio,
   pvSpecificCostMinorPerKw: nullableInteger,
   pvMarginRatio: nullableRatio,
@@ -195,11 +204,13 @@ export const cableChoiceInputV1Schema = z.object({
   lengthM: nullableNonNegative,
   material: z.enum(['copper', 'aluminium']),
   installation: z.enum(['buried', 'not-buried']),
+  maxVoltageDropPercent: nullablePositive.optional(),
 }).strict();
 
 export const protectionChoiceInputV1Schema = z.object({
   segment: circuitSegmentSchema,
   ratingA: nullablePositive,
+  selectedType: z.enum(['Fusible gPV', 'Fusible gG', 'Disjoncteur DC', 'Disjoncteur AC']).nullable().optional(),
 }).strict();
 
 const additionalCostItemV1Schema = z.object({

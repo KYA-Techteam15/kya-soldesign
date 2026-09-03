@@ -18,6 +18,7 @@ export interface SizingInputV1 {
   readonly requiredPvPowerKw: number; readonly requiredStorageKwh: number; readonly requiredInverterPowerKw: number;
   readonly coldTemperatureC: number; readonly referenceTemperatureC: number; readonly temperatureCoefficientDefaultPerC: number;
   readonly selectedEquipment: { readonly module: SizingModuleSnapshot; readonly battery: SizingBatterySnapshot; readonly inverter: SizingInverterSnapshot };
+  readonly estimatedCosts?: { readonly pvSpecificCostMinorPerKw: number | null; readonly storageSpecificCostMinorPerKwh: number | null; readonly inverterSpecificCostMinorPerKw: number | null };
 }
 export interface SizingProgress { readonly completed: number; readonly total: number; readonly phase: 'pv' | 'battery' | 'inverter'; }
 export interface SizingOutputV1 {
@@ -27,5 +28,7 @@ export interface SizingOutputV1 {
   readonly inverter: { readonly count: number; readonly requiredPowerKw: number; readonly obtainedPowerKw: number; readonly marginRatio: number };
   readonly compatibility: { readonly compatible: boolean; readonly issues: readonly CalculationIssue[]; readonly warnings: readonly CalculationIssue[] };
   readonly valid: boolean;
+  readonly estimate?: { readonly status: 'available'; readonly pvMinor: number; readonly storageMinor: number; readonly inverterMinor: number; readonly mainEquipmentMinor: number; readonly scope: 'pv-storage-inverter-only' } | { readonly status: 'unavailable'; readonly missing: readonly string[] };
+  readonly evidence?: { readonly methodVersion: string; readonly inputHash: string; readonly trace: readonly string[] };
 }
 export type SizingEnvelopeV1 = CalculationEnvelope<SizingOutputV1>;

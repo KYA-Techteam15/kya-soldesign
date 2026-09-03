@@ -8,7 +8,10 @@ const number = (value: string) => value.trim() === '' ? null : Number(value);
 export function filterEquipment(items: readonly Equipment[], query: string, filters: CatalogFilterState): readonly Equipment[] {
   const needle = text(query.trim()); const minPower = number(filters.minPower); const maxPower = number(filters.maxPower); const minVoltage = number(filters.minVoltage); const maxVoltage = number(filters.maxVoltage);
   return items.filter((item) => {
-    if (needle && !text(item.manufacturer + ' ' + item.model).includes(needle)) return false;
+    const searchable = item.kind === 'inverter'
+      ? `${item.manufacturer} ${item.model} ${item.inverterType ?? ''}`
+      : `${item.manufacturer} ${item.model} ${item.technology ?? ''}`;
+    if (needle && !text(searchable).includes(needle)) return false;
     if (filters.manufacturer && (item.manufacturer ?? 'Non renseigné') !== filters.manufacturer) return false;
     if (filters.technology && item.kind !== 'inverter' && (item.technology ?? 'Non renseigné') !== filters.technology) return false;
     if (filters.type && item.kind === 'inverter' && (item.inverterType ?? 'Non renseigné') !== filters.type) return false;

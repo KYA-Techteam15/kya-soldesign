@@ -9,6 +9,11 @@ import { fmt, signed } from '../../domain/format';
 import { StepHead } from '../../ui/Flow';
 import { Prov } from '../../ui/Prov';
 import { EquipmentPicker, type Kind } from './EquipmentPicker';
+import { OptimizationSettings } from './OptimizationSettings';
+import { OptimizationResults } from './OptimizationResults';
+import { runSizingOptimization, candidateSelection } from '../../app/services/sizingOptimization';
+import type { OptimizationCandidate, OptimizationRequest, OptimizationResult } from '@ksd/engine';
+import { useT } from '../../i18n';
 
 function reserveTone(percent: number): 'short' | 'tight' | 'ok' | 'over' {
   if (percent < 0) return 'short';
@@ -48,10 +53,17 @@ function CmpRow({ label, base, got, unit, decimals = 1 }: { readonly label: stri
   return <tr><td className="name">{label}</td><td className="num mut">{fmt(base, decimals)}<span className="unit"> {unit}</span></td><td className="num"><b>{fmt(got, decimals)}<span className="unit"> {unit}</span></b></td><td className="num mut">{base === 0 ? '—' : `${signed(delta)} %`}</td></tr>;
 }
 
+const DEFAULT_OPTIMIZATION_REQUEST: OptimizationRequest = { enabled: false, module: { mode: 'free' }, battery: { mode: 'free' }, inverter: { mode: 'free' }, objective: 'closest' };
+
 export function SectionMateriel() {
+  const t = useT();
   const project = useProject();
   const update = useProjects((state) => state.update);
   const { equipment } = useCatalog();
+  const [showOptimizationSettings, setShowOptimizationSettings] = useState(false);
+  const [optimizationRequest, setOptimizationRequest] = useState<OptimizationRequest>(DEFAULT_OPTIMIZATION_REQUEST);
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+  const [optimizationRunning, setOptimizationRunning] = useState(false);
   const service = useCalculationService();
   const presizing = useCalculationState<PresizingOutputV1>(project.id, 'presizing', project.updatedAt);
   const sizing = useCalculationState<SizingOutputV1>(project.id, 'sizing', project.updatedAt);
@@ -99,6 +111,22 @@ export function SectionMateriel() {
 
   const pick = (kind: Kind, id: string) => { update((draft) => { if (kind === 'module') draft.selection.moduleId = id; if (kind === 'battery') draft.selection.batteryId = id; if (kind === 'inverter') draft.selection.inverterId = id; if (kind !== 'inverter') draft.selection.inverterId = null; }); setPicker(null); setError(null); };
 
+  const runOptimization = (request: OptimizationRequest) => {
+    if (!pre) return;
+    setOptimizationRequest(request);
+    setShowOptimizationSettings(false);
+    setOptimizationRunning(true);
+    void runSizingOptimization({ project, requirements: { pvKw: pre.pvPeakKw, storageKwh: pre.storageKwh, inverterKw: pre.inverterKw }, equipment, request })
+      .then((outcome) => setOptimizationResult(outcome))
+      .finally(() => setOptimizationRunning(false));
+  };
+  const applyOptimizationCandidate = (candidate: OptimizationCandidate) => {
+    const selection = candidateSelection(candidate);
+    update((draft) => { draft.selection.moduleId = selection.moduleId; draft.selection.batteryId = selection.batteryId; draft.selection.inverterId = selection.inverterId; });
+    setOptimizationResult(null);
+    setError(null);
+  };
+
   useEffect(() => {
     if (!selected.module || !selected.battery || !selected.inverter || !service.runSizing) return;
     if (resultMatchesSelection) {
@@ -118,7 +146,7 @@ export function SectionMateriel() {
     <StepHead slug="materiel" aside={<span className="label">{equipment.filter((x) => x.kind === 'inverter').length} onduleurs · {pre ? '121 combinaisons en amont' : 'prédimensionnement requis'}</span>} />
     <section className="targets"><span className="targets-tag">à couvrir</span><Target label="Champ PV" value={pre?.pvPeakKw ?? null} unit="kWc" got={result ? { text: `${fmt(result.pv.obtainedPowerKwc, 2)} kWc montés`, ok: result.pv.marginRatio >= 0 } : undefined} /><Target label="Stockage" value={pre?.storageKwh ?? null} unit="kWh" got={mountedStorage == null ? undefined : { text: `${fmt(mountedStorage, 1)} kWh montés`, ok: result!.battery.marginRatio >= 0 }} /><Target label="Onduleur" value={pre?.inverterKw ?? null} unit="kW" got={result ? { text: `${fmt(result.inverter.obtainedPowerKw, 1)} kW montés`, ok: result.inverter.marginRatio >= 0 } : undefined} /></section>
     {!pre && <div className="alert warn"><div><b>Minimums indisponibles — </b>lancez le prédimensionnement à l’étape précédente pour savoir ce que le matériel doit couvrir.</div></div>}
-    <section><h2 className="h-sec">Composants au catalogue</h2><div className="picklist"><PickRow index={1} role="Module" equipment={selected.module} onPick={() => setPicker('module')} /><PickRow index={2} role="Batterie" equipment={selected.battery} onPick={() => setPicker('battery')} /></div></section>
+    <section><div className="tbl-title"><h2 className="h-sec">Composants au catalogue</h2><span className="sep" />{pre && <button className="btn" onClick={() => setShowOptimizationSettings(true)}>{t('optimization.entryButton')}</button>}</div><div className="picklist"><PickRow index={1} role="Module" equipment={selected.module} onPick={() => setPicker('module')} /><PickRow index={2} role="Batterie" equipment={selected.battery} onPick={() => setPicker('battery')} /></div></section>
     <section><div className="tbl-title"><h2 className="h-sec"><span className="pickrow-n">3</span> Onduleur compatible</h2><span className="sep" />{selected.module && selected.battery && <span className="label">{candidates.length} compatibles sur {equipment.filter((x) => x.kind === 'inverter').length}{candidates.length > 0 && ` · ${fmt(Math.min(...candidates.map((x) => x.equipment.nominalAcPowerW)) / 1000, 1)}–${fmt(Math.max(...candidates.map((x) => x.equipment.nominalAcPowerW)) / 1000, 1)} kW`}</span>}</div>{!selected.module || !selected.battery ? <div className="hint-box">Choisissez d’abord un module et une batterie : la tension du parc et la puissance à tenir découlent des deux, et c’est ce qui détermine les onduleurs recevables.</div> : candidates.length === 0 ? <div className="alert warn"><div><b>Aucun onduleur recevable — </b>revoyez le module ou la batterie retenue.</div></div> : <div className="candlist">{candidates.slice(0, 4).map((candidate) => <CandidateRow key={candidate.equipment.id} candidate={candidate} selected={candidate.equipment.id === selected.inverter?.id} onSelect={() => pick('inverter', candidate.equipment.id)} />)}{candidates.length > 4 && <button className="btn cand-more" onClick={() => setPicker('inverter')}>Voir les {candidates.length - 4} autres au catalogue</button>}</div>}</section>
     <div className={`runbar ${result ? '' : 'is-stale'}`}><span className={`btn btn-ok btn-run ${running ? 'is-busy' : ''}`}>{running ? 'Calcul en cours…' : result ? 'Dimensionnement à jour' : 'Sélectionnez un onduleur'}</span><span className="runbar-note">{running ? 'Vérification des contraintes sur le matériel retenu' : result ? `${result.compatibility.issues.length === 0 ? 4 : 4 - result.compatibility.issues.length} contraintes satisfaites sur 4` : 'Le résultat est calculé immédiatement après la sélection.'}</span></div>
     {error && <div className="alert warn"><div><b>Dimensionnement impossible — </b>{error}</div></div>}
@@ -126,5 +154,8 @@ export function SectionMateriel() {
     {pre && <section className="out"><div className="out-head"><span className="out-tag">simulé</span><h2 className="h-sec">Simulation du système retenu</h2><span className="sep" /><span className={`badge ${result.valid ? 'ok' : 'bad'}`}>{result.valid ? 'Seuils tenus' : 'Seuils dépassés'}</span></div><div className="tbl-wrap"><table className="tbl t-cmp"><thead><tr><th>Grandeur</th><th>Prédimensionné</th><th>Système retenu</th><th>Écart</th></tr></thead><tbody><CmpRow label="Puissance crête" base={pre.pvPeakKw} got={result.pv.obtainedPowerKwc} unit="kWc" decimals={2} /><CmpRow label="Stockage" base={pre.storageKwh} got={result.battery.usefulEnergyKwh} unit="kWh" /><CmpRow label="Onduleur" base={pre.inverterKw} got={result.inverter.obtainedPowerKw} unit="kW" /></tbody></table></div></section>}
     </>}
     {picker && <EquipmentPicker kind={picker} project={project} equipment={picker === 'inverter' ? equipment.filter((x) => compatibleIds.includes(x.id)) : equipment} compatibleIds={compatibleIds} onPick={(id) => pick(picker, id)} onClose={() => setPicker(null)} />}
+    {showOptimizationSettings && <OptimizationSettings equipment={equipment} initial={optimizationRequest} onClose={() => setShowOptimizationSettings(false)} onRun={runOptimization} />}
+    {optimizationRunning && <div className="scrim"><div className="modal" role="dialog" aria-modal="true" aria-label={t('optimization.settingsTitle')}><div className="body"><p className="label">{t('optimization.run')}…</p></div></div></div>}
+    {optimizationResult && !optimizationRunning && <OptimizationResults result={optimizationResult} request={optimizationRequest} equipment={equipment} onApply={applyOptimizationCandidate} onClose={() => setOptimizationResult(null)} />}
   </div>;
 }

@@ -10,6 +10,10 @@ describe('protection and cabling engine', () => {
     const result = sizeProtectionSegment({ segment: 'inverter_load', inverterPowerW: 20_000, dcVoltageV: 48, acVoltageV: 230 });
     expect(result.exact).toBe(false); expect(result.caliberA).toBeCloseTo(108.695, 2); expect(result.options).toEqual([]);
   });
+  it('falls back to the required current when an explicit type has no covering catalogue rating', () => {
+    const result = sizeProtectionSegment({ segment: 'inverter_battery', inverterPowerW: 10_000, dcVoltageV: 48, acVoltageV: 230, selectedType: 'Fusible gG' });
+    expect(result.selectedType).toBe('Fusible gG'); expect(result.options).toEqual([]); expect(result.state).toBe('estimated'); expect(result.exact).toBe(false); expect(result.caliberA).toBeCloseTo(260.4166, 2);
+  });
   it('uses the retained protection caliber and voltage drop', () => {
     const result = sizeCableSegment({ segment: 'inverter_battery', currentA: 63, voltageV: 48, lengthM: 3, material: 'copper', installation: 'not_buried', phase: 'dc', maxDropPercent: 1 });
     expect(result.minimalSection).toBeGreaterThan(14); expect(result.normalizedSection).toBe(16); expect(result.dropPercent).toBeLessThanOrEqual(1);

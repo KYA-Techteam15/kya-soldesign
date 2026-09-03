@@ -1,0 +1,60 @@
+const fs = require("fs");
+const path = "apps/desktop/src/i18n/index.ts";
+const lines = fs.readFileSync(path, "utf8").split("\n");
+const marker = "  'presizing.unavailable':";
+const idx = lines.findIndex((l) => l.startsWith(marker));
+if (idx === -1) { console.error("marker not found"); process.exit(1); }
+const block = [
+  "  'optimization.entryButton': { fr: 'Optimiser…', en: 'Optimize…' },",
+  "  'optimization.settingsTitle': { fr: 'Optimisation du dimensionnement', en: 'Sizing optimization' },",
+  "  'optimization.settingsLead': { fr: 'Choisissez la latitude de recherche par famille, l’objectif et les limites acceptées.', en: 'Choose the search latitude per family, the objective, and the accepted limits.' },",
+  "  'optimization.disabledUntilRun': { fr: 'Aucune sélection n’est modifiée avant validation.', en: 'No selection changes until confirmed.' },",
+  "  'optimization.run': { fr: 'Lancer la recherche', en: 'Run search' },",
+  "  'optimization.familyModule': { fr: 'Module', en: 'Module' },",
+  "  'optimization.familyBattery': { fr: 'Batterie', en: 'Battery' },",
+  "  'optimization.familyInverter': { fr: 'Onduleur', en: 'Inverter' },",
+  "  'optimization.scopeTitle': { fr: 'Latitude de recherche', en: 'Search latitude' },",
+  "  'optimization.scopeFixed': { fr: 'Référence fixée', en: 'Fixed reference' },",
+  "  'optimization.scopeShortlist': { fr: 'Liste autorisée', en: 'Allowed list' },",
+  "  'optimization.scopeFree': { fr: 'Choix libre', en: 'Free choice' },",
+  "  'optimization.scopeFreeHint': { fr: 'Tout le catalogue éligible est examiné.', en: 'The entire eligible catalog is examined.' },",
+  "  'optimization.scopeShortlistCount': { fr: '{n} référence(s) sélectionnée(s)', en: '{n} reference(s) selected' },",
+  "  'optimization.objectiveTitle': { fr: 'Objectif de recherche', en: 'Search objective' },",
+  "  'optimization.objectiveClosest': { fr: 'Le plus proche du prédimensionnement', en: 'Closest to pre-sizing' },",
+  "  'optimization.objectiveCost': { fr: 'Coût du matériel principal le plus bas', en: 'Lowest main equipment cost' },",
+  "  'optimization.objectiveFewest': { fr: 'Le moins de composants', en: 'Fewest components' },",
+  "  'optimization.objectiveClosestHint': { fr: 'Minimise l’écart cumulé aux besoins de PV, stockage et onduleur.', en: 'Minimizes the combined gap to PV, storage, and inverter needs.' },",
+  "  'optimization.objectiveCostHint': { fr: 'Classe les solutions par coût indicatif du matériel principal.', en: 'Ranks solutions by indicative main equipment cost.' },",
+  "  'optimization.objectiveFewestHint': { fr: 'Privilégie le nombre total de modules, batteries et onduleurs le plus faible.', en: 'Favors the lowest total count of modules, batteries, and inverters.' },",
+  "  'optimization.limitsTitle': { fr: 'Limites de surdimensionnement (optionnel)', en: 'Oversize limits (optional)' },",
+  "  'optimization.limitPv': { fr: 'Limite PV', en: 'PV limit' },",
+  "  'optimization.limitStorage': { fr: 'Limite stockage', en: 'Storage limit' },",
+  "  'optimization.limitInverter': { fr: 'Limite onduleur', en: 'Inverter limit' },",
+  "  'optimization.limitsHint': { fr: 'Laisser à 0 pour ne fixer aucune limite sur cette famille.', en: 'Leave at 0 to set no limit on this family.' },",
+  "  'optimization.resultsTitle': { fr: 'Résultats de l’optimisation', en: 'Optimization results' },",
+  "  'optimization.resultsLead': { fr: 'Comparez les solutions proposées puis confirmez celle à appliquer.', en: 'Compare the proposed solutions, then confirm the one to apply.' },",
+  "  'optimization.candidatesFound': { fr: '{n} solution(s) trouvée(s) sur {examined} combinaison(s) examinée(s)', en: '{n} solution(s) found out of {examined} combination(s) examined' },",
+  "  'optimization.noCandidate': { fr: 'Aucune solution ne respecte les contraintes et limites choisies.', en: 'No solution satisfies the chosen constraints and limits.' },",
+  "  'optimization.blockedDisabled': { fr: 'L’optimisation n’a pas été activée.', en: 'Optimization was not enabled.' },",
+  "  'optimization.blockedScopeEmpty': { fr: 'Au moins une famille n’a aucune référence disponible dans la latitude choisie.', en: 'At least one family has no reference available in the chosen scope.' },",
+  "  'optimization.blockedCostUnavailable': { fr: 'L’objectif de coût nécessite des coûts spécifiques renseignés dans les hypothèses.', en: 'The cost objective requires specific costs set in the assumptions.' },",
+  "  'optimization.rank': { fr: 'Rang', en: 'Rank' },",
+  "  'optimization.module': { fr: 'Module', en: 'Module' },",
+  "  'optimization.battery': { fr: 'Batterie', en: 'Battery' },",
+  "  'optimization.inverter': { fr: 'Onduleur', en: 'Inverter' },",
+  "  'optimization.deltaPv': { fr: 'Écart PV', en: 'PV gap' },",
+  "  'optimization.deltaStorage': { fr: 'Écart stockage', en: 'Storage gap' },",
+  "  'optimization.deltaInverter': { fr: 'Écart onduleur', en: 'Inverter gap' },",
+  "  'optimization.componentCount': { fr: 'Composants', en: 'Components' },",
+  "  'optimization.indicativeCost': { fr: 'Coût indicatif', en: 'Indicative cost' },",
+  "  'optimization.costUnavailable': { fr: 'non estimable', en: 'not estimable' },",
+  "  'optimization.justificationObjectiveClosest': { fr: 'Classée par proximité au prédimensionnement', en: 'Ranked by closeness to pre-sizing' },",
+  "  'optimization.justificationObjectiveCost': { fr: 'Classée par coût du matériel principal', en: 'Ranked by main equipment cost' },",
+  "  'optimization.justificationObjectiveFewest': { fr: 'Classée par nombre de composants', en: 'Ranked by component count' },",
+  "  'optimization.apply': { fr: 'Appliquer…', en: 'Apply…' },",
+  "  'optimization.applyConfirmTitle': { fr: 'Appliquer cette solution ?', en: 'Apply this solution?' },",
+  "  'optimization.applyConfirmBody': { fr: 'Le module, la batterie et l’onduleur retenus remplaceront la sélection actuelle du projet.', en: 'The selected module, battery, and inverter will replace the project’s current selection.' },",
+];
+lines.splice(idx, 0, ...block);
+fs.writeFileSync(path, lines.join("\n"), "utf8");
+console.log("inserted", block.length, "lines at", idx);
