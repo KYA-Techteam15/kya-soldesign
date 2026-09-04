@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@ksd/catalog": "workspace:*",
+    "@ksd/diagram": "workspace:*",
     "@ksd/domain": "workspace:*",
     "@ksd/engine": "workspace:*",
     "@ksd/project-format": "workspace:*",
+    "docx": "9.7.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-router-dom": "7.18.1",

@@ -434,3 +434,41 @@ table.a4-tbl {
     margin: 15mm 15mm 13mm;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Planche unifilaire.
+
+   Le schéma est du SVG dans le DOM : il s'imprime à la résolution de
+   l'imprimante, là où une image matricielle serait pixellisée. Le dossier
+   d'exécution le couche en paysage, par une page nommée — un saut de section
+   suffit à mélanger les deux orientations dans un même document.
+--------------------------------------------------------------------------- */
+
+.a4-landscape {
+  width: 297mm;
+  min-height: 210mm;
+}
+
+.a4-diagram {
+  flex: none;
+  margin: 4mm 0 2mm;
+}
+
+.a4-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media print {
+  @page landscape {
+    size: A4 landscape;
+    margin: 14mm;
+  }
+  .a4-landscape {
+    page: landscape;
+  }
+  .a4-diagram {
+    break-inside: avoid;
+  }
+}

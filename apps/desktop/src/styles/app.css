@@ -3608,3 +3608,53 @@ table.tbl select.cell-in {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Vue synoptique. La planche est montrée telle qu'elle sera imprimée : fond
+   blanc, cadre, aucun habillage qui n'existerait pas sur le document.
+--------------------------------------------------------------------------- */
+
+.synoptic-sheet {
+  background: #fff;
+  border: 1px solid var(--line, #d3d9dc);
+  border-radius: 2px;
+  overflow: auto;
+  max-height: 72vh;
+  padding: 8px;
+  margin-top: 10px;
+}
+
+.synoptic-sheet svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 640px;
+}
+
+.synoptic-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted, #66717f);
+  font-variant-numeric: tabular-nums;
+}
+
+.synoptic-issues {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.diag-line {
+  margin: 0;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  line-height: 1.45;
+}
+
+.diag-line.info { background: #eef2f7; color: #3d4753; }
+.diag-line.warning { background: #fdf2e0; color: #8a5a08; }
+.diag-line.error { background: #fbe9e7; color: #a52c2a; }
