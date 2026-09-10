@@ -3658,3 +3658,166 @@ table.tbl select.cell-in {
 .diag-line.info { background: #eef2f7; color: #3d4753; }
 .diag-line.warning { background: #fdf2e0; color: #8a5a08; }
 .diag-line.error { background: #fbe9e7; color: #a52c2a; }
+
+/* La planche conservée pendant un recalcul : présente, mais visiblement
+   en sursis — jamais confondue avec un résultat à jour. */
+.synoptic-sheet.is-stale {
+  opacity: 0.55;
+  transition: opacity 140ms ease-out;
+}
+
+/* ---------------------------------------------------------------------------
+   Accueil — compact.
+
+   L'écran s'ouvre sur le travail en cours, pas sur un décor : la moitié droite
+   du bandeau porte la dernière étude et son avancement, à la place du losange
+   ornemental. Les chiffres sont ceux des études de l'utilisateur ; ils
+   n'apparaissent qu'une fois qu'il y a quelque chose à compter.
+--------------------------------------------------------------------------- */
+
+.home-hero {
+  grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.9fr);
+  gap: var(--sp-5);
+  padding: var(--sp-5);
+  align-items: stretch;
+}
+
+.home-hero-copy { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+
+.home-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  margin-bottom: 6px;
+}
+
+.home-hero-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.4vw, 31px);
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.home-hero .page-lead { margin: 0; max-width: 46ch; font-size: 13px; }
+
+.home-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-5);
+  margin: var(--sp-4) 0 0;
+}
+.home-figures div { display: grid; gap: 1px; }
+.home-figures dt { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.home-figures dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.home-figures dd span { margin-left: 3px; font-family: inherit; font-size: 10px; color: var(--text-muted); }
+
+.home-resume {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  text-align: left;
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  min-width: 0;
+}
+.home-resume:not(.is-empty):hover { border-color: var(--accent); background: var(--accent-soft); }
+.home-resume.is-empty { cursor: default; justify-items: start; gap: 6px; }
+.home-resume-tag {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+.home-resume b { font-size: 15px; overflow-wrap: anywhere; }
+.home-resume small { color: var(--text-muted); font-size: 11.5px; overflow-wrap: anywhere; }
+.home-resume-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.home-next { color: var(--accent-ink); }
+
+.home-meter {
+  display: block;
+  height: 4px;
+  margin: 6px 0 4px;
+  background: var(--surface-3, #e6ebef);
+  overflow: hidden;
+}
+.home-meter i {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  transition: width 220ms ease-out;
+}
+
+.row-progress { display: grid; gap: 0; min-width: 84px; }
+.row-progress small { color: var(--text-muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-meter i { transition: none; }
+}
+
+@media (max-width: 900px) {
+  .home-hero { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Cartes de système compactes : le schéma sert à reconnaître une architecture
+   d'un coup d'œil, pas à occuper la page. */
+.sys-schema { aspect-ratio: 16 / 5; padding: 4px 0; }
+.sys-card { padding: var(--sp-3); gap: 3px; }
+.sys-card b { font-size: 13.5px; }
+.sys-card .sys-desc { font-size: 11.5px; line-height: 1.4; }
+.sys-card .sys-state { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; }
+.upcoming-title { margin-top: var(--sp-5); }
+
+/* Le bandeau et les types de système forment une seule séquence de lecture :
+   l'espace qui les séparait cassait ce lien. */
+.page-home .home-hero { margin-bottom: var(--sp-5); }
+.page-home section + section { margin-top: var(--sp-6); }
+
+/* En `table-layout: fixed`, un intitulé plus long que sa colonne est rogné
+   sans ellipse : « Tension de service » devenait « Tension de ser ». Les
+   en-têtes se replient sur deux lignes plutôt que de mentir sur leur contenu. */
+.t-prot th,
+.t-cables th {
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.25;
+}
+.t-cables th:nth-child(3), .t-cables td:nth-child(3) { width: 104px; }
+.t-cables th:nth-child(4), .t-cables td:nth-child(4) { width: 112px; }
+.t-prot th:nth-child(5), .t-prot td:nth-child(5) { width: 78px; }
+
+/* Un sélecteur en cellule ne doit pas rogner son option : « Non enterré »
+   devenait « Non e… ». */
+.t-cables select.cell-in { text-overflow: ellipsis; }
+
+/* L'aide d'un réglage est une seconde ligne, pas la suite du libellé :
+   « Fichier logo de rapportPNG, JPEG… » collait les deux. */
+.asset-help { display: block; margin-top: 2px; }
+.asset-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: flex-end; }
+
+/* Le corps d'un dialogue défile, mais rien ne le disait : une rangée coupée
+   net contre le pied de dialogue se lit comme un défaut d'affichage. Le dégradé
+   n'apparaît que tant qu'il reste quelque chose à faire défiler. */
+.modal .body {
+  background:
+    linear-gradient(var(--surface) 30%, transparent) top / 100% 24px no-repeat,
+    linear-gradient(transparent, var(--surface) 70%) bottom / 100% 24px no-repeat,
+    radial-gradient(farthest-side at 50% 0, rgba(20, 24, 29, .10), transparent) top / 100% 10px no-repeat,
+    radial-gradient(farthest-side at 50% 100%, rgba(20, 24, 29, .10), transparent) bottom / 100% 10px no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}

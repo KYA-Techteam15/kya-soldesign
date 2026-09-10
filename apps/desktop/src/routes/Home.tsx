@@ -4,7 +4,8 @@ import { StatusBar } from '../shell/StatusBar';
 import { useT } from '../i18n';
 import { useProjects } from '../store/project';
 import { useUi } from '../store/ui';
-import { relativeFr } from '../domain/format';
+import { fmt, relativeFr } from '../domain/format';
+import { projectProgress, studioMetrics } from '../app/models/homeMetrics';
 import { useSettings } from '../store/settings';
 import { readProjectResumeTarget } from '../app/navigationSession';
 import type { SystemType } from '../app/models/projectView';
@@ -55,11 +56,15 @@ export function Home() {
   const projects = useProjects((s) => s.projects);
   const create = useProjects((s) => s.create);
   const notify = useUi((s) => s.notify);
+  const lang = useUi((s) => s.lang);
   const recentLimit = useSettings((s) => s.projects.recentProjectLimit);
 
-  const recent = [...projects]
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, recentLimit);
+  const sorted = [...projects].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const recent = sorted.slice(0, recentLimit);
+  const metrics = studioMetrics(projects);
+  // La dernière étude ouverte tient lieu de point d'entrée : reprendre son
+  // travail est le geste le plus fréquent, il mérite la place du décor.
+  const last = sorted[0] ? { project: sorted[0], progress: projectProgress(sorted[0], lang) } : null;
 
   const resumeLast = () => {
     const project = recent[0];
@@ -92,16 +97,41 @@ export function Home() {
       />
       <div className="page-body">
         <div className="page-inner">
-          <div>
-            <div className="home-hero">
-              <div>
-                <h1 className="page-title">{t('home.welcome')}</h1>
-                <h2 className="home-hero-title">{t('home.heroTitle')}</h2>
-                <p className="page-lead">{t('home.heroLead')}</p>
-                {recent[0] && <button className="btn btn-ok" onClick={resumeLast}>{t('home.resumeLast')}</button>}
-              </div>
-              <div className="home-hero-mark" aria-hidden="true"><span>◎</span><i /></div>
+          <div className="home-hero">
+            <div className="home-hero-copy">
+              <span className="home-eyebrow">{t('home.welcome')}</span>
+              <h1 className="home-hero-title">{t('home.heroTitle')}</h1>
+              <p className="page-lead">{t('home.heroLead')}</p>
+              {metrics.projects > 0 && (
+                <dl className="home-figures">
+                  <div><dt>{t('home.figureStudies')}</dt><dd>{metrics.projects}</dd></div>
+                  <div><dt>{t('home.figureClients')}</dt><dd>{metrics.clients || '—'}</dd></div>
+                  <div><dt>{t('home.figurePv')}</dt><dd>{metrics.pvKwc === null ? '—' : fmt(metrics.pvKwc, 1)}<span>kWc</span></dd></div>
+                  <div><dt>{t('home.figureStorage')}</dt><dd>{metrics.storageKwh === null ? '—' : fmt(metrics.storageKwh, 1)}<span>kWh</span></dd></div>
+                </dl>
+              )}
             </div>
+
+            {last ? (
+              <button className="home-resume" onClick={resumeLast}>
+                <span className="home-resume-tag">{t('home.resumeLast')}</span>
+                <b>{last.project.name}</b>
+                <small>{last.project.details.clientName || t('home.clientMissing')} · {last.project.details.projectLocation || t('home.locationMissing')}</small>
+                <span className="home-meter" aria-hidden="true">
+                  <i style={{ width: `${Math.round((last.progress.done / last.progress.total) * 100)}%` }} />
+                </span>
+                <span className="home-resume-foot">
+                  <span>{last.progress.done}/{last.progress.total} {t('home.stepsDone')}</span>
+                  {last.progress.nextStep && <span className="home-next">{t('ws.section.' + last.progress.nextStep)} →</span>}
+                </span>
+              </button>
+            ) : (
+              <div className="home-resume is-empty">
+                <b>{t('home.noProject')}</b>
+                <small>{t('home.emptyHint')}</small>
+                <button className="btn btn-ok" onClick={() => start('standalone_all_in_one', true)}>{t('home.emptyCta')}</button>
+              </div>
+            )}
           </div>
 
           <section>
@@ -166,23 +196,32 @@ export function Home() {
               </div>
             ) : (
               <div className="proj-list">
-                {recent.map((p) => (
-                  <button
-                    key={p.id}
-                    className="proj-row"
-                    onClick={() => nav(readProjectResumeTarget(p.id) ?? `/projet/${p.id}/atelier/projet`)}
-                  >
-                    <span>
-                      <b>{p.name}</b>
-                      <small>
-                        {p.details.clientName || t('home.clientMissing')} ·{' '}
-                        {p.details.projectLocation || t('home.locationMissing')}
-                      </small>
-                    </span>
-                    <span className="when">n° {p.details.projectNumber || '—'}</span>
-                    <span className="when">{relativeFr(p.updatedAt)}</span>
-                  </button>
-                ))}
+                {recent.map((p) => {
+                  const progress = projectProgress(p, lang);
+                  return (
+                    <button
+                      key={p.id}
+                      className="proj-row"
+                      onClick={() => nav(readProjectResumeTarget(p.id) ?? `/projet/${p.id}/atelier/projet`)}
+                    >
+                      <span>
+                        <b>{p.name}</b>
+                        <small>
+                          {p.details.clientName || t('home.clientMissing')} ·{' '}
+                          {p.details.projectLocation || t('home.locationMissing')}
+                        </small>
+                      </span>
+                      <span className="row-progress" title={`${progress.done}/${progress.total}`}>
+                        <span className="home-meter" aria-hidden="true">
+                          <i style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} />
+                        </span>
+                        <small>{progress.done}/{progress.total}</small>
+                      </span>
+                      <span className="when">n° {p.details.projectNumber || '—'}</span>
+                      <span className="when">{relativeFr(p.updatedAt)}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>

@@ -17,6 +17,18 @@ import { projectProtections } from '../diagram/projectDiagram';
 export type DocKind = 'rapport' | 'offre' | 'proforma' | 'dossier_exec';
 
 export type Block =
+  | {
+      readonly kind: 'cover';
+      readonly docKind: string;
+      readonly project: string;
+      readonly subtitle: string;
+      readonly system: string;
+      readonly sri: string;
+      readonly cells: readonly { label: string; value: string }[];
+      /** URLs d'objet des visuels choisis dans les réglages, s'il y en a. */
+      readonly logoUrl: string | null;
+      readonly coverUrl: string | null;
+    }
   | { readonly kind: 'title'; readonly text: string; readonly subtitle: string }
   | { readonly kind: 'heading'; readonly text: string }
   | { readonly kind: 'meta'; readonly items: readonly { label: string; value: string; note: string }[] }
@@ -73,6 +85,8 @@ export interface ReportModelInput {
   readonly t: (key: string) => string;
   /** Planche unifilaire, absente tant que le dimensionnement n'est pas fait. */
   readonly diagram: { readonly svg: string; readonly width: number; readonly height: number; readonly bom: readonly BillOfMaterialRow[] } | null;
+  /** Visuels de couverture résolus par l'appelant depuis les réglages. */
+  readonly assets?: { readonly logoUrl: string | null; readonly coverUrl: string | null };
 }
 
 /** Construit le document, dans le même ordre et avec les mêmes chiffres que `ReportA4`. */
@@ -226,12 +240,33 @@ export function buildReportDocument(input: ReportModelInput): ReportDocument {
     { kind: 'signature', left: `${settings.company.name || 'KYA-SolDesign'} — ${dash(details.followerName)}`, right: t('report.forClient') },
   ];
 
+  const cover: Block = {
+    kind: 'cover',
+    docKind: title,
+    project: project.name,
+    subtitle: `${t(subtitleKey)} · n° ${dash(details.projectNumber)}`,
+    system: sizing
+      ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc · ${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh ${t('report.useful')} · ${fmt(sizing.inverter.obtainedPowerKw, 2)} kW`
+      : t('report.sizingUnavailable'),
+    sri: sim ? fmt(sim.sri, 2) : '—',
+    cells: [
+      { label: t('report.client'), value: dash(details.clientName) },
+      { label: t('report.site'), value: dash(details.projectLocation || project.site.region) },
+      { label: t('report.follower'), value: dash(details.followerName) },
+      { label: t('report.editedOn'), value: dateFr(details.projectDate) },
+    ],
+    logoUrl: input.assets?.logoUrl ?? null,
+    coverUrl: input.assets?.coverUrl ?? null,
+  };
+
   const sections: DocSection[] = [
+    { orientation: 'portrait', blocks: [cover] },
     { orientation: 'portrait', blocks: page1 },
     { orientation: 'portrait', blocks: page2 },
   ];
 
-  if (diagram) {
+  // La proforma est une pièce comptable : la planche n'y a pas sa place.
+  if (diagram && kind !== 'proforma') {
     // La planche complète demande une page couchée ; le synoptique tient debout.
     const landscape = kind === 'dossier_exec';
     const blocks: Block[] = [

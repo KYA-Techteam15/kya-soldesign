@@ -13,11 +13,15 @@ export function sizeProtectionSegment(i: ProtectionSizingInput): ProtectionSizin
   else { requiredA=1.25*finite(i.inverterPowerW)/(i.acVoltageV||230); voltage=i.acVoltageV||230; recommended='Disjoncteur AC'; quantity=i.poles??1; }
   const legacyAuto = i.selectedType === undefined;
   const selectedType = legacyAuto ? recommended : i.selectedType ?? null;
-  const options = selectedType === null ? [] : ratingSeries(selectedType).filter((value) => value >= requiredA && (i.maximumCurrentA === null || i.maximumCurrentA === undefined || value <= i.maximumCurrentA));
+  // Sans courant à couvrir, aucun calibre ne peut être déclaré valable : tous
+  // les passeraient. Le segment est indisponible tant que le dimensionnement
+  // n'a rien produit, plutôt que « validé » contre une exigence nulle.
+  const sizeable = requiredA > 0;
+  const options = selectedType === null || !sizeable ? [] : ratingSeries(selectedType).filter((value) => value >= requiredA && (i.maximumCurrentA === null || i.maximumCurrentA === undefined || value <= i.maximumCurrentA));
   const selectedRating = i.selectedCaliberA ?? null;
-  const usesFallback = selectedType !== null && options.length === 0;
-  const caliberA = selectedRating !== null && options.includes(selectedRating) ? selectedRating : options[0] ?? (usesFallback ? requiredA : null);
-  const state = selectedType === null ? 'awaiting-type' : usesFallback ? 'estimated' : caliberA === null ? 'awaiting-rating' : 'valid';
+  const usesFallback = sizeable && selectedType !== null && options.length === 0;
+  const caliberA = !sizeable ? null : selectedRating !== null && options.includes(selectedRating) ? selectedRating : options[0] ?? (usesFallback ? requiredA : null);
+  const state = !sizeable ? 'unavailable' : selectedType === null ? 'awaiting-type' : usesFallback ? 'estimated' : caliberA === null ? 'awaiting-rating' : 'valid';
   return { segment:i.segment, kind:selectedType ?? recommended, allowedTypes, selectedType:legacyAuto ? null : selectedType, requiredA, minimumCurrentA:requiredA, maximumCurrentA:i.maximumCurrentA ?? null, serviceVoltageV:voltage, quantity, options, compatibleRatingsA:options, caliberA, selectedRatingA:caliberA, exact:state === 'valid', overridden:caliberA !== null && options.length > 0 && caliberA !== options[0], state, methodVersion:'core-v1' };
 }
 export function sizeCableSegment(i: CableSizingInput): CableSizingResult {

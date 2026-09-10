@@ -63,7 +63,9 @@ const NORMALIZE: Readonly<Record<string, Normalized>> = {
 };
 
 export const DEFAULT_OPTIONS: DiagramOptions = {
-  format: 'a4-landscape',
+  // La planche n'est pas un réglage d'affichage : c'est la plus petite feuille
+  // normalisée sur laquelle ce plan-ci reste lisible. Elle se déduit du dessin.
+  format: 'auto',
   detail: 'full',
   dcRepresentation: 'pair',
   maxDrawnModules: 4,

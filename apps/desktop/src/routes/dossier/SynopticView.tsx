@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { Equipment } from '@ksd/catalog';
 import type { SizingOutputV1 } from '@ksd/engine';
 import { SYNOPTIC_OPTIONS } from '@ksd/diagram';
@@ -19,10 +19,13 @@ import { fmt } from '../../domain/format';
 export function SynopticView({
   project,
   sizing,
+  pending,
   catalog,
 }: {
   readonly project: ProjectViewModel;
   readonly sizing: SizingOutputV1 | null;
+  /** Un recalcul est en cours : le dimensionnement précédent reste valable. */
+  readonly pending: boolean;
   readonly catalog: readonly Equipment[];
 }) {
   const t = useT();
@@ -30,7 +33,7 @@ export function SynopticView({
   const lang = useUi((state) => state.lang);
   const [format, setFormat] = useState<'sheet' | 'synoptic'>('sheet');
 
-  const diagram = useMemo(() => {
+  const built = useMemo(() => {
     if (!sizing) return null;
     return buildProjectDiagram({
       project,
@@ -41,6 +44,17 @@ export function SynopticView({
       options: format === 'synoptic' ? SYNOPTIC_OPTIONS : undefined,
     });
   }, [project, sizing, catalog, settings, lang, format]);
+
+  /**
+   * Toute modification du projet relance la lecture du dimensionnement, qui
+   * repasse par un état d'attente. Retomber sur l'écran vide à chaque frappe
+   * laisserait croire que le schéma a disparu : on garde la dernière planche
+   * à l'écran, signalée comme en cours de mise à jour, jusqu'à la suivante.
+   */
+  const lastGood = useRef<ReturnType<typeof buildProjectDiagram> | null>(null);
+  if (built) lastGood.current = built;
+  const diagram = built ?? (pending ? lastGood.current : null);
+  const stale = built === null && diagram !== null;
 
   if (!diagram) {
     return (
@@ -71,6 +85,7 @@ export function SynopticView({
       <div className="out-head">
         <span className="out-tag">{t('workshop.synoptic').toUpperCase()}</span>
         <h2 className="h-sec">{t('report.singleLine')}</h2>
+        {stale && <span className="badge warn">{t('synoptic.updating')}</span>}
         <span className="sep" />
         <div className="seg no-print">
           <button aria-selected={format === 'sheet'} onClick={() => setFormat('sheet')}>
@@ -85,7 +100,7 @@ export function SynopticView({
         </button>
       </div>
 
-      <div className="synoptic-sheet" dangerouslySetInnerHTML={{ __html: svg }} />
+      <div className={'synoptic-sheet' + (stale ? ' is-stale' : '')} dangerouslySetInnerHTML={{ __html: svg }} />
 
       <div className="synoptic-facts">
         <span>

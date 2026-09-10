@@ -4,6 +4,7 @@ import type {
   GridFrame,
   LegendRow,
   PlacedSymbol,
+  SheetFormat,
   SingleLineTopology,
 } from '../contracts.js';
 import type { DiagramLabels } from '../labels.js';
@@ -22,7 +23,9 @@ import {
   MARGIN,
   SMALLEST_TEXT_PX,
   SOURCE_LANE,
+  SHEETS,
   TITLE_HEIGHT,
+  USABLE_HEIGHT_MM,
   USABLE_MM,
 } from './constants.js';
 import { layoutAcLine } from './ac-line.js';
@@ -123,7 +126,13 @@ export function layoutDiagram(
   }
 
   const { earthTaps } = layoutAcLine(build, topology.ac, inverterSymbols, bands, lanes);
-  layoutEarth(build, topology.earth, earthTaps, inverterSymbols, bands, lanes);
+
+  // Le collecteur de terre longe la planche à droite de tout le reste. Sa
+  // colonne ne peut donc être arrêtée qu'ici, une fois les libellés posés :
+  // calculée d'avance sur la seule largeur des symboles, elle ferait passer
+  // le collecteur au travers des annotations d'appareils.
+  const earthLanes: Lanes = { ...lanes, earthX: build.rightExtent() + EARTH_LANE / 2 };
+  layoutEarth(build, topology.earth, earthTaps, inverterSymbols, bands, earthLanes);
 
   /* ---- Enveloppe : cadre de repérage, légende, cartouche ----------------- */
 
@@ -133,8 +142,10 @@ export function layoutDiagram(
   const bodyBottom = Math.max(bands.contentBottom, bands.yBusbar + 190);
 
   const gridPad = options.showGridFrame ? GRID_MARGIN : 0;
+  // La planche est bordée d'après ce qui y est réellement tracé, annotations
+  // comprises : c'est la seule mesure qui garantisse qu'aucun texte ne sorte.
   const width = Math.round(
-    Math.max(lanes.mainX + mainWidth + EARTH_LANE + MARGIN, MARGIN * 2 + LEGEND_WIDTH + 340) + gridPad * 2,
+    Math.max(build.rightExtent() + MARGIN, MARGIN * 2 + LEGEND_WIDTH + 340) + gridPad * 2,
   );
   const height = Math.round(bodyBottom + 34 + footerHeight + MARGIN + gridPad * 2);
 
@@ -157,23 +168,32 @@ export function layoutDiagram(
     if (frame.id.startsWith('frame-pv')) anchors.set('G1', { x: frame.x, y: frame.y });
   }
   const bom = withGridReferences(build.bom, build.symbols, anchors, grid);
-  const usable = USABLE_MM[options.format];
-  const smallestTextPt = (SMALLEST_TEXT_PX * (usable / width) * 72) / 25.4;
+
+  // Une planche s'inscrit dans la page par son côté le plus contraignant. Ne
+  // rapporter que la largeur laisserait passer un plan haut et étroit — le cas
+  // ordinaire d'un unifilaire — en le déclarant lisible alors que la réduction
+  // en hauteur l'aura rendu illisible.
+  const smallest = smallestLegibleSheet(width, height);
+  const format = options.format === 'auto' ? (smallest ?? LARGEST_SHEET) : options.format;
+  const smallestTextPt = textPtAt(format, width, height);
 
   const issues = [...topology.issues];
-  if (smallestTextPt < 6) {
+  if (smallestTextPt < LEGIBLE_PT) {
+    const remedy = smallest
+      ? ` La planche ${FORMAT_LABEL[smallest]} suffirait.`
+      : ' Condenser le champ en représentation synoptique.';
     issues.push({
       level: 'warning',
       message:
-        `À l’échelle ${options.format === 'a4-landscape' ? 'A4 paysage' : 'A4 portrait'}, le plus petit texte tombe à ` +
-        `${smallestTextPt.toFixed(1)} pt. En dessous de 6 pt le plan n’est plus lisible imprimé : passer en synoptique ou en paysage.`,
+        `À l’échelle ${FORMAT_LABEL[format]}, le plus petit texte tombe à ${smallestTextPt.toFixed(1)} pt. ` +
+        `En dessous de ${LEGIBLE_PT} pt le plan n’est plus lisible imprimé.${remedy}`,
     });
   }
 
   return {
     width,
     height,
-    format: options.format,
+    format,
     symbols: build.symbols,
     wires: build.wires,
     frames: build.frames,
@@ -186,6 +206,42 @@ export function layoutDiagram(
     issues,
     smallestTextPt,
   };
+}
+
+const FORMAT_LABEL: Readonly<Record<SheetFormat, string>> = {
+  'a4-portrait': 'A4 portrait',
+  'a4-landscape': 'A4 paysage',
+  'a3-portrait': 'A3 portrait',
+  'a3-landscape': 'A3 paysage',
+  'a2-portrait': 'A2 portrait',
+  'a2-landscape': 'A2 paysage',
+};
+
+/** Corps typographique minimal en dessous duquel un plan imprimé n'est plus lu. */
+const LEGIBLE_PT = 6;
+
+const LARGEST_SHEET: SheetFormat = SHEETS[SHEETS.length - 1]!.format;
+
+/**
+ * Corps du plus petit texte de la planche une fois celle-ci réduite à la page,
+ * en points typographiques. La réduction retenue est celle qui fait entrer la
+ * planche entière : le plus contraignant des deux rapports.
+ */
+function textPtAt(format: SheetFormat, width: number, height: number): number {
+  const fit = Math.min(USABLE_MM(format) / width, USABLE_HEIGHT_MM(format) / height);
+  return (SMALLEST_TEXT_PX * fit * 72) / 25.4;
+}
+
+/**
+ * Plus petite planche normalisée sur laquelle le plan reste lisible, ou `null`
+ * si même la plus grande n'y suffit pas — auquel cas c'est le dessin qu'il
+ * faut condenser, pas le papier qu'il faut agrandir.
+ */
+function smallestLegibleSheet(width: number, height: number): SheetFormat | null {
+  for (const sheet of SHEETS) {
+    if (textPtAt(sheet.format, width, height) >= LEGIBLE_PT) return sheet.format;
+  }
+  return null;
 }
 
 /** Ordonnées des bandes. Une bande absente n'occupe aucune hauteur. */

@@ -5,6 +5,7 @@ import { layoutDiagram } from './layout/index.js';
 import { collapse, cableNote } from './layout/builder.js';
 import type { DiagramSystemType, TopologySource } from './topology.js';
 import { EN_LABELS } from './labels.js';
+import { SHEETS } from './layout/constants.js';
 
 const sizing = (over: Partial<SizingOutputV1> = {}): SizingOutputV1 =>
   ({
@@ -185,12 +186,41 @@ describe('planche', () => {
     expect(plan.bom.every((row) => row.gridRef !== '')).toBe(true);
   });
 
-  it('reste lisible en paysage et alerte quand le portrait est trop chargé', () => {
-    const landscape = generateSingleLineDiagram(source()).plan;
-    expect(landscape.smallestTextPt).toBeGreaterThanOrEqual(6);
+  it('retient la plus petite planche normalisée qui reste lisible', () => {
+    const auto = generateSingleLineDiagram(source()).plan;
+    expect(auto.smallestTextPt).toBeGreaterThanOrEqual(6);
 
-    const portraitFull = generateSingleLineDiagram(source({ options: { format: 'a4-portrait' } })).plan;
-    expect(portraitFull.smallestTextPt).toBeLessThan(landscape.smallestTextPt);
+    // La planche retenue est bien la plus petite : celle qui la précède dans la
+    // gamme ne suffirait pas. Sans quoi « automatique » voudrait dire « la plus grande ».
+    const index = SHEETS.findIndex((sheet) => sheet.format === auto.format);
+    expect(index).toBeGreaterThanOrEqual(0);
+    for (const smaller of SHEETS.slice(0, index)) {
+      const pinned = generateSingleLineDiagram(source({ options: { format: smaller.format } })).plan;
+      expect(pinned.smallestTextPt).toBeLessThan(6);
+    }
+  });
+
+  it('alerte, sans rien masquer, quand l’appelant impose une planche trop petite', () => {
+    const pinned = generateSingleLineDiagram(source({ options: { format: 'a4-portrait' } })).plan;
+    expect(pinned.format).toBe('a4-portrait');
+    expect(pinned.smallestTextPt).toBeLessThan(6);
+    const warning = pinned.issues.find((issue) => issue.message.includes('pt'));
+    expect(warning?.level).toBe('warning');
+    // L'alerte nomme le remède plutôt que de laisser l'utilisateur chercher.
+    expect(warning?.message).toMatch(/A[234] (portrait|paysage)|synoptique/);
+  });
+
+  it('mesure la lisibilité sur la hauteur autant que sur la largeur', () => {
+    // Un plan haut et étroit tient en largeur mais pas en hauteur : le mesurer
+    // sur la seule largeur le déclarerait lisible à tort.
+    const tall = generateSingleLineDiagram(
+      source({
+        options: { format: 'a4-landscape' },
+        sizing: sizing({ pv: { ...sizing().pv, modulesInSeries: 24, stringsInParallel: 1, totalModules: 24 } }),
+      }),
+    ).plan;
+    expect(tall.height).toBeGreaterThan(tall.width);
+    expect(tall.smallestTextPt).toBeLessThan(6);
   });
 
   it('condense le champ en synoptique portrait', () => {

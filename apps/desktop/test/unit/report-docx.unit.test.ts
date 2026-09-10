@@ -88,7 +88,9 @@ const diagramOf = (kind: 'rapport' | 'dossier_exec') => PLANS[kind];
 describe('document Word', () => {
   it('reprend les sections du rapport imprimé', () => {
     const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, catalog, settings, t, diagram: diagramOf('rapport') });
-    expect(document.sections).toHaveLength(3);
+    // Page de garde, page 1, page 2, planche.
+    expect(document.sections).toHaveLength(4);
+    expect(document.sections[0]!.blocks[0]!.kind).toBe('cover');
     expect(document.fileName).toBe('centrale-de-bouake-rapport.docx');
     expect(document.company.contact).toContain('Lomé');
     const headings = document.sections.flatMap((section) => section.blocks.filter((block) => block.kind === 'heading').map((block) => block.text));
@@ -98,7 +100,7 @@ describe('document Word', () => {
 
   it('couche la planche du dossier d’exécution et y joint la nomenclature', () => {
     const document = buildReportDocument({ project, kind: 'dossier_exec', sizing, finance: null, catalog, settings, t, diagram: diagramOf('dossier_exec') });
-    const last = document.sections[2]!;
+    const last = document.sections[3]!;
     expect(last.orientation).toBe('landscape');
     const table = last.blocks.find((block) => block.kind === 'table');
     expect(table?.kind === 'table' && table.rows.length).toBeGreaterThan(3);
@@ -106,13 +108,19 @@ describe('document Word', () => {
 
   it('garde le rapport à deux sections tant que le dimensionnement manque', () => {
     const document = buildReportDocument({ project, kind: 'rapport', sizing: null, finance: null, catalog, settings, t, diagram: null });
-    expect(document.sections).toHaveLength(2);
+    expect(document.sections).toHaveLength(3);
   });
 
   it('porte les mêmes calibres que le tableau des protections', () => {
     const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, catalog, settings, t, diagram: diagramOf('rapport') });
-    const table = document.sections[1]!.blocks.find((block) => block.kind === 'table');
+    const table = document.sections[2]!.blocks.find((block) => block.kind === 'table');
     expect(table?.kind === 'table' && table.rows.some((row) => row.includes('32,0 A'))).toBe(true);
+  });
+
+  it('retire la planche de la facture proforma', () => {
+    const document = buildReportDocument({ project, kind: 'proforma', sizing, finance: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    expect(document.sections).toHaveLength(3);
+    expect(document.sections.flatMap((section) => section.blocks).some((block) => block.kind === 'image')).toBe(false);
   });
 
   it('produit un .docx valide, avec une section couchée et l’image de la planche', async () => {

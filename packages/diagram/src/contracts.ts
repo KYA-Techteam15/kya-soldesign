@@ -48,8 +48,23 @@ export type SymbolKind =
   | 'earth-link'
   | 'earth-electrode';
 
-/** Gabarit de sortie. Contraint la largeur disponible, donc le niveau de détail. */
-export type SheetFormat = 'a4-landscape' | 'a4-portrait';
+/**
+ * Gabarit de sortie : la planche sur laquelle le plan sera imprimé.
+ *
+ * Contraint la réduction, donc la taille du plus petit texte, donc le niveau
+ * de détail soutenable. `auto` laisse le placement retenir la plus petite
+ * planche normalisée qui garde le plan lisible.
+ */
+export type SheetFormat =
+  | 'a4-portrait'
+  | 'a4-landscape'
+  | 'a3-portrait'
+  | 'a3-landscape'
+  | 'a2-portrait'
+  | 'a2-landscape';
+
+/** Gabarit demandé par l'appelant : une planche imposée, ou le choix automatique. */
+export type SheetRequest = SheetFormat | 'auto';
 
 /**
  * Niveau de détail du champ photovoltaïque.
@@ -177,7 +192,7 @@ export interface TopologyIssue {
 
 /** Réglages de représentation, indépendants du dimensionnement. */
 export interface DiagramOptions {
-  readonly format: SheetFormat;
+  readonly format: SheetRequest;
   readonly detail: DetailLevel;
   /**
    * Continu représenté par une paire de conducteurs colorés (+ rouge / − bleu),

@@ -472,3 +472,60 @@ table.a4-tbl {
     break-inside: avoid;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Page de garde. Ce qu'on pose sur une table : le document se nomme, se date
+   et s'attribue sans qu'on l'ouvre. Le logo et l'image viennent des réglages ;
+   sans image, la couverture reste typographique — jamais un cadre vide.
+--------------------------------------------------------------------------- */
+
+.a4-cover { padding: 20mm 16mm 14mm; }
+.cover-brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; }
+.cover-brand .a4-logo-image { max-height: 18mm; max-width: 52mm; object-fit: contain; }
+.cover-rule { display: flex; height: 1.6mm; margin-top: 6mm; }
+.cover-rule i { display: block; height: 100%; }
+.cover-rule i:first-child { width: 38%; background: var(--orange); }
+.cover-rule i:last-child { width: 62%; background: var(--teal); }
+
+.cover-image {
+  display: block;
+  width: 100%;
+  height: 62mm;
+  object-fit: cover;
+  margin-top: 8mm;
+}
+
+.cover-kind {
+  margin-top: 12mm;
+  font-size: 8pt;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal-dark);
+}
+.cover-title {
+  font-family: var(--font-display);
+  font-size: 30pt;
+  line-height: 1.05;
+  margin: 3mm 0 2mm;
+  letter-spacing: -0.02em;
+}
+.cover-sub { font-size: 10pt; color: var(--muted, #6b7684); }
+
+.cover-band {
+  margin-top: 9mm;
+  background: var(--band);
+  border-left: 1.4mm solid var(--orange);
+  padding: 5mm 6mm;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6mm;
+}
+.cover-band b { display: block; font-size: 12pt; margin-top: 1mm; }
+.cover-lbl { font-size: 7pt; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7684; }
+.cover-seal { text-align: right; }
+.cover-seal b { font-family: var(--font-display); font-size: 24pt; color: var(--orange); line-height: 1; margin: 0; }
+
+.cover-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm 10mm; margin: 10mm 0 0; }
+.cover-grid dt { font-size: 7pt; letter-spacing: 0.09em; text-transform: uppercase; color: #6b7684; }
+.cover-grid dd { margin: 1mm 0 0; font-size: 11pt; font-weight: 600; border-bottom: 0.3mm solid var(--rule); padding-bottom: 1.5mm; }

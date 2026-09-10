@@ -110,6 +110,52 @@ export class Builder {
     if (!reference) return;
     this.bom.push({ reference, designation, characteristic, quantity, gridRef: '' });
   }
+
+  /**
+   * Abscisse maximale réellement occupée, annotations comprises.
+   *
+   * Le collecteur de terre et le bord de planche se placent d'après cette
+   * mesure, et non d'après la largeur des seuls symboles : un libellé posé à
+   * droite d'un appareil occupe la planche autant que l'appareil lui-même.
+   */
+  rightExtent(): number {
+    let right = 0;
+    for (const symbol of this.symbols) {
+      const caption = symbol.caption ? CAPTION_GAP + textWidth(symbol.caption, CAPTION_SIZE) : 0;
+      right = Math.max(right, symbol.x + symbol.width + caption);
+    }
+    for (const caption of this.captions) {
+      right = Math.max(right, captionRight(caption));
+    }
+    for (const frame of this.frames) right = Math.max(right, frame.x + frame.width);
+    for (const wire of this.wires) {
+      for (const point of wire.points) right = Math.max(right, point.x);
+    }
+    return right;
+  }
+}
+
+/** Corps des libellés accolés aux symboles, en pixels planche. */
+const CAPTION_SIZE = 8.5;
+/** Écart entre le bord droit d'un symbole et son libellé. */
+const CAPTION_GAP = 8;
+
+/**
+ * Largeur approchée d'un texte.
+ *
+ * Le rendu n'ayant pas de moteur de fontes, la mesure est estimée à partir de
+ * la chasse moyenne de la fonte de planche. Elle sert à réserver de la place,
+ * jamais à positionner : une surestimation coûte quelques pixels de marge,
+ * une sous-estimation ferait passer un trait sur un texte.
+ */
+export const textWidth = (value: string, size: number): number => value.length * size * 0.56;
+
+/** Abscisse du bord droit d'un texte, selon son point d'ancrage. */
+function captionRight(caption: Caption): number {
+  const width = textWidth(caption.text, caption.size);
+  if (caption.anchor === 'start') return caption.x + width;
+  if (caption.anchor === 'middle') return caption.x + width / 2;
+  return caption.x;
 }
 
 /** Trajet en L : on descend, puis on translate. */
