@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test';
 
 test('restores the validated home with six systems and an empty production session', async ({ page }) => {
   await page.goto('/accueil');
-  await expect(page.getByRole('heading', { name: 'Bienvenue' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Concevez des systèmes solaires fiables' })).toBeVisible();
   await expect(page.locator('.sys-card')).toHaveCount(6);
   await expect(page.locator('.sys-card:disabled')).toHaveCount(5);
-  await expect(page.getByText('Aucun projet')).toBeVisible();
+  await expect(page.locator('.home-resume.is-empty')).toContainText('Aucun projet');
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
   await expect(page).toHaveURL(/\/projet\/[0-9a-f-]{36}\/atelier\/projet$/);
   await expect(page.locator('.stephead .h-page')).toHaveText('Identification du projet');
@@ -35,5 +35,5 @@ test('unknown projects keep the original recoverable state', async ({ page }) =>
 test('unknown application routes use the original redirect to home', async ({ page }) => {
   await page.goto('/adresse-inconnue');
   await expect(page).toHaveURL(/\/accueil$/);
-  await expect(page.getByRole('heading', { name: 'Bienvenue' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Concevez des systèmes solaires fiables' })).toBeVisible();
 });

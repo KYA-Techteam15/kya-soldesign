@@ -3273,7 +3273,7 @@ table.tbl select.cell-in {
   flex-wrap: wrap;
   margin: var(--sp-3) 0;
   padding: var(--sp-3);
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   background: var(--surface);
 }
   .catalog-filters select,
@@ -3281,10 +3281,10 @@ table.tbl select.cell-in {
   min-width: 140px;
   height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
   background: var(--surface);
-  color: var(--ink);
+  color: var(--text);
   }
   .catalog-active { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0; }
   .filter-chip { border: 1px solid var(--border-strong); border-radius: var(--r-sm); padding: 5px 8px; background: var(--accent-soft); color: var(--text); cursor: pointer; }
@@ -3820,4 +3820,100 @@ table.tbl select.cell-in {
     radial-gradient(farthest-side at 50% 0, rgba(20, 24, 29, .10), transparent) top / 100% 10px no-repeat,
     radial-gradient(farthest-side at 50% 100%, rgba(20, 24, 29, .10), transparent) bottom / 100% 10px no-repeat;
   background-attachment: local, local, scroll, scroll;
+}
+
+
+/* --- Dialogue de génération ---
+   Les sections d'un côté, les options de l'autre : on lit la composition
+   comme un sommaire, et on règle le tirage à côté sans perdre la liste. */
+.generate-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .generate-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.generate-sections {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  margin: 0;
+  min-width: 0;
+}
+.generate-sections legend {
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.generate-sections label {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: 5px 0;
+  cursor: pointer;
+}
+.generate-sections label:has(input:disabled) {
+  cursor: default;
+  color: var(--text-faint);
+}
+/* Une section confidentielle se signale dans la liste, pas seulement dans un
+   avertissement en bas : c'est en la cochant qu'on prend le risque. */
+.generate-sections label.is-confidential span {
+  color: var(--danger);
+  font-weight: 600;
+}
+.generate-options {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.generate-options label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.generate-options label > span {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.generate-options label small {
+  display: block;
+  font-weight: 400;
+}
+.generate-switch {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--sp-2);
+  cursor: pointer;
+}
+.generate-warning {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+/* --- Série annuelle importée ---
+   8 760 champs ne se saisissent pas : le panneau dit ce que la série contient
+   et laisse une porte de sortie, il ne mime pas une grille de saisie. */
+.annual-series-panel {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  justify-items: start;
+}
+.annual-series-panel .out-grid {
+  width: 100%;
 }

@@ -14,7 +14,7 @@ test('the original French and English shell copy switches without changing route
 test('language choice survives navigation through the copied command palette', async ({ page }) => {
   await page.goto('/accueil');
   await page.locator('.topbar button[title="Langue"]').click();
-  await expect(page.getByRole('heading', { name: 'Welcome' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Design reliable solar systems' })).toBeVisible();
   await page.locator('.topbar button[title="Palette de commandes"]').click();
   await page.locator('.palette-input').fill('réglages');
   await page.getByRole('button', { name: 'Ouvrir les réglages', exact: true }).click();

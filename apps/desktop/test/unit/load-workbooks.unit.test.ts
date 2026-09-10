@@ -39,3 +39,36 @@ describe('load workbooks', () => {
     expect(inspectHourlyProfileWorkbook(invalid).status).toBe('invalid');
   });
 });
+
+describe('série horaire annuelle', () => {
+  it('accepte un classeur de 8 760 heures', () => {
+    const workbook = exportHourlyProfileWorkbook(
+      Array.from({ length: 8_760 }, (_, hour) => ({ hourIndex: hour, activePowerKw: 1 + (hour % 24) / 24, peakPowerKw: 3 })),
+    );
+    const result = inspectHourlyProfileWorkbook(workbook);
+    expect(result.status).toBe('valid');
+    if (result.status !== 'valid') return;
+    expect(result.candidate).toHaveLength(8_760);
+    expect(result.candidate.at(-1)!.hourIndex).toBe(8_759);
+  });
+
+  it('refuse une série tronquée qui n’est ni une journée ni une année', () => {
+    const workbook = exportHourlyProfileWorkbook(
+      Array.from({ length: 168 }, (_, hour) => ({ hourIndex: hour, activePowerKw: 1, peakPowerKw: 2 })),
+    );
+    const result = inspectHourlyProfileWorkbook(workbook);
+    expect(result.status).toBe('invalid');
+    if (result.status !== 'invalid') return;
+    expect(result.issues.some((issue) => issue.code === 'HOURS_COUNT_INVALID')).toBe(true);
+  });
+
+  it('refuse une journée type dont les index sortent de 0..23', () => {
+    const workbook = exportHourlyProfileWorkbook(
+      Array.from({ length: 24 }, (_, hour) => ({ hourIndex: hour === 0 ? 500 : hour, activePowerKw: 1, peakPowerKw: 2 })),
+    );
+    const result = inspectHourlyProfileWorkbook(workbook);
+    expect(result.status).toBe('invalid');
+    if (result.status !== 'invalid') return;
+    expect(result.issues.some((issue) => issue.code === 'HOUR_OUT_OF_RANGE')).toBe(true);
+  });
+});

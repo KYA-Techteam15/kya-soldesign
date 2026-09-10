@@ -280,6 +280,98 @@ table.a4-tbl {
   margin-left: 0.25em;
 }
 
+/* Une valeur textuelle — l'origine de la charge — ne se lit pas en chiffres
+   tabulaires de 13 pt : elle reprend la graisse du corps de texte. */
+.a4-kpis dd.a4-kpi-text {
+  font-family: inherit;
+  font-size: 8.5pt;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* Note de bas de section : dit d'où vient un chiffre sans le concurrencer. */
+.a4-note {
+  margin: 4px 0 0;
+  font-size: 7.5pt;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+
+/* --- Filigrane ---
+   Il doit se voir sans rendre le texte illisible : posé derrière le contenu,
+   en très clair. `position: relative` sur la feuille lui donne son repère. */
+.a4 {
+  position: relative;
+}
+.a4-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-32deg);
+  font: 700 64pt/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  color: rgb(233 108 108 / 0.12);
+  pointer-events: none;
+  z-index: 0;
+}
+.a4 > *:not(.a4-watermark) {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Fiche de mise en service ---
+   Une case se coche au stylo : le carré vide est le contenu utile, il occupe
+   donc la place d'une vraie case et non celle d'une puce. */
+.a4-checklist {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+.a4-checklist li {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 9px;
+  align-items: start;
+  font-size: 8.5pt;
+  line-height: 1.4;
+  break-inside: avoid;
+}
+.a4-checklist li::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  margin-top: 1px;
+  border: 1px solid var(--rule-2);
+  border-radius: 2px;
+}
+
+/* Paraphe scanné : il se pose au-dessus du filet, à la taille d'une signature
+   manuscrite et jamais plus. */
+.a4-sign-mark {
+  display: block;
+  max-width: 46mm;
+  max-height: 18mm;
+  margin-bottom: 4px;
+}
+
+/* Une section ne se coupe pas entre son titre et sa première ligne. */
+.a4-sec {
+  break-after: avoid;
+}
+.a4-tbl,
+.a4-kpis,
+.a4-checklist {
+  break-inside: auto;
+}
+.a4-tbl tr,
+.a4-kpis > div {
+  break-inside: avoid;
+}
+
 /* --- Conditions, signature, pied --- */
 .a4-cond {
   columns: 2;

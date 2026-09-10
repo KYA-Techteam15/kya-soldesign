@@ -124,12 +124,16 @@ export function inspectHourlyProfileWorkbook(buffer: ArrayBuffer | Uint8Array): 
     const activePowerKw = number(row[index.get('average_power_kw')!]);
     const peakCell = row[index.get('peak_power_kw')!];
     const peakPowerKw = blank(peakCell) ? null : number(peakCell);
-    if (!Number.isInteger(hour) || hour < 0 || hour > 23) issues.push(cellIssue('HOUR_INVALID', parsed.sheetName, rowIndex + 1, 'hour', 'hour', row[index.get('hour')!], 'Entier de 0 à 23 attendu'));
+    if (!Number.isInteger(hour) || hour < 0 || hour > 8_759) issues.push(cellIssue('HOUR_INVALID', parsed.sheetName, rowIndex + 1, 'hour', 'hour', row[index.get('hour')!], 'Entier de 0 à 8759 attendu'));
     if (!Number.isFinite(activePowerKw) || activePowerKw < 0) issues.push(cellIssue('RANGE_INVALID', parsed.sheetName, rowIndex + 1, 'average_power_kw', 'average_power_kw', row[index.get('average_power_kw')!], 'Nombre >= 0 attendu'));
     if (peakPowerKw !== null && (!Number.isFinite(peakPowerKw) || peakPowerKw < activePowerKw)) issues.push(cellIssue('PEAK_BELOW_AVERAGE', parsed.sheetName, rowIndex + 1, 'peak_power_kw', 'peak_power_kw', peakCell, 'La pointe doit être >= à la moyenne'));
     points.push({ hourIndex: hour, activePowerKw, peakPowerKw });
   }
-  if (points.length !== 24) issues.push(cellIssue('HOURS_COUNT_INVALID', parsed.sheetName, 0, 'hour', 'hour', points.length, '24 heures uniques sont obligatoires'));
+  // Une journée type ou une année complète, rien d'intermédiaire : le moteur
+  // répète la série, et un fragment inventerait une saisonnalité.
+  if (points.length !== 24 && points.length !== 8_760) issues.push(cellIssue('HOURS_COUNT_INVALID', parsed.sheetName, 0, 'hour', 'hour', points.length, '24 heures (journée type) ou 8760 heures (année) sont attendues'));
+  const bound = points.length === 8_760 ? 8_759 : 23;
+  if (points.some((point) => point.hourIndex > bound)) issues.push(cellIssue('HOUR_OUT_OF_RANGE', parsed.sheetName, 0, 'hour', 'hour', bound, `Les index doivent rester entre 0 et ${bound}`));
   if (new Set(points.map((point) => point.hourIndex)).size !== points.length) issues.push(cellIssue('HOUR_DUPLICATE', parsed.sheetName, 0, 'hour', 'hour', points.map((point) => point.hourIndex), 'Chaque heure doit être unique'));
   if (issues.length > 0) return { status: 'invalid', issues };
   const warnings = points.some((point) => point.peakPowerKw === null)

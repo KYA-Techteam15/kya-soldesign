@@ -18,5 +18,5 @@ test('recovers from the retained injected catalog adapter harness', async ({ pag
   await page.goto('/catalog-error.html');
   await expect(page.getByRole('alert')).toContainText('Le catalogue canonique est indisponible.');
   await page.getByRole('button', { name: 'Réessayer' }).click();
-  await expect(page.locator('.catalog-card').first()).toBeVisible();
+  await expect(page.locator('.tbl tbody tr').first()).toBeVisible();
 });

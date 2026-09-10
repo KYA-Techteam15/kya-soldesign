@@ -61,7 +61,7 @@ const project = {
 
 const settings = {
   company: { name: 'KYA-Energy Group', address: 'Lomé', phone: '+228 00', email: 'contact@kya.tg' },
-  reports: { footerText: '', logoUrl: '', logoAssetId: null },
+  reports: { footerText: '', logoUrl: '', logoAssetId: null, signatureAssetId: null, coverAssetId: null, signatureText: '', bankDetails: '' },
 } as unknown as ApplicationSettingsV2;
 
 const catalog = [
@@ -72,7 +72,8 @@ const catalog = [
 
 const t = (key: string) => key;
 
-import { buildReportDocument } from '../../src/app/export/reportModel';
+import { buildReportDocument, type ReportDocument } from '../../src/app/export/reportModel';
+import { defaultReportOptions } from '../../src/app/export/documentComposition';
 import { writeDocx } from '../../src/app/export/docxWriter';
 import { buildProjectDiagram } from '../../src/app/diagram/projectDiagram';
 
@@ -85,46 +86,102 @@ const make = (kind: 'rapport' | 'dossier_exec') => {
 const PLANS = { rapport: make('rapport'), dossier_exec: make('dossier_exec') } as const;
 const diagramOf = (kind: 'rapport' | 'dossier_exec') => PLANS[kind];
 
+/** Les titres de section disent la composition d'une pièce mieux qu'un compte de blocs. */
+const headingsOf = (document: ReportDocument): string[] =>
+  document.sections.flatMap((section) => section.blocks).flatMap((block) => block.kind === 'heading' ? [block.text] : []);
+
 describe('document Word', () => {
-  it('reprend les sections du rapport imprimé', () => {
-    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, catalog, settings, t, diagram: diagramOf('rapport') });
-    // Page de garde, page 1, page 2, planche.
-    expect(document.sections).toHaveLength(4);
+  it('assemble le rapport en une garde et un corps, planche comprise', () => {
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    // Page de garde d'un côté, tout le corps de l'autre : le synoptique du
+    // rapport tient debout, il n'a pas besoin d'une section couchée à lui.
+    expect(document.sections).toHaveLength(2);
     expect(document.sections[0]!.blocks[0]!.kind).toBe('cover');
     expect(document.fileName).toBe('centrale-de-bouake-rapport.docx');
     expect(document.company.contact).toContain('Lomé');
-    const headings = document.sections.flatMap((section) => section.blocks.filter((block) => block.kind === 'heading').map((block) => block.text));
-    expect(headings).toContain('report.protectionsAndCables');
-    expect(headings).toContain('report.singleLine');
+    expect(headingsOf(document)).toEqual(expect.arrayContaining([
+      'report.siteResource', 'report.siteNeeds', 'report.methodology',
+      'report.presizing', 'report.recommendedSystem', 'report.protectionsAndCables',
+      'report.financialAssessment', 'report.singleLine',
+    ]));
   });
 
   it('couche la planche du dossier d’exécution et y joint la nomenclature', () => {
-    const document = buildReportDocument({ project, kind: 'dossier_exec', sizing, finance: null, catalog, settings, t, diagram: diagramOf('dossier_exec') });
-    const last = document.sections[3]!;
+    const document = buildReportDocument({ project, kind: 'dossier_exec', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('dossier_exec') });
+    const last = document.sections.at(-1)!;
     expect(last.orientation).toBe('landscape');
     const table = last.blocks.find((block) => block.kind === 'table');
     expect(table?.kind === 'table' && table.rows.length).toBeGreaterThan(3);
   });
 
-  it('garde le rapport à deux sections tant que le dimensionnement manque', () => {
-    const document = buildReportDocument({ project, kind: 'rapport', sizing: null, finance: null, catalog, settings, t, diagram: null });
-    expect(document.sections).toHaveLength(3);
-  });
-
-  it('porte les mêmes calibres que le tableau des protections', () => {
-    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, catalog, settings, t, diagram: diagramOf('rapport') });
-    const table = document.sections[2]!.blocks.find((block) => block.kind === 'table');
-    expect(table?.kind === 'table' && table.rows.some((row) => row.includes('32,0 A'))).toBe(true);
-  });
-
-  it('retire la planche de la facture proforma', () => {
-    const document = buildReportDocument({ project, kind: 'proforma', sizing, finance: null, catalog, settings, t, diagram: diagramOf('rapport') });
-    expect(document.sections).toHaveLength(3);
+  it('n’ouvre pas de section pour une planche absente', () => {
+    const document = buildReportDocument({ project, kind: 'rapport', sizing: null, finance: null, solar: null, catalog, settings, t, diagram: null });
+    expect(document.sections).toHaveLength(2);
     expect(document.sections.flatMap((section) => section.blocks).some((block) => block.kind === 'image')).toBe(false);
   });
 
+  it('porte les mêmes calibres que le tableau des protections', () => {
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    const rows = document.sections.flatMap((section) => section.blocks).flatMap((block) => block.kind === 'table' ? block.rows : []);
+    expect(rows.some((row) => row.includes('32,0 A'))).toBe(true);
+  });
+
+  it('réduit la proforma à la pièce comptable', () => {
+    const document = buildReportDocument({ project, kind: 'proforma', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    const headings = headingsOf(document);
+    // Une facture ne porte ni planche, ni sections de câbles, ni bilan carbone.
+    expect(document.sections.flatMap((section) => section.blocks).some((block) => block.kind === 'image')).toBe(false);
+    expect(headings).not.toContain('report.protectionsAndCables');
+    expect(headings).not.toContain('report.expectedPerformance');
+    // Elle porte en revanche ce qui la rend payable.
+    expect(headings).toContain('report.payment');
+    expect(headings).toContain('report.conditions');
+  });
+
+  it('réserve les coûts d’achat et les marges à l’offre interne', () => {
+    const internal = buildReportDocument({ project, kind: 'offre', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    const client = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    expect(headingsOf(internal)).toContain('report.internalCosts');
+    expect(headingsOf(client)).not.toContain('report.internalCosts');
+  });
+
+  it('retire tous les montants quand on génère sans les prix', () => {
+    const options = { ...defaultReportOptions('rapport', 'fr'), withPrices: false };
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport'), options });
+    const headings = headingsOf(document);
+    expect(headings).not.toContain('report.financialAssessment');
+    expect(headings).not.toContain('report.economicIndicators');
+    // Le contenu technique, lui, reste entier.
+    expect(headings).toContain('report.recommendedSystem');
+    expect(headings).toContain('report.protectionsAndCables');
+  });
+
+  it('respecte les sections décochées et le nom de fichier choisi', () => {
+    const base = defaultReportOptions('rapport', 'fr');
+    const options = {
+      ...base,
+      sections: base.sections.filter((id) => id !== 'presizing' && id !== 'siteResource'),
+      fileName: 'Offre Bouaké — révision 2',
+      watermark: 'brouillon',
+    };
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport'), options });
+    expect(headingsOf(document)).not.toContain('report.presizing');
+    expect(headingsOf(document)).not.toContain('report.siteResource');
+    expect(document.fileName).toBe('offre-bouake-revision-2.docx');
+    expect(document.watermark).toBe('brouillon');
+  });
+
+  it('ajoute la fiche de mise en service au seul dossier d’exécution', () => {
+    const execution = buildReportDocument({ project, kind: 'dossier_exec', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('dossier_exec') });
+    const checklist = execution.sections.flatMap((section) => section.blocks).find((block) => block.kind === 'checklist');
+    expect(checklist?.kind === 'checklist' && checklist.items.length).toBeGreaterThan(5);
+
+    const report = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    expect(report.sections.flatMap((section) => section.blocks).some((block) => block.kind === 'checklist')).toBe(false);
+  });
+
   it('produit un .docx valide, avec une section couchée et l’image de la planche', async () => {
-    const document = buildReportDocument({ project, kind: 'dossier_exec', sizing, finance: null, catalog, settings, t, diagram: diagramOf('dossier_exec') });
+    const document = buildReportDocument({ project, kind: 'dossier_exec', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('dossier_exec') });
     const bytes = new Uint8Array(await (await writeDocx(document)).arrayBuffer());
 
     // Signature ZIP : un .docx est une archive OOXML.

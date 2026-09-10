@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
 import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary, type SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
@@ -16,6 +16,8 @@ import { Dialog } from '../../ui/Dialog';
 import { isDecimalDraft } from '../../app/models/formValues';
 import { exportEquipmentWorkbook, inspectEquipmentWorkbook, exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
 import { ComposedProfilesDialog } from './ComposedProfilesDialog';
+import { AnnualLoadChart } from './AnnualLoadChart';
+import { buildAnnualLoadPresentation } from '../../app/models/annualLoadPresentation';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -93,8 +95,21 @@ export function SectionBesoins() {
     (p) => p.id === project.load.activeProfileId,
   )!;
   const composedActive = project.load.activeMode === 'composed' && project.load.composition !== null;
+  // Une série de 8 760 points ne se saisit pas à la main : l'écran doit dire
+  // ce qu'il détient et proposer d'en sortir, pas afficher les 24 premières
+  // heures de l'année en laissant croire qu'elles sont tout le profil.
+  const annualSeries = profile.hourly.length === 8_760;
+
   const calculation = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
   const solarCalculation = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
+
+  /**
+   * Vue annuelle. Elle demande la météo horaire du site : sans elle, aucune
+   * date n'est portée par le profil et la série ne peut pas être construite.
+   * Le calcul est mémorisé — il déroule 8 760 heures à chaque frappe sinon.
+   */
+  const solarOutput = solarCalculation.status === 'ready' ? solarCalculation.envelope.output : null;
+  const annual = useMemo(() => buildAnnualLoadPresentation(project, solarOutput), [project, solarOutput]);
 
   const mutateProfile = (fn: (p: NamedProfile) => void) =>
     update((draft) => {
@@ -508,15 +523,30 @@ export function SectionBesoins() {
         <section>
           <div className="tbl-title">
             <h2 className="h-sec">{t('loads.hourly')}</h2>
-            <span className="label">puissance moyenne et pointe, kW · 24 valeurs</span>
+            <span className="label">{annualSeries ? t('loads.annualSeriesLabel') : t('loads.dailySeriesLabel')}</span>
             <span className="sep" />
-            <button className="btn" onClick={() => setBulkEditor(true)}>
+            {!annualSeries && <button className="btn" onClick={() => setBulkEditor(true)}>
               Édition en masse…
-            </button>
+            </button>}
             <input ref={hourlyImportRef} type="file" accept=".xlsx,.xls,.csv,text/csv" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void (file.name.toLowerCase().endsWith('.csv') ? importHourlyCsv(file, mutateProfile, notify) : importHourlyWorkbook(file, mutateProfile, notify)); event.target.value = ''; }} />
             <button className="btn" onClick={() => hourlyImportRef.current?.click()}>{t('loads.importExcel')}</button>
             <button className="btn" onClick={exportHourly}>{t('loads.exportExcel')}</button>
           </div>
+          {annualSeries ? <AnnualSeriesPanel
+            hourly={profile.hourly}
+            onReduceToDay={() => {
+              // On repart de la journée la plus chargée : c'est celle que le
+              // dimensionnement doit tenir, et la seule dont partir ait un sens.
+              const day = heaviestDayIndex(profile.hourly);
+              mutateProfile((target) => {
+                target.hourly = Array.from({ length: 24 }, (_, hour) => {
+                  const point = target.hourly[day * 24 + hour];
+                  return { hour, realPower: point?.realPower ?? 0, peakPower: point?.peakPower ?? 0 };
+                });
+              });
+              notify({ kind: 'info', title: t('loads.annualReducedTitle'), detail: t('loads.annualReducedDetail') });
+            }}
+          /> : <>
           {[0, 12].map((offset) => (
             <div className="hourgrid" key={offset} style={{ marginBottom: 'var(--sp-3)' }}>
               {profile.hourly.slice(offset, offset + 12).map((h) => (
@@ -542,6 +572,7 @@ export function SectionBesoins() {
           ))}
           <div className="tbl-title" style={{ marginTop: 'var(--sp-4)' }}><h2 className="h-sec">{t('loads.hourlyPeak')}</h2><span className="label">kW · chaque valeur doit être ≥ à la puissance moyenne</span></div>
           {[0, 12].map((offset) => <div className="hourgrid" key={`peak-${offset}`} style={{ marginBottom: 'var(--sp-3)' }}>{profile.hourly.slice(offset, offset + 12).map((h) => <div key={h.hour}><span>{String(h.hour).padStart(2, '0')}</span><DraftNumberInput className="cell-in" aria-label={`Puissance de pointe à ${h.hour} h`} value={h.peakPower} format={(value) => fmt(value, 2)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.hourly[h.hour].peakPower = Math.max(p.hourly[h.hour].realPower, value); }); }} /></div>)}</div>)}
+          </>}
           <CapabilityNotice capability="sizing" state={calculation} compact />
         </section>
       )}
@@ -578,6 +609,8 @@ export function SectionBesoins() {
       )}
       </>}
 
+      <AnnualLoadChart presentation={annual} />
+
       <ComposedProfilesDialog open={showComposer} initial={project.load.composition} onCancel={() => setShowComposer(false)} onApply={(composition) => { applyComposition(composition); setShowComposer(false); notify({ kind: 'success', title: 'Profils composés enregistrés', detail: 'Le calendrier annuel a été recalculé.' }); }} />
       {confirmSimpleSwitch && <Dialog title={t('loads.composedSwitchTitle')} onClose={() => setConfirmSimpleSwitch(false)} footer={<><button className="btn btn-ghost" onClick={() => setConfirmSimpleSwitch(false)}>{t('g.cancel')}</button><button className="btn btn-ok" onClick={() => { update((draft) => { draft.load.activeMode = 'simple'; }); setConfirmSimpleSwitch(false); }}>{t('g.confirm')}</button></>}><p>{t('loads.composedSwitchBody')}</p></Dialog>}
 
@@ -612,6 +645,47 @@ function summarizeRows(rows: readonly (EquipmentRowSummary | null)[]): Equipment
   }), { installedUsefulPowerW: 0, calledElectricalPowerW: 0, dailyEnergyWh: 0 });
 }
 
+/** Index du jour le plus consommateur d'une série annuelle. */
+function heaviestDayIndex(hourly: readonly { readonly realPower: number }[]): number {
+  let best = 0;
+  let bestEnergy = -1;
+  for (let day = 0; day * 24 + 24 <= hourly.length; day += 1) {
+    let energy = 0;
+    for (let hour = 0; hour < 24; hour += 1) energy += hourly[day * 24 + hour]!.realPower;
+    if (energy > bestEnergy) { bestEnergy = energy; best = day; }
+  }
+  return best;
+}
+
+/**
+ * Résumé d'une série annuelle importée.
+ *
+ * On ne montre pas 8 760 champs : on dit ce que la série contient, on désigne
+ * le jour qui dimensionne, et on laisse une porte de sortie vers la journée
+ * type pour qui voudrait reprendre la main à la saisie.
+ */
+function AnnualSeriesPanel({ hourly, onReduceToDay }: {
+  readonly hourly: readonly { readonly hour: number; readonly realPower: number; readonly peakPower: number }[];
+  readonly onReduceToDay: () => void;
+}) {
+  const t = useT();
+  const totalKwh = hourly.reduce((total, point) => total + point.realPower, 0);
+  const peakKw = hourly.reduce((max, point) => Math.max(max, point.peakPower), 0);
+  const day = heaviestDayIndex(hourly);
+  const dayKwh = Array.from({ length: 24 }, (_, hour) => hourly[day * 24 + hour]?.realPower ?? 0).reduce((total, value) => total + value, 0);
+  const date = new Date(Date.UTC(2021, 0, 1 + day));
+  return <div className="annual-series-panel">
+    <div className="out-grid">
+      <div className="out-cell is-lead"><span className="out-lbl">{t('loads.annualTotal')}</span><span className="out-val"><b>{fmt(totalKwh, 0)}</b><span className="unit">kWh/an</span></span></div>
+      <div className="out-cell"><span className="out-lbl">{t('loads.annualPeak')}</span><span className="out-val"><b>{fmt(peakKw, 2)}</b><span className="unit">kW</span></span></div>
+      <div className="out-cell"><span className="out-lbl">{t('loads.annualDesignDay')}</span><span className="out-val"><b>{date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', timeZone: 'UTC' })}</b></span><span className="out-note">{fmt(dayKwh, 1)} kWh</span></div>
+      <div className="out-cell"><span className="out-lbl">{t('loads.annualHours')}</span><span className="out-val"><b>{fmt(hourly.length, 0)}</b><span className="unit">h</span></span></div>
+    </div>
+    <p className="label">{t('loads.annualHint')}</p>
+    <button className="btn" onClick={onReduceToDay}>{t('loads.annualReduce')}</button>
+  </div>;
+}
+
 function clampHour(value: number): number { return Math.min(23, Math.max(0, Math.round(value))); }
 
 async function importHourlyCsv(
@@ -621,19 +695,30 @@ async function importHourlyCsv(
 ): Promise<void> {
   try {
     const lines = (await file.text()).split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+    // Une première ligne d'en-têtes est fréquente dans les exports de
+    // compteur : elle ne se lit pas comme une heure, on la laisse tomber.
     const parsed = lines.flatMap((line) => {
       const columns = line.split(/[;,\t]/u).map((value) => value.trim().replace(',', '.'));
       const hour = Number(columns[0]);
       const meanKw = Number(columns[1]);
-      const peakKw = columns[2] === undefined ? meanKw : Number(columns[2]);
-      return Number.isInteger(hour) && hour >= 0 && hour <= 23 && Number.isFinite(meanKw) && meanKw >= 0 && Number.isFinite(peakKw) && peakKw >= meanKw
+      const peakKw = columns[2] === undefined || columns[2] === '' ? meanKw : Number(columns[2]);
+      return Number.isInteger(hour) && hour >= 0 && hour <= 8_759 && Number.isFinite(meanKw) && meanKw >= 0 && Number.isFinite(peakKw) && peakKw >= meanKw
         ? [{ hour, meanKw, peakKw }] : [];
     });
-    if (parsed.length !== 24 || new Set(parsed.map((row) => row.hour)).size !== 24) throw new Error('INVALID_HOURLY_CSV');
-    mutate((profile) => { for (const row of parsed) { profile.hourly[row.hour]!.realPower = row.meanKw; profile.hourly[row.hour]!.peakPower = row.peakKw; } });
-    notify({ kind: 'success', title: 'Profil CSV importé', detail: '24 heures · puissance moyenne et pointe contrôlées.' });
+    const size = parsed.length === 8_760 ? 8_760 : 24;
+    if (parsed.length !== size || new Set(parsed.map((row) => row.hour)).size !== size) throw new Error('INVALID_HOURLY_CSV');
+    if (parsed.some((row) => row.hour >= size)) throw new Error('INVALID_HOURLY_CSV');
+    mutate((profile) => {
+      profile.hourly = Array.from({ length: size }, (_, hour) => ({ hour, realPower: 0, peakPower: 0 }));
+      for (const row of parsed) { profile.hourly[row.hour]!.realPower = row.meanKw; profile.hourly[row.hour]!.peakPower = row.peakKw; }
+    });
+    notify({
+      kind: 'success',
+      title: 'Profil CSV importé',
+      detail: size === 8_760 ? '8 760 heures · année complète, la simulation la lira telle quelle.' : '24 heures · puissance moyenne et pointe contrôlées.',
+    });
   } catch {
-    notify({ kind: 'error', title: 'Import CSV refusé', detail: 'Attendu : 24 lignes uniques « heure; moyenne_kW; pointe_kW », avec pointe ≥ moyenne.' });
+    notify({ kind: 'error', title: 'Import CSV refusé', detail: 'Attendu : 24 lignes (journée type) ou 8 760 lignes (année) « heure; moyenne_kW; pointe_kW », heures uniques et pointe ≥ moyenne.' });
   }
 }
 
@@ -647,6 +732,14 @@ async function importHourlyWorkbook(
     notify({ kind: 'error', title: 'Import refusé', detail: result.issues.slice(0, 3).map((issue) => `${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') });
     return;
   }
-  mutate((profile) => { result.candidate.forEach((point) => { profile.hourly[point.hourIndex] = { hour: point.hourIndex, realPower: point.activePowerKw, peakPower: point.peakPowerKw ?? point.activePowerKw }; }); });
-  notify({ kind: 'success', title: 'Profil horaire importé', detail: '24 heures validées et remplacées atomiquement.' });
+  const size = result.candidate.length;
+  mutate((profile) => {
+    profile.hourly = Array.from({ length: size }, (_, hour) => ({ hour, realPower: 0, peakPower: 0 }));
+    result.candidate.forEach((point) => { profile.hourly[point.hourIndex] = { hour: point.hourIndex, realPower: point.activePowerKw, peakPower: point.peakPowerKw ?? point.activePowerKw }; });
+  });
+  notify({
+    kind: 'success',
+    title: 'Profil horaire importé',
+    detail: size === 8_760 ? '8 760 heures validées et remplacées atomiquement.' : '24 heures validées et remplacées atomiquement.',
+  });
 }

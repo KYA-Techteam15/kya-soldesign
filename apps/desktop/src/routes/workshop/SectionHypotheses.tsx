@@ -30,6 +30,7 @@ export function SectionHypotheses() {
   const project = useProject();
   const update = useProjects((state) => state.update);
   const assumptions = project.assumptions;
+  const money = project.currency;
   const state = useCalculationState(project.id, 'presizing', project.updatedAt);
   const service = useCalculationService();
   const [family, setFamily] = useState<Family>('tech');
@@ -60,7 +61,7 @@ export function SectionHypotheses() {
     <section><h2 className="h-sec">Critères de l’étude</h2><div className="form-rows">
       <NumField label="LPSP maximale" unit="%" value={assumptions.lpspMax} onChange={set('lpspMax')} decimals={1} />
       <NumField label="LOLP maximale" unit="%" value={assumptions.lolpMax} onChange={set('lolpMax')} decimals={1} />
-      <NumField label="Tarif réseau de référence" unit="FCFA/kWh" value={assumptions.lcoeGrid} onChange={set('lcoeGrid')} />
+      <NumField label="Tarif réseau de référence" unit={`${money}/kWh`} value={assumptions.lcoeGrid} onChange={set('lcoeGrid')} />
     </div></section>
     <div className={`runbar ${result === null ? 'is-stale' : ''}`}><button className="btn btn-ok btn-run" disabled={running || service.runPresizing === undefined} onClick={() => void run()}>{running ? t('presizing.running') : t('presizing.run')}</button><span className="runbar-note">{running && progress ? `${progress.completed} / ${progress.total}` : result === null ? t('presizing.readyToRun') : `${t('presizing.method')} ${result.engineVersion}`}</span></div>
     {running && progress && <progress value={progress.completed} max={progress.total} aria-label={t('presizing.progress')} />}
@@ -79,8 +80,8 @@ export function SectionHypotheses() {
         <ResultValue label="Énergie servie" value={candidate.servedEnergyKwh} unit="kWh/an" digits={0} />
         <ResultValue label="LPSP" value={candidate.lpsp * 100} unit="%" /><ResultValue label="LOLP" value={candidate.lolp * 100} unit="%" />
         <ResultValue label="SRI" value={candidate.sri} digits={3} /><ResultValue label="SRI minimum" value={output.sriMin} digits={3} />
-        <ResultValue label="Coût cycle de vie" value={candidate.lcc} unit="FCFA" digits={0} />
-        <ResultValue label="Coût du kWh produit" value={candidate.lcoe} unit="FCFA/kWh" /><ResultValue label="SVI" value={candidate.svi} digits={3} />
+        <ResultValue label="Coût cycle de vie" value={candidate.lcc} unit={money} digits={0} />
+        <ResultValue label="Coût du kWh produit" value={candidate.lcoe} unit={`${money}/kWh`} /><ResultValue label="SVI" value={candidate.svi} digits={3} />
         <ResultValue label="CO₂ évité" value={candidate.co2AvoidedKg} unit="kg/an" digits={0} />
         <ResultValue label="Facteur carbone" value={candidate.carbonFactorKgPerKwh} unit="kgCO₂/kWh" digits={3} />
       </>}
@@ -93,7 +94,7 @@ export function SectionHypotheses() {
         <NumField label="Rendement batterie" unit="%" value={assumptions.batteryYield} onChange={set('batteryYield')} decimals={1} />
         <NumField label="Seuil d’irradiance minimale" unit="W/m²" value={project.load.irMin} onChange={(value) => update((draft) => { draft.load.irMin = value; })} />
       </div>}
-      {family === 'costs' && <EconomicAssumptionsPanel assumptions={assumptions} onSet={(key, value) => set(key)(value)} onSetMode={(component, mode) => update((draft) => { if (component === 'pv') draft.assumptions.pvCostInputMode = mode; else if (component === 'storage') draft.assumptions.storageCostInputMode = mode; else draft.assumptions.inverterCostInputMode = mode; })} onApplyReference={(component, price, size, specificCost) => update((draft) => { if (component === 'pv') { draft.assumptions.pvReferencePrice = price; draft.assumptions.pvReferencePowerW = size; draft.assumptions.pvSpecificCost = specificCost; draft.assumptions.pvCostInputMode = 'component'; } else if (component === 'storage') { draft.assumptions.storageReferencePrice = price; draft.assumptions.storageReferenceKwh = size; draft.assumptions.batterySpecificCost = specificCost; draft.assumptions.storageCostInputMode = 'component'; } else { draft.assumptions.inverterReferencePrice = price; draft.assumptions.inverterReferencePowerW = size; draft.assumptions.inverterSpecificCost = specificCost; draft.assumptions.inverterCostInputMode = 'component'; } })} />}
+      {family === 'costs' && <EconomicAssumptionsPanel currency={money} assumptions={assumptions} onSet={(key, value) => set(key)(value)} onSetMode={(component, mode) => update((draft) => { if (component === 'pv') draft.assumptions.pvCostInputMode = mode; else if (component === 'storage') draft.assumptions.storageCostInputMode = mode; else draft.assumptions.inverterCostInputMode = mode; })} onApplyReference={(component, price, size, specificCost) => update((draft) => { if (component === 'pv') { draft.assumptions.pvReferencePrice = price; draft.assumptions.pvReferencePowerW = size; draft.assumptions.pvSpecificCost = specificCost; draft.assumptions.pvCostInputMode = 'component'; } else if (component === 'storage') { draft.assumptions.storageReferencePrice = price; draft.assumptions.storageReferenceKwh = size; draft.assumptions.batterySpecificCost = specificCost; draft.assumptions.storageCostInputMode = 'component'; } else { draft.assumptions.inverterReferencePrice = price; draft.assumptions.inverterReferencePowerW = size; draft.assumptions.inverterSpecificCost = specificCost; draft.assumptions.inverterCostInputMode = 'component'; } })} />}
       {family === 'life' && <div className="form-rows">
         <NumField label="Durée de vie du projet" unit="ans" value={assumptions.projectLifetime} onChange={set('projectLifetime')} />
         <NumField label="Modules PV" unit="ans" value={assumptions.pvLifetime} onChange={set('pvLifetime')} />

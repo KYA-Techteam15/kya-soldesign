@@ -1,36 +1,49 @@
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { ApplicationProvider, useApplication } from '../../src/app/ApplicationProvider.js';
-import { CatalogPage } from '../../src/features/catalog/CatalogPage.js';
-import { I18nProvider } from '../../src/shared/i18n/I18nProvider.js';
-import { createTestServices } from '../support/createTestServices.js';
+import { CatalogProvider } from '../../src/app/CatalogProvider.js';
+import { ProjectSessionProvider } from '../../src/app/ProjectSessionProvider.js';
+import { CatalogRoute } from '../../src/routes/Catalog.js';
+import { CanonicalCatalog } from '../../src/app/adapters/canonicalCatalog.js';
+import type { CatalogQuery, CatalogQueryPort } from '../../src/app/contracts.js';
 import '../../src/styles/tokens.css';
-import '../../src/styles/base.css';
-import '../../src/styles/utilities.css';
+import '../../src/styles/app.css';
+import '../../src/styles/vivid.css';
+import '../../src/styles/radiant.css';
+import '../../src/styles/print.css';
 
-const base = createTestServices();
+/**
+ * Reprise après une lecture de catalogue en échec.
+ *
+ * La première lecture échoue, les suivantes réussissent : c'est le seul moyen
+ * de voir l'état d'erreur puis la reprise sans dépendre d'une panne réelle. Le
+ * harnais monte l'écran réellement livré — un banc monté sur un écran que
+ * personne n'ouvre ne prouve rien de ce que l'utilisateur vit.
+ */
+
+const base = new CanonicalCatalog();
 let attempts = 0;
-const services = {
-  ...base,
-  catalog: {
-    ...base.catalog,
-    list: async (query?: Parameters<typeof base.catalog.list>[0]) => {
-      attempts += 1;
-      if (attempts === 1) throw new Error('Injected catalog read failure');
-      return base.catalog.list(query);
-    },
-    listLocalities: () => base.catalog.listLocalities(),
-    listWeatherSources: (localityId?: string) => base.catalog.listWeatherSources(localityId),
-    listWeatherFiles: () => base.catalog.listWeatherFiles(),
-    summary: () => base.catalog.summary(),
-  },
-};
 
-function Harness() {
-  const { locale } = useApplication();
-  return <I18nProvider locale={locale}><CatalogPage /></I18nProvider>;
-}
+const failingOnce: CatalogQueryPort = {
+  list: async (query?: CatalogQuery) => {
+    attempts += 1;
+    if (attempts === 1) throw new Error('Injected catalog read failure');
+    return base.list(query);
+  },
+  listLocalities: () => base.listLocalities(),
+  listWeatherSources: (localityId?: string) => base.listWeatherSources(localityId),
+  listWeatherFiles: () => base.listWeatherFiles(),
+  listLoadProfiles: () => base.listLoadProfiles(),
+  summary: () => base.summary(),
+};
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Harness root is missing');
-createRoot(root).render(<BrowserRouter><ApplicationProvider services={services}><Harness /></ApplicationProvider></BrowserRouter>);
+createRoot(root).render(
+  <BrowserRouter>
+    <ProjectSessionProvider>
+      <CatalogProvider catalog={failingOnce}>
+        <CatalogRoute />
+      </CatalogProvider>
+    </ProjectSessionProvider>
+  </BrowserRouter>,
+);

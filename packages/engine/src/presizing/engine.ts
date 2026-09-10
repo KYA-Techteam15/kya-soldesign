@@ -51,9 +51,15 @@ function evaluateCandidate(input: PresizingInputV1, alphaA: number, alphaN: numb
     + ((alphaA + storageEfficiency) * input.yEn + (1 + alphaN) * (1 - input.yEn)) / storageEfficiency);
   if (pvPeakKw <= 0 || storageKwh < 0) return null;
   const inverterKw = Math.max(input.peakPowerW / 1000, pvPeakKw * input.inverterEfficiency);
-  let storedKwh = storageKwh; let lossHours = 0; let served = 0; let production = 0;
+  // La charge est soit une journée type répétée, soit une année complète. Le
+  // modulo porte donc sur sa propre longueur : sur 8 760 valeurs il ne boucle
+  // jamais, et la saisonnalité réellement saisie atteint la simulation au lieu
+  // d'être écrasée par une moyenne.
+  const loadHours = input.hourlyLoadWh.length;
+  let storedKwh = storageKwh; let lossHours = 0; let served = 0; let production = 0; let demanded = 0;
   for (let hour = 0; hour < input.hourlyPoaWm2.length; hour += 1) {
-    const loadKwh = (input.hourlyLoadWh[hour % 24] ?? 0) / 1000;
+    const loadKwh = (input.hourlyLoadWh[hour % loadHours] ?? 0) / 1000;
+    demanded += loadKwh;
     const pvKwh = pvPeakKw * (input.hourlyPoaWm2[hour]! / 1000) * input.systemPr;
     production += pvKwh;
     const direct = Math.min(loadKwh, pvKwh * input.inverterEfficiency);
@@ -63,7 +69,9 @@ function evaluateCandidate(input: PresizingInputV1, alphaA: number, alphaN: numb
     served += direct + discharged * input.batteryEfficiency;
     if (direct + discharged * input.batteryEfficiency + 1e-9 < loadKwh) lossHours += 1;
   }
-  const totalLoadKwh = input.dailyEnergyWh / 1000 * 365;
+  // Le besoin total se lit sur la simulation elle-même. Le déduire d'une
+  // énergie journalière multipliée par 365 supposait une année plate.
+  const totalLoadKwh = demanded;
   const servedEnergyKwh = Math.min(served, totalLoadKwh);
   const lpsp = Math.max(0, Math.min(1, 1 - servedEnergyKwh / Math.max(totalLoadKwh, 0.001)));
   const lolp = lossHours / input.hourlyPoaWm2.length; const sri = (1 - lolp) * (1 - lpsp);
@@ -89,10 +97,21 @@ function replacementCost(pvPeakKw: number, storageKwh: number, inverterKw: numbe
   return total;
 }
 
+/**
+ * Longueurs de charge admises.
+ *
+ * 24 : une journée type, répétée sur l'année météo. 8 760 : l'année réelle,
+ * heure par heure. Rien entre les deux — une série partielle laisserait le
+ * modulo fabriquer une saisonnalité qui n'existe pas.
+ */
+export function isAcceptedLoadLength(length: number): boolean {
+  return length === 24 || length === 8760;
+}
+
 function validateInput(input: PresizingInputV1): void {
   if (!Number.isFinite(input.dailyEnergyWh) || input.dailyEnergyWh <= 0) throw new Error('LOAD_ENERGY_MISSING');
   if (!Number.isFinite(input.yEn) || input.yEn < 0 || input.yEn > 1) throw new Error('YEN_OUT_OF_RANGE');
-  if (input.hourlyLoadWh.length !== 24 || input.hourlyPoaWm2.length !== 8760) throw new Error('HOURLY_DATA_INCOMPLETE');
+  if (!isAcceptedLoadLength(input.hourlyLoadWh.length) || input.hourlyPoaWm2.length !== 8760) throw new Error('HOURLY_DATA_INCOMPLETE');
   if (input.hourlyLoadWh.some((value) => !Number.isFinite(value) || value < 0) || input.hourlyPoaWm2.some((value) => !Number.isFinite(value) || value < 0)) throw new Error('HOURLY_DATA_INVALID');
   const ratios = [input.lpspMax, input.lolpMax, input.systemPr, input.inverterEfficiency, input.batteryEfficiency];
   if (ratios.some((value) => !Number.isFinite(value) || value < 0 || value > 1) || input.systemPr === 0 || input.inverterEfficiency === 0 || input.batteryEfficiency === 0) throw new Error('ASSUMPTION_OUT_OF_RANGE');

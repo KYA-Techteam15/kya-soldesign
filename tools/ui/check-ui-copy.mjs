@@ -5,7 +5,7 @@ const root = resolve('apps/desktop/src');
 const allowed = new Set([
   'KYA', 'SolDesign', 'KYA SOLAR ENGINEERING', 'Français', 'English',
   'Ctrl K', 'Ctrl D', 'Ctrl V', 'Entrée', 'Échap',
-  'W', 'Wc', 'Wh', 'kW', 'kWc', 'kWh', 'V', 'A', 'Ah', 'm', 'mm²',
+  'W', 'Wc', 'Wh', 'kW', 'kWc', 'kWh', 'V', 'A', 'Ah', 'm', 'mm²', 'h', 'kWh/an',
   'FCFA', 'FCFA/kWh', 'FCFA/Wc', '%', 'u', 'DoD', 'PV max', 'Vdc',
   'LPSP', 'LOLP', 'SRI', 'SVI', 'CO₂',
 ]);

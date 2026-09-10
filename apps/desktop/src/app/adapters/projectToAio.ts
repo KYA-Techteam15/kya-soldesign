@@ -106,8 +106,14 @@ export async function projectToPresizingInput(project: ProjectFileV1, references
   const value = required as { readonly [Key in keyof typeof required]: number };
   const load = adapted.input.load;
   const peakPowerW = solar.output.loadHourlyPeakPowerW === null ? Math.max(...load.hourlyEnergyWh) : Math.max(...solar.output.loadHourlyPeakPowerW);
+  // La journée normalisée dimensionne (formules analytiques journalières) ;
+  // l'année réelle, quand elle existe, simule. Les deux ne se remplacent pas :
+  // c'est la simulation qui produit LPSP, LOLP et SRI, et elle n'a aucune
+  // raison de lire une moyenne quand l'utilisateur a fourni ses 8 760 heures.
+  const annual = annualHourlyLoadWh(parseProjectInputsV1(project.inputs));
   return { status: 'ready', input: {
-    dailyEnergyWh: load.hourlyEnergyWh.reduce((sum, item) => sum + item, 0), yEn: gammaValue, hourlyLoadWh: load.hourlyEnergyWh,
+    dailyEnergyWh: load.hourlyEnergyWh.reduce((sum, item) => sum + item, 0), yEn: gammaValue,
+    hourlyLoadWh: annual ?? load.hourlyEnergyWh,
     hourlyPoaWm2: solar.output.hourlyPoaWm2, peakPowerW, lpspMax: value.lpspMax, lolpMax: value.lolpMax, systemPr: value.systemPr,
     inverterEfficiency: value.inverterEfficiency, batteryEfficiency: value.batteryEfficiency,
     pvSpecificCostPerKw: value.pvCost * (1 + assumptions.pvMarginRatio),
@@ -177,6 +183,22 @@ export function projectToSolarAnalysis(project: ProjectFileV1, references: Page1
   const input = parseProjectInputsV1(project.inputs);
   const resourceOnly = analyzeProjectSolar(input, null);
   return analyzeProjectSolar(input, normalizeActiveLoad(input, references, resourceOnly?.output.meanHourlyPoaWm2 ?? null), references);
+}
+
+/**
+ * Série annuelle du profil actif, si l'utilisateur en a importé une.
+ *
+ * Seul le mode « profil horaire » peut en porter une : un inventaire décrit
+ * des appareils, une facture une moyenne, et des profils composés des types de
+ * jour — aucun des trois ne connaît l'heure 4 812 de l'année.
+ */
+function annualHourlyLoadWh(input: ProjectInputsV1): readonly number[] | null {
+  if (input.load.activeMode === 'composed') return null;
+  const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId);
+  if (profile === undefined || profile.source !== 'hourly' || profile.hourlyPoints.length !== 8_760) return null;
+  const series = Array.from({ length: 8_760 }, () => 0);
+  for (const point of profile.hourlyPoints) series[point.hourIndex] = point.activePowerW;
+  return series;
 }
 
 function normalizeActiveLoad(input: ProjectInputsV1, references: Page1References, meanHourlyPoaWm2: readonly number[] | null): Page1LoadNormalization {

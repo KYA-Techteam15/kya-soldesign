@@ -73,10 +73,21 @@ export const projectLoadItemV1Schema = z.object({
 }).strict();
 
 export const hourlyLoadPointV1Schema = z.object({
-  hourIndex: z.number().int().min(0).max(23),
+  // 0..23 pour une journée type, 0..8759 pour une année complète.
+  hourIndex: z.number().int().min(0).max(8_759),
   activePowerW: z.number().finite().min(0),
   peakPowerW: z.number().finite().min(0).nullable(),
 }).strict();
+
+/**
+ * Une série horaire décrit une journée type ou une année entière, jamais un
+ * fragment : une longueur intermédiaire laisserait la répétition fabriquer une
+ * saisonnalité que personne n'a saisie.
+ */
+const hourlySeriesSchema = z.array(hourlyLoadPointV1Schema)
+  .refine((points) => points.length === 24 || points.length === 8_760, {
+    message: 'An hourly series must hold exactly 24 or 8760 points',
+  });
 
 export const meterLoadInputV1Schema = z.object({
   observedEnergyWh: nullableNonNegative,
@@ -98,7 +109,7 @@ export const loadProfileInputV1Schema = z.object({
   displayColor: z.string().min(1),
   source: z.enum(['equipment', 'hourly', 'meter']),
   items: z.array(projectLoadItemV1Schema),
-  hourlyPoints: z.array(hourlyLoadPointV1Schema).length(24),
+  hourlyPoints: hourlySeriesSchema,
   meter: meterLoadInputV1Schema.nullable(),
 }).strict();
 

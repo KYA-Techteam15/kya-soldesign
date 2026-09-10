@@ -90,7 +90,7 @@ const cell = (
   });
 
 type Raster = { png: Uint8Array; widthPx: number; heightPx: number };
-type CoverArt = { logo?: Raster; cover?: Raster };
+type CoverArt = { logo?: Raster; cover?: Raster; signature?: Raster };
 
 /** Rend un bloc du modèle. Un bloc image demande un rendu asynchrone préalable. */
 function renderBlock(
@@ -364,13 +364,18 @@ function renderBlock(
         new Paragraph({ spacing: { after: 120 }, children: [] }),
       ];
 
-    case 'paragraph':
+    case 'paragraph': {
+      // Un libellé vide sert de note libre : ni gras de tête, ni espace orphelin.
+      const labelled = block.label.trim().length > 0;
       return [
         new Paragraph({
           spacing: { after: 60 },
-          children: [text(`${block.label} `, { bold: true, size: 8.5, color: TEAL_DARK }), text(block.text, { size: 8.5 })],
+          children: labelled
+            ? [text(`${block.label} `, { bold: true, size: 8.5, color: TEAL_DARK }), text(block.text, { size: 8.5 })]
+            : [text(block.text, { size: 7.5, color: MUTED })],
         }),
       ];
+    }
 
     case 'image': {
       const raster = images.get(block);
@@ -397,6 +402,19 @@ function renderBlock(
       ];
     }
 
+    // Fiche de chantier : une case à cocher se coche au stylo, elle ne se
+    // pré-remplit pas. Le carré vide est donc le contenu, pas un décor.
+    case 'checklist':
+      return block.items.map((label) =>
+        new Paragraph({
+          spacing: { after: 90 },
+          children: [
+            text('\u2610   ', { size: 12, color: TEAL_DARK }),
+            text(label, { size: 8.5 }),
+          ],
+        }),
+      );
+
     case 'signature':
       return [
         new Paragraph({ spacing: { before: 320 }, children: [] }),
@@ -411,6 +429,18 @@ function renderBlock(
             insideVertical: NO_BORDER,
           },
           rows: [
+            // Le paraphe se pose au-dessus du filet, côté émetteur seulement :
+            // la case du client reste vide, c'est lui qui la remplit.
+            new TableRow({
+              children: [signatureMark(art.get(block)?.signature), undefined].map(
+                (mark) =>
+                  new TableCell({
+                    borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER },
+                    margins: { top: 0, bottom: 0, left: 0, right: 120 },
+                    children: [mark ?? new Paragraph({ children: [] })],
+                  }),
+              ),
+            }),
             new TableRow({
               children: [block.left, block.right].map(
                 (value) =>
@@ -427,11 +457,26 @@ function renderBlock(
   }
 }
 
+/** Paragraphe portant le paraphe, ou rien s'il n'a pas été configuré. */
+function signatureMark(raster: Raster | undefined): Paragraph | undefined {
+  if (!raster) return undefined;
+  return new Paragraph({
+    spacing: { before: 120 },
+    children: [new ImageRun({ type: 'png', data: raster.png, transformation: { width: raster.widthPx, height: raster.heightPx } })],
+  });
+}
+
 /** Charge les visuels de la page de garde ; un échec n'empêche pas l'export. */
 async function loadCoverArt(document: ReportDocument): Promise<Map<Block, CoverArt>> {
   const art = new Map<Block, CoverArt>();
   for (const section of document.sections) {
     for (const block of section.blocks) {
+      if (block.kind === 'signature') {
+        // Le paraphe scanné fait foi sur la pièce remise : il entre au même
+        // titre que le logo, à une largeur qui reste une signature.
+        art.set(block, { signature: await loadImage(block.imageUrl, mmToDocxPx(38)) });
+        continue;
+      }
       if (block.kind !== 'cover') continue;
       const entry: CoverArt = {};
       entry.logo = await loadImage(block.logoUrl, mmToDocxPx(46));
@@ -501,6 +546,16 @@ function sectionOf(
     headers: {
       default: new Header({
         children: [
+          // Filigrane. Word n'expose pas de VML ici : la mention est posée en
+          // tête de page, en gros et en clair. Elle se voit sans masquer le
+          // texte — c'est ce qu'on attend d'un « BROUILLON ».
+          ...(document.watermark.length > 0
+            ? [new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 40 },
+                children: [text(document.watermark.toUpperCase(), { bold: true, size: 20, color: 'E8B4B8' })],
+              })]
+            : []),
           new Paragraph({
             border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: TEAL, space: 6 } },
             spacing: { after: 160 },

@@ -1,10 +1,76 @@
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { readdir } from 'node:fs/promises';
+import { extname, join, relative, resolve } from 'node:path';
 
-const frBlock = await readFile(resolve('apps/desktop/src/shared/i18n/fr.ts'), 'utf8');
-const enBlock = await readFile(resolve('apps/desktop/src/shared/i18n/en.ts'), 'utf8');
-const keys = (value) => [...value.matchAll(/'([^']+)':/g)].map((match) => match[1]).sort((left, right) => left.localeCompare(right));
-const frKeys = keys(frBlock); const enKeys = keys(enBlock);
-if (frKeys.length === 0 || JSON.stringify(frKeys) !== JSON.stringify(enKeys)) throw new Error('French and English message keys must match exactly');
-if (/\{\{[^}]+\}\}/.test(`${frBlock}\n${enBlock}`)) throw new Error('Unresolved raw translation token found');
-process.stdout.write(`i18n check passed (${frKeys.length} keys)\n`);
+/**
+ * Garde-fou du dictionnaire.
+ *
+ * Il vise `src/i18n/index.ts`, le seul dictionnaire que l'application charge.
+ * Il a longtemps visé `src/shared/i18n/`, qui appartenait à un arbre
+ * d'interface que rien n'exécutait : le contrôle passait au vert sans rien
+ * dire des 700 clés réellement rendues à l'écran.
+ */
+
+const dictionaryPath = resolve('apps/desktop/src/i18n/index.ts');
+const sourceRoot = resolve('apps/desktop/src');
+
+const source = await readFile(dictionaryPath, 'utf8');
+
+// Chaque entrée s'écrit `'clé': { fr: '…', en: '…' }`. On lit la paire d'un
+// bloc plutôt que chaque champ isolément : c'est l'appariement fr/en qui doit
+// être garanti, pas la simple présence des deux mots.
+const entryPattern = /'([^']+)':\s*\{\s*fr:\s*(['"`])((?:\\.|(?!\2)[\s\S])*)\2,\s*en:\s*(['"`])((?:\\.|(?!\4)[\s\S])*)\4,?\s*\}/g;
+const entries = [...source.matchAll(entryPattern)].map((match) => ({
+  key: match[1],
+  fr: match[3],
+  en: match[5],
+}));
+
+const failures = [];
+
+if (entries.length === 0) failures.push('Aucune entrée de traduction lisible dans i18n/index.ts');
+
+const declaredKeys = [...source.matchAll(/^ {2}'([^']+)':\s*\{/gmu)].map((match) => match[1]);
+const unpaired = declaredKeys.filter((key) => !entries.some((entry) => entry.key === key));
+for (const key of unpaired) failures.push(`« ${key} » n'expose pas exactement une valeur fr et une valeur en`);
+
+const seen = new Set();
+for (const entry of entries) {
+  if (seen.has(entry.key)) failures.push(`« ${entry.key} » est déclarée deux fois`);
+  seen.add(entry.key);
+  if (entry.fr.trim().length === 0) failures.push(`« ${entry.key} » n'a pas de texte français`);
+  if (entry.en.trim().length === 0) failures.push(`« ${entry.key} » n'a pas de texte anglais`);
+}
+
+if (/\{\{[^}]+\}\}/u.test(source)) failures.push('Jeton de traduction non résolu ({{…}}) dans le dictionnaire');
+
+// Une clé demandée mais absente s'affiche telle quelle à l'écran. On relit
+// donc les appels `t('…')` du code livré et on exige qu'ils existent.
+async function filesUnder(directory) {
+  const found = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(found.map(async (entry) => {
+    const target = join(directory, entry.name);
+    if (entry.isDirectory()) return filesUnder(target);
+    return ['.ts', '.tsx'].includes(extname(entry.name)) ? [target] : [];
+  }));
+  return nested.flat();
+}
+
+const used = new Map();
+for (const file of await filesUnder(sourceRoot)) {
+  const text = await readFile(file, 'utf8');
+  for (const match of text.matchAll(/\bt\(\s*'([a-zA-Z0-9_.-]+)'\s*\)/gu)) {
+    if (!used.has(match[1])) used.set(match[1], relative(sourceRoot, file).split('\\').join('/'));
+  }
+}
+
+for (const [key, file] of used) {
+  if (!seen.has(key)) failures.push(`« ${key} » est demandée par ${file} mais absente du dictionnaire`);
+}
+
+if (failures.length > 0) {
+  console.error(failures.join('\n'));
+  process.exitCode = 1;
+} else {
+  console.log(`i18n check passed (${entries.length} clés, ${used.size} utilisées)`);
+}

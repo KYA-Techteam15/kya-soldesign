@@ -1,93 +1,191 @@
-import { sizeCableSegment, sizeProtectionSegment, type FinanceOutputV1, type SizingOutputV1 } from '@ksd/engine';
+import { useMemo } from 'react';
+import type { FinanceOutputV1, PresizingOutputV1, SizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
-import type { CableSegment, ProjectViewModel } from '../../app/models/projectView';
-import { dateFr, fmt } from '../../domain/format';
+import type { ProjectViewModel } from '../../app/models/projectView';
+import { dateFr } from '../../domain/format';
 import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
-import { useT } from '../../i18n';
+import { translate } from '../../i18n';
 import { useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
 import { buildProjectDiagram } from '../../app/diagram/projectDiagram';
 import { SYNOPTIC_OPTIONS } from '@ksd/diagram';
+import { buildReportDocument, type Block, type DocSection } from '../../app/export/reportModel';
+import { defaultReportOptions, type DocKind, type ReportOptions } from '../../app/export/documentComposition';
 
-export type DocKind = 'rapport' | 'offre' | 'proforma' | 'dossier_exec';
-
-const TITLE_KEYS: Record<DocKind, [string, string]> = {
-  rapport: ['report.title.rapport', 'report.subtitle.rapport'],
-  offre: ['report.title.offre', 'report.subtitle.offre'],
-  proforma: ['report.title.proforma', 'report.subtitle.proforma'],
-  dossier_exec: ['report.title.execution', 'report.subtitle.execution'],
-};
-const LABEL_KEYS: Record<CableSegment, string> = { pv_inverter: 'report.segment.pvInverter', inverter_battery: 'report.segment.inverterBattery', inverter_load: 'report.segment.inverterLoad' };
-const item = (list: readonly Equipment[], id: string | null) => list.find((equipment) => equipment.id === id);
-const name = (equipment: Equipment | undefined) => equipment ? `${equipment.manufacturer} · ${equipment.model}` : '—';
-
-function Header({ project }: { project: ProjectViewModel }) {
-  const t = useT(); const company = useSettings(); const assetUrl = useReportAssetUrl(company.reports.logoAssetId);
-  const contact = [company.company.address, company.company.phone, company.company.email].filter(Boolean).join(' · ');
-  return <><div className="a4-brand"><img className="a4-logo-image" src={assetUrl || company.reports.logoUrl || '/kya-sol-design-logo.png'} alt={company.company.name || 'KYA-SolDesign'} /><div className="a4-who"><b>{company.company.name}</b><br />{contact || project.details.projectLocation || project.site.region || '—'}<br />{t('report.editedOn')} {dateFr(project.details.projectDate)}</div></div><div className="a4-rule" /></>;
-}
+export type { DocKind };
 
 /**
- * Page de garde.
+ * Aperçu avant impression.
  *
- * C'est la pièce qu'on pose sur une table : elle doit dire de quel document il
- * s'agit, pour quel projet et de qui il vient, sans qu'on l'ouvre. Le logo et
- * l'image de couverture viennent des réglages ; sans image, la couverture reste
- * typographique plutôt que d'afficher un cadre vide.
+ * Il ne décrit plus le document une seconde fois : il rend exactement le modèle
+ * de blocs que `docxWriter` transforme en Word. Deux descriptions parallèles du
+ * même rapport avaient fini par diverger — l'écran annonçait des puissances que
+ * le moteur n'avait jamais calculées.
  */
-function CoverPage({ project, kind, sizing, finance, page, total }: { project: ProjectViewModel; kind: DocKind; sizing: SizingOutputV1 | null; finance: FinanceOutputV1 | null; page: number; total: number }) {
-  const t = useT(); const company = useSettings(); const d = project.details;
-  const logoUrl = useReportAssetUrl(company.reports.logoAssetId);
-  const coverUrl = useReportAssetUrl(company.reports.coverAssetId);
-  const contact = [company.company.address, company.company.phone, company.company.email].filter(Boolean).join(' · ');
-  const [titleKey, subtitleKey] = TITLE_KEYS[kind];
-  const cells: [string, string][] = [
-    [t('report.client'), d.clientName || '—'],
-    [t('report.site'), d.projectLocation || project.site.region || '—'],
-    [t('report.follower'), d.followerName || '—'],
-    [t('report.editedOn'), dateFr(d.projectDate)],
-  ];
-  return <article className="a4 a4-cover">
-    <div className="cover-brand"><img className="a4-logo-image" src={logoUrl || company.reports.logoUrl || '/kya-sol-design-logo.png'} alt={company.company.name || 'KYA-SolDesign'} /><div className="a4-who"><b>{company.company.name}</b><br />{contact}</div></div>
-    <div className="cover-rule"><i /><i /></div>
-    {coverUrl && <img className="cover-image" src={coverUrl} alt="" />}
-    <div className="cover-kind">{t(titleKey)}</div>
-    <h1 className="cover-title">{project.name}</h1>
-    <div className="cover-sub">{t(subtitleKey)} · n° {d.projectNumber || '—'}</div>
-    <div className="cover-band"><div><span className="cover-lbl">{t('report.selectedSystem')}</span><b>{sizing ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc · ${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh ${t('report.useful')} · ${fmt(sizing.inverter.obtainedPowerKw, 2)} kW` : t('report.sizingUnavailable')}</b></div><div className="cover-seal"><b>{finance ? fmt(finance.simulation.sri, 2) : '—'}</b><span className="cover-lbl">SRI</span></div></div>
-    <dl className="cover-grid">{cells.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+export function ReportA4({ project, kind, sizing, finance, solar, presizing, catalog, options }: {
+  project: ProjectViewModel;
+  kind: DocKind;
+  sizing: SizingOutputV1 | null;
+  finance: FinanceOutputV1 | null;
+  solar: SolarResourceAnalysisOutputV1 | null;
+  presizing?: PresizingOutputV1 | null;
+  catalog: readonly Equipment[];
+  options?: ReportOptions;
+}) {
+  const settings = useSettings();
+  const uiLang = useUi((state) => state.lang);
+  const logoUrl = useReportAssetUrl(settings.reports.logoAssetId);
+  const coverUrl = useReportAssetUrl(settings.reports.coverAssetId);
+  const signatureUrl = useReportAssetUrl(settings.reports.signatureAssetId);
+  const resolved = options ?? defaultReportOptions(kind, uiLang);
+  const t = useMemo(() => (key: string) => translate(key, resolved.lang), [resolved.lang]);
+
+  const landscape = kind === 'dossier_exec';
+  const diagram = useMemo(() => {
+    if (!sizing) return null;
+    const built = buildProjectDiagram({
+      project, sizing, catalog, settings, lang: resolved.lang,
+      options: landscape ? undefined : SYNOPTIC_OPTIONS,
+    });
+    return { svg: built.svg, width: built.plan.width, height: built.plan.height, bom: built.plan.bom };
+  }, [project, sizing, catalog, settings, resolved.lang, landscape]);
+
+  const document = useMemo(() => buildReportDocument({
+    project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram,
+    assets: { logoUrl, coverUrl, signatureUrl },
+    options: resolved,
+  }), [project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram, logoUrl, coverUrl, signatureUrl, resolved]);
+
+  const brandContact = [settings.company.address, settings.company.phone, settings.company.email].filter(Boolean).join(' · ');
+
+  return <div className="a4-stack">
+    {document.sections.map((section, index) => <Page
+      key={index}
+      section={section}
+      documentFooter={document.footer}
+      companyName={settings.company.name}
+      contact={brandContact}
+      editedOn={`${t('report.editedOn')} ${dateFr(project.details.projectDate)}`}
+      logo={logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png'}
+      watermark={document.watermark}
+      page={index + 1}
+      total={document.sections.length}
+      pageLabel={t('report.page')}
+    />)}
+  </div>;
+}
+
+interface PageProps {
+  readonly section: DocSection;
+  readonly documentFooter: string;
+  readonly companyName: string;
+  readonly contact: string;
+  readonly editedOn: string;
+  readonly logo: string;
+  readonly watermark: string;
+  readonly page: number;
+  readonly total: number;
+  readonly pageLabel: string;
+}
+
+function Page({ section, documentFooter, companyName, contact, editedOn, logo, watermark, page, total, pageLabel }: PageProps) {
+  const isCover = section.blocks[0]?.kind === 'cover';
+  const className = ['a4', section.orientation === 'landscape' ? 'a4-landscape' : '', isCover ? 'a4-cover' : ''].filter(Boolean).join(' ');
+  return <article className={className}>
+    {watermark.length > 0 && <div className="a4-watermark" aria-hidden="true">{watermark.toUpperCase()}</div>}
+    {!isCover && <>
+      <div className="a4-brand">
+        <img className="a4-logo-image" src={logo} alt={companyName || 'KYA-SolDesign'} />
+        <div className="a4-who"><b>{companyName}</b><br />{contact || '—'}<br />{editedOn}</div>
+      </div>
+      <div className="a4-rule" />
+    </>}
+    {section.blocks.map((block, index) => <BlockView key={index} block={block} companyName={companyName} contact={contact} />)}
     <div className="a4-spacer" />
-    <ReportFooter title={t(titleKey)} page={page} total={total} />
+    <div className="a4-foot"><span>{documentFooter}</span><span>{pageLabel} {page} / {total}</span></div>
   </article>;
 }
 
-function ReportFooter({ title, page, total }: { title: string; page: number; total: number }) {
-  const t = useT(); const company = useSettings(); const text = company.reports.footerText.trim() || `${company.company.name || 'KYA-SolDesign'} · ${title}`;
-  return <div className="a4-foot"><span>{text}</span><span>{t('report.page')} {page} / {total}</span></div>;
+function BlockView({ block, companyName, contact }: { block: Block; companyName: string; contact: string }) {
+  switch (block.kind) {
+    case 'cover':
+      return <>
+        <div className="cover-brand">
+          <img className="a4-logo-image" src={block.logoUrl || '/kya-sol-design-logo.png'} alt={companyName || 'KYA-SolDesign'} />
+          <div className="a4-who"><b>{companyName}</b><br />{contact}</div>
+        </div>
+        <div className="cover-rule"><i /><i /></div>
+        {block.coverUrl && <img className="cover-image" src={block.coverUrl} alt="" />}
+        <div className="cover-kind">{block.docKind}</div>
+        <h1 className="cover-title">{block.project}</h1>
+        <div className="cover-sub">{block.subtitle}</div>
+        <div className="cover-band">
+          <div><span className="cover-lbl">{block.docKind}</span><b>{block.system}</b></div>
+          <div className="cover-seal"><b>{block.sri}</b><span className="cover-lbl">SRI</span></div>
+        </div>
+        <dl className="cover-grid">{block.cells.map((cell) => <div key={cell.label}><dt>{cell.label}</dt><dd>{cell.value}</dd></div>)}</dl>
+      </>;
+
+    case 'title':
+      return <><h1 className="a4-title">{block.text}</h1><div className="a4-sub">{block.subtitle}</div></>;
+
+    case 'heading':
+      return <h3 className="a4-sec">{block.text}</h3>;
+
+    case 'meta':
+      return <dl className="a4-meta">{block.items.map((entry) => <div key={entry.label}>
+        <dt>{entry.label}</dt><dd>{entry.value}{entry.note && <small>{entry.note}</small>}</dd>
+      </div>)}</dl>;
+
+    case 'headline':
+      return <div className="a4-headline">
+        <div><h2>{block.label}</h2><p>{block.text}</p></div>
+        <div className="a4-seal"><b>{block.sealValue}</b><span>{block.sealLabel}</span></div>
+      </div>;
+
+    case 'table':
+      return <table className="a4-tbl">
+        <thead><tr>{block.head.map((cell) => <th key={cell}>{cell}</th>)}</tr></thead>
+        <tbody>{block.rows.map((row, rowIndex) => <tr key={rowIndex} className={rowClass(block.emphasis, rowIndex, block.rows.length)}>
+          {row.map((cell, cellIndex) => <td key={cellIndex} className={block.numeric.includes(cellIndex) ? 'num' : ''}>{cell}</td>)}
+        </tr>)}</tbody>
+      </table>;
+
+    case 'kpis':
+      return <dl className="a4-kpis">{block.items.map((entry) => <div key={entry.label}>
+        <dt>{entry.label}</dt>
+        <dd className={entry.unit === '' && !/^[\d\s.,+-]*$/u.test(entry.value) ? 'a4-kpi-text' : ''}>
+          {entry.value}{entry.unit && <span className="u">{entry.unit}</span>}
+        </dd>
+      </div>)}</dl>;
+
+    case 'paragraph':
+      return block.label.trim().length > 0
+        ? <div className="a4-cond"><p><b>{block.label}</b> {block.text}</p></div>
+        : <p className="a4-note">{block.text}</p>;
+
+    case 'checklist':
+      return <ul className="a4-checklist">{block.items.map((label) => <li key={label}>{label}</li>)}</ul>;
+
+    case 'image':
+      return <div className="a4-diagram" dangerouslySetInnerHTML={{ __html: block.svg }} />;
+
+    case 'signature':
+      return <div className="a4-sign">
+        <div>{block.imageUrl && <img className="a4-sign-mark" src={block.imageUrl} alt="" />}{block.left}</div>
+        <div>{block.right}</div>
+      </div>;
+  }
 }
 
 /**
- * Planche unifilaire. En SVG dans le DOM : à l'impression elle sort à la
- * résolution de l'imprimante, là où une image matricielle serait pixellisée.
- * Le dossier d'exécution la couche en paysage, les autres pièces la condensent.
+ * Les lignes de total se lisent d'un coup d'œil. `emphasis` porte l'index de
+ * la première ligne accentuée ; ce qui suit est un sous-total, et la dernière
+ * ligne d'une table qui en a plusieurs porte le montant final.
  */
-function DiagramPage({ project, sizing, catalog, kind, page, total }: { project: ProjectViewModel; sizing: SizingOutputV1; catalog: readonly Equipment[]; kind: DocKind; page: number; total: number }) {
-  const t = useT(); const company = useSettings(); const lang = useUi((state) => state.lang);
-  const landscape = kind === 'dossier_exec';
-  const diagram = buildProjectDiagram({ project, sizing, catalog, settings: company, lang, options: landscape ? undefined : SYNOPTIC_OPTIONS });
-  return <article className={'a4' + (landscape ? ' a4-landscape' : '')}><Header project={project} /><h3 className="a4-sec">{t('report.singleLine')}</h3><div className="a4-diagram" dangerouslySetInnerHTML={{ __html: diagram.svg }} />{landscape && diagram.plan.bom.length > 0 ? <><h3 className="a4-sec">{t('report.billOfMaterial')}</h3><table className="a4-tbl"><thead><tr><th>{t('report.bomReference')}</th><th>{t('report.bomDesignation')}</th><th>{t('report.bomCharacteristic')}</th><th>{t('report.quantity')}</th><th>{t('report.bomLocation')}</th></tr></thead><tbody>{diagram.plan.bom.map((row) => <tr key={row.reference}><td><b>{row.reference}</b></td><td>{row.designation}</td><td>{row.characteristic}</td><td>{row.quantity}</td><td>{row.gridRef}</td></tr>)}</tbody></table></> : null}<div className="a4-spacer" /><ReportFooter title={t('report.singleLine')} page={page} total={total} /></article>;
-}
-
-function ProtectionTable({ project, sizing, catalog }: { project: ProjectViewModel; sizing: SizingOutputV1 | null; catalog: readonly Equipment[] }) {
-  const t = useT(); const mod = item(catalog, project.selection.moduleId); const bat = item(catalog, project.selection.batteryId); const inv = item(catalog, project.selection.inverterId);
-  const pv = mod?.kind === 'pv-module' ? mod : undefined; const battery = bat?.kind === 'battery' ? bat : undefined; const inverter = inv?.kind === 'inverter' ? inv : undefined;
-  const power = sizing ? sizing.inverter.obtainedPowerKw * 1000 : inverter?.nominalAcPowerW || 0; const voltage = sizing?.battery.bankVoltageV || battery?.nominalVoltageV || inverter?.nominalDcVoltageV || 0; const series = sizing?.pv.modulesInSeries || 1; const parallel = sizing?.pv.stringsInParallel || 1;
-  const segments: CableSegment[] = ['pv_inverter', 'inverter_battery', 'inverter_load'];
-  const protections = segments.map((segment) => sizeProtectionSegment({ segment, moduleIscA: pv?.shortCircuitCurrentA, moduleVocV: pv?.openCircuitVoltageV, pvStrings: parallel, pvModulesInSeries: series, inverterPowerW: power, dcVoltageV: voltage, acVoltageV: inverter?.nominalAcVoltageV || 230, selectedCaliberA: project.protections.find((choice) => choice.segment === segment)?.caliberA }));
-  return <table className="a4-tbl"><thead><tr><th>{t('report.segment')}</th><th>{t('report.protection')}</th><th>{t('report.current')}</th><th>{t('report.caliber')}</th><th>{t('report.cableSection')}</th><th>{t('report.length')}</th></tr></thead><tbody>{protections.map((protection) => { const cable = project.cables.find((choice) => choice.segment === protection.segment); const result = cable && protection.caliberA !== null ? sizeCableSegment({ segment: cable.segment, currentA: protection.caliberA, voltageV: protection.serviceVoltageV, lengthM: cable.length, material: cable.material, installation: cable.installation, phase: cable.segment === 'inverter_load' ? 'single_phase' : 'dc', maxDropPercent: cable.maxVoltageDropPercent }) : null; return <tr key={protection.segment}><td>{t(LABEL_KEYS[protection.segment])}</td><td>{protection.kind}</td><td>{fmt(protection.requiredA, 1)} A</td><td>{protection.caliberA === null ? '—' : `${fmt(protection.caliberA, 1)} A`}</td><td>{result ? `${fmt(result.normalizedSection, 1)} mm²` : '—'}</td><td>{cable ? `${fmt(cable.length, 1)} m` : '—'}</td></tr>; })}</tbody></table>;
-}
-
-export function ReportA4({ project, kind, sizing, finance, catalog }: { project: ProjectViewModel; kind: DocKind; sizing: SizingOutputV1 | null; finance: FinanceOutputV1 | null; catalog: readonly Equipment[] }) {
-  const t = useT(); const company = useSettings(); const d = project.details; const money = project.currency; const [titleKey, subtitleKey] = TITLE_KEYS[kind]; const title = t(titleKey); const subtitle = t(subtitleKey); const mod = item(catalog, project.selection.moduleId); const bat = item(catalog, project.selection.batteryId); const inv = item(catalog, project.selection.inverterId); const profile = project.load.profiles.find((candidate) => candidate.id === project.load.activeProfileId); const rows = profile ? [...profile.classic, ...profile.inductive] : []; const daily = rows.reduce((total, row) => total + row.qty * row.unitPower * row.opHours, 0); const real = rows.reduce((total, row) => total + row.qty * row.unitPower * (row.yield ?? 1) * (row.simultaneity ?? 1), 0); const peak = rows.reduce((total, row) => total + row.qty * row.unitPower, 0); const sim = finance?.simulation; const life = finance?.lifecycle; const showDiagram = sizing !== null && kind !== 'proforma'; const pages = showDiagram ? 4 : 3;
-  return <div className="a4-stack"><CoverPage project={project} kind={kind} sizing={sizing} finance={finance} page={1} total={pages} /><article className="a4"><Header project={project} /><h1 className="a4-title">{title}</h1><div className="a4-sub">{subtitle}</div><dl className="a4-meta"><div><dt>{t('report.client')}</dt><dd>{d.clientName || '—'}<small>{d.clientTel || d.clientEmail || ''}</small></dd></div><div><dt>{t('report.project')}</dt><dd>{project.name}<small>n° {d.projectNumber || '—'} · {d.applicationType}</small></dd></div><div><dt>{t('report.site')}</dt><dd>{project.site.region || '—'}, {project.site.country || '—'}<small>{fmt(project.site.latitude, 4)} · {fmt(project.site.longitude, 4)}</small></dd></div><div><dt>{t('report.solarResource')}</dt><dd>{fmt(project.site.irradiation, 2)} kWh/m²/j<small>{t('report.tilt')} {fmt(project.site.tilt, 0)}° · {t('report.azimuth')} {fmt(project.site.azimuth, 0)}°</small></dd></div></dl><div className="a4-headline"><div><h2>{t('report.selectedSystem')}</h2><p>{sizing ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc · ${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh ${t('report.useful')} · ${fmt(sizing.inverter.obtainedPowerKw, 2)} kW ${t('report.inverter')}` : t('report.sizingUnavailable')}</p></div><div className="a4-seal"><b>{sim ? fmt(sim.sri, 2) : '—'}</b><span>SRI</span></div></div><h3 className="a4-sec">{t('report.siteNeeds')}</h3><table className="a4-tbl"><thead><tr><th>{t('report.item')}</th><th>{t('report.quantity')}</th><th>{t('report.calledPower')}</th><th>{t('report.energyPerDay')}</th></tr></thead><tbody>{rows.slice(0, 12).map((row) => <tr key={row.id}><td>{row.name}</td><td>{row.qty}</td><td>{fmt(row.qty * row.unitPower * (row.yield ?? 1) * (row.simultaneity ?? 1))}</td><td>{fmt(row.qty * row.unitPower * row.opHours)}</td></tr>)}<tr className="total"><td>{t('report.total')}</td><td>{fmt(rows.reduce((total, row) => total + row.qty, 0))}</td><td>{fmt(real)}</td><td>{fmt(daily)}</td></tr><tr className="sub"><td>{t('report.peakPower')}</td><td colSpan={3}>{fmt(peak)} W</td></tr></tbody></table><h3 className="a4-sec">{t('report.recommendedSystem')}</h3><table className="a4-tbl"><thead><tr><th>{t('report.component')}</th><th>{t('report.reference')}</th><th>{t('report.configuration')}</th><th>{t('report.quantity')}</th><th>{t('report.obtained')}</th></tr></thead><tbody><tr><td>{t('report.pvModules')}<small>{name(mod)}</small></td><td className="ref">{mod?.id || '—'}</td><td>{sizing ? `${sizing.pv.modulesInSeries} S × ${sizing.pv.stringsInParallel} P` : '—'}</td><td>{sizing?.pv.totalModules || '—'}</td><td>{sizing ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc` : '—'}</td></tr><tr><td>{t('report.batteryBank')}<small>{name(bat)}</small></td><td className="ref">{bat?.id || '—'}</td><td>{sizing ? `${sizing.battery.unitsInSeries} S × ${sizing.battery.stringsInParallel} P` : '—'}</td><td>{sizing?.battery.totalUnits || '—'}</td><td>{sizing ? `${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh ${t('report.useful')}` : '—'}</td></tr><tr><td>{t('report.inverters')}<small>{name(inv)}</small></td><td className="ref">{inv?.id || '—'}</td><td>{t('report.parallel')}</td><td>{sizing?.inverter.count || '—'}</td><td>{sizing ? `${fmt(sizing.inverter.obtainedPowerKw, 2)} kW` : '—'}</td></tr></tbody></table><h3 className="a4-sec">{t('report.expectedPerformance')}</h3><dl className="a4-kpis"><div><dt>{t('report.annualProduction')}</dt><dd>{sim ? fmt(sim.annualProductionKwh) : '—'}<span className="u">kWh</span></dd></div><div><dt>{t('report.lcoe')}</dt><dd>{life ? fmt(life.lcoeActualized, 1) : '—'}<span className="u">{money}/kWh</span></dd></div><div><dt>SVI</dt><dd>{life ? fmt(life.svi, 2) : '—'}<span className="u">/ 1</span></dd></div><div><dt>{t('report.co2')}</dt><dd>{life ? fmt(life.co2AvoidedKg / 1000, 1) : '—'}<span className="u">{t('unit.tonnes')}</span></dd></div></dl><div className="a4-spacer" /><ReportFooter title={title} page={2} total={pages} /></article><article className="a4"><Header project={project} /><h3 className="a4-sec">{t('report.protectionsAndCables')}</h3><ProtectionTable project={project} sizing={sizing} catalog={catalog} /><h3 className="a4-sec">{t('report.financialAssessment')}</h3><table className="a4-tbl"><thead><tr><th>{t('report.item')}</th><th>{t('report.quantity')}</th><th>{t('report.unitPrice')}</th><th>{t('report.totalExclTax')}</th></tr></thead><tbody>{finance?.lines.map((line) => <tr key={line.key}><td>{line.label}</td><td>{fmt(line.quantity)}</td><td>{fmt(line.unitSale)}</td><td>{fmt(line.totalSale)}</td></tr>)}<tr className="total"><td colSpan={3}>{t('report.totalExclTax')}</td><td>{finance ? fmt(finance.totalSaleHt) : '—'}</td></tr><tr className="sub"><td colSpan={3}>{t('report.vat')} {fmt(project.costing.tvaPercent, 1)} %</td><td>{finance ? fmt(finance.vatAmount) : '—'}</td></tr><tr className="grand"><td colSpan={3}>{t('report.totalInclTax')}</td><td>{finance ? fmt(finance.totalTtc) : '—'}</td></tr><tr className="sub"><td colSpan={3}>{t('report.downPayment')} · {fmt(project.costing.downPaymentPercent, 1)} %</td><td>{finance ? fmt(finance.downPayment) : '—'}</td></tr><tr className="sub"><td colSpan={3}>{t('report.balance')}</td><td>{finance ? fmt(finance.balanceDue) : '—'}</td></tr></tbody></table><h3 className="a4-sec">{t('report.economicIndicators')}</h3><dl className="a4-kpis"><div><dt>{t('report.wpPrice')}</dt><dd>{finance ? fmt(finance.wattPeakPrice) : '—'}<span className="u">{money}/Wc</span></dd></div><div><dt>{t('report.margin')}</dt><dd>{finance ? fmt(finance.averageMarginRatio * 100, 1) : '—'}<span className="u">%</span></dd></div><div><dt>{t('report.lifecycle')}</dt><dd>{life ? fmt(life.actualizedLifecycleCost / 1e6, 2) : '—'}<span className="u">M{money}</span></dd></div><div><dt>{t('report.maintenance')}</dt><dd>{life ? fmt(life.annualMaintenanceCost) : '—'}<span className="u">{money}/an</span></dd></div></dl><h3 className="a4-sec">{t('report.conditions')}</h3><div className="a4-cond"><p><b>{t('report.validity')} :</b> {fmt(project.costing.offerValidity)} {t('report.days')} {t('report.from')} {dateFr(d.projectDate)}.</p><p><b>{t('report.delivery')} :</b> {fmt(project.costing.deliveryTime)} {t('report.days')} {t('report.afterDeposit')}.</p><p><b>{t('report.warranty')} :</b> {fmt(project.costing.productWarranty)} {t('report.months')}.</p><p><b>{t('report.studyDuration')} :</b> {fmt(project.assumptions.projectLifetime)} {t('report.years')} · {t('report.discountRate')} {fmt(project.assumptions.actualizationRate, 1)} %.</p><p><b>{t('report.gridReference')} :</b> {fmt(project.assumptions.lcoeGrid, 1)} {money}/kWh · {t('report.emissionFactor')} {fmt(project.assumptions.emissionFactor, 2)} kgCO₂/kWh.</p></div><div className="a4-sign"><div>{company.company.name || 'KYA-SolDesign'} — {d.followerName || '—'}</div><div>{t('report.forClient')}</div></div><div className="a4-spacer" /><ReportFooter title={title} page={3} total={pages} /></article>{showDiagram ? <DiagramPage project={project} sizing={sizing} catalog={catalog} kind={kind} page={4} total={pages} /> : null}</div>;
+function rowClass(emphasis: readonly number[], index: number, count: number): string {
+  if (!emphasis.includes(index) && index < Math.min(...emphasis, count)) return '';
+  if (emphasis.includes(index)) return 'total';
+  if (index === count - 1 && emphasis.length > 0) return 'grand';
+  return index > Math.min(...emphasis, count) ? 'sub' : '';
 }
