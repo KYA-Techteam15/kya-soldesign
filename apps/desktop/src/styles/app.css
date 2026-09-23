@@ -3917,3 +3917,56 @@ table.tbl select.cell-in {
 .annual-series-panel .out-grid {
   width: 100%;
 }
+
+/* --- Visuels dans le dialogue de génération ---
+   L'utilisateur doit voir ce qui sera imprimé avant de l'imprimer : le cadre
+   montre le fichier réel, pas son nom. */
+.generate-visuals {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  margin: 0;
+  display: grid;
+  gap: var(--sp-3);
+}
+.generate-visuals legend {
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.visual-slot {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'label actions' 'frame actions' 'error error';
+  align-items: center;
+  gap: 6px var(--sp-3);
+}
+.visual-slot-label {
+  grid-area: label;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.visual-slot-frame {
+  grid-area: frame;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 6px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+/* Le logo garde sa hauteur de bandeau ; la couverture, plus grande, se réduit
+   à une vignette qui laisse juger du cadrage. */
+.visual-slot-logo .visual-slot-frame img { max-height: 34px; max-width: 100%; }
+.visual-slot-cover .visual-slot-frame img { max-height: 72px; max-width: 100%; }
+.visual-slot-actions {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.visual-slot .error { grid-area: error; }

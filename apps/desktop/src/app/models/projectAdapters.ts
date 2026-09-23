@@ -100,13 +100,18 @@ function directProfileToInput(profile: DirectLoadProfileView) {
 
 // Defaults used by the historical Page 2 workflow when a new/legacy project
 // has not yet collected an explicit engineering assumption.
+// Unit costs (FCFA, "minor" = XOF base unit, no subdivision) derived from
+// KYA-Energy's own BOQ: PV 455 Wc / 60 000, batterie 5 kWh / 600 000,
+// onduleur 5 kW / 700 000 -> 131 868 FCFA/kWc, 120 000 FCFA/kWh, 140 000
+// FCFA/kW. Reconciled with simulation_pv_autonome_2026_08/simulation_pv_autonome.py,
+// which carries the USD equivalents of the same BOQ (see its P dict).
 export const PRESIZING_DEFAULTS = {
-  maxLpspRatio: 0.05, maxLolpRatio: 0.05, systemPerformanceRatio: 0.80,
-  inverterEfficiencyRatio: 0.95, batteryEfficiencyRatio: 0.90, batteryNominalVoltageV: 48, batteryDodRatio: 0.80,
-  pvSpecificCostMinorPerKw: 300_000, pvMarginRatio: 0.15, batterySpecificCostMinorPerKwh: 150_000, batteryMarginRatio: 0.15,
-  inverterSpecificCostMinorPerKw: 100_000, inverterMarginRatio: 0.15, projectLifetimeYears: 20, pvLifetimeYears: 25,
-  batteryLifetimeYears: 10, inverterLifetimeYears: 10, pvMaintenanceRatioPerYear: 0.01, batteryMaintenanceRatioPerYear: 0.02,
-  inverterMaintenanceRatioPerYear: 0.01, discountRateRatio: 0.08, gridTariffMinorPerKwh: 120, gridEmissionKgCo2PerKwh: 0.45,
+  maxLpspRatio: 0.05, maxLolpRatio: 0.05, systemPerformanceRatio: 0.75,
+  inverterEfficiencyRatio: 0.90, batteryEfficiencyRatio: 0.90, batteryNominalVoltageV: 48, batteryDodRatio: 0.80,
+  pvSpecificCostMinorPerKw: 131_868, pvMarginRatio: 0.15, batterySpecificCostMinorPerKwh: 120_000, batteryMarginRatio: 0.15,
+  inverterSpecificCostMinorPerKw: 140_000, inverterMarginRatio: 0.15, projectLifetimeYears: 20, pvLifetimeYears: 25,
+  batteryLifetimeYears: 10, inverterLifetimeYears: 10, pvMaintenanceRatioPerYear: 0.02, batteryMaintenanceRatioPerYear: 0.02,
+  inverterMaintenanceRatioPerYear: 0.02, discountRateRatio: 0.08, gridTariffMinorPerKwh: 120, gridEmissionKgCo2PerKwh: 0.45,
   selfConsumptionRatio: 0.80, dieselSpecificCostMinorPerKw: 0,
 } as const;
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PresizingEngine,
   FinanceEngine,
+  designDayStartIndex,
   normalizeDirectHourlyRows,
   type FinanceInputV1,
   type PresizingInputV1,
@@ -126,6 +127,30 @@ describe('chaîne annuelle de la charge', () => {
     // sous-dimensionné le système exactement le jour où il doit tenir.
     expect(result.load.hourlyEnergyWh.every((value) => Math.abs(value - 2_000) < 1e-6)).toBe(true);
     expect(result.warnings.some((warning) => warning.code === 'LOAD_DIRECT_ANNUAL_REDUCED_TO_DESIGN_DAY')).toBe(true);
+  });
+
+  it('désigne le même jour pour les moyennes et pour les pointes', () => {
+    // Le jour 200 est le plus chargé. Les puissances moyennes et les pointes
+    // sont deux vues de la même journée : si deux règles distinctes choisissent
+    // deux jours différents, le rapport colle des pointes d'un jour sur les
+    // moyennes d'un autre — sans que rien ne le signale.
+    const hourlyPowerW = Array.from({ length: 8_760 }, (_, hour) => (Math.floor(hour / 24) === 200 ? 2_000 : 500));
+    const start = designDayStartIndex(hourlyPowerW);
+    expect(start).toBe(200 * 24);
+
+    const normalized = normalizeDirectHourlyRows({
+      timezoneIana: 'Africa/Lome',
+      hourlyPowerW,
+      hourlyPeakPowerW: hourlyPowerW.map(() => null),
+    });
+    expect(normalized.status).toBe('ready');
+    if (normalized.status !== 'ready') return;
+    // La journée retenue par la normalisation est bien celle que l'index nomme.
+    expect(normalized.load.hourlyEnergyWh).toEqual(hourlyPowerW.slice(start, start + 24));
+  });
+
+  it('renvoie le premier jour pour une journée type', () => {
+    expect(designDayStartIndex(Array<number>(24).fill(500))).toBe(0);
   });
 
   it('refuse une année dont les pointes n’ont pas la même longueur', () => {

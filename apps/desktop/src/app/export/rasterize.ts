@@ -24,9 +24,14 @@ export interface RasterResult {
  * Rend un SVG en PNG à la largeur d'impression demandée.
  * Rejette plutôt que de rendre une image vide : un plan absent doit se voir.
  */
-export async function rasterizeSvg(svg: string, planWidth: number, planHeight: number, targetWidthMm: number): Promise<RasterResult> {
-  const targetPx = mmToPrintPx(targetWidthMm);
-  const scale = targetPx / planWidth;
+export async function rasterizeSvg(svg: string, planWidth: number, planHeight: number, targetWidthMm: number, targetHeightMm?: number): Promise<RasterResult> {
+  // La planche choisit sa propre feuille : un champ de trente modules sort en
+  // A3, parfois en A2. Ramenée à la seule largeur de la page, elle en
+  // débordait par le bas. On retient donc la plus contraignante des deux
+  // dimensions, et le rapport de forme est conservé.
+  const widthScale = mmToPrintPx(targetWidthMm) / planWidth;
+  const heightScale = targetHeightMm === undefined ? widthScale : mmToPrintPx(targetHeightMm) / planHeight;
+  const scale = Math.min(widthScale, heightScale);
   const width = Math.round(planWidth * scale);
   const height = Math.round(planHeight * scale);
 

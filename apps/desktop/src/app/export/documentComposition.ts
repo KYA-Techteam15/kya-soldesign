@@ -82,15 +82,18 @@ export function sectionDescriptor(id: SectionId): SectionDescriptor {
  * chantier.
  */
 export const DEFAULT_COMPOSITION: Readonly<Record<DocKind, readonly SectionId[]>> = {
+  // Le bandeau « Système retenu » répétait mot pour mot la couverture, deux
+  // pages plus loin. Il est retiré : la couverture l'annonce, le tableau du
+  // système le détaille, rien ne justifiait un troisième passage.
   rapport: [
-    'cover', 'identity', 'headline',
+    'cover', 'identity',
     'siteResource', 'loadNeeds', 'methodology', 'presizing',
-    'system', 'performance', 'protections',
+    'system', 'performance',
     'pricing', 'economics', 'conditions', 'signature',
-    'diagram',
+    'diagram', 'protections',
   ],
   offre: [
-    'cover', 'identity', 'headline',
+    'cover', 'identity',
     'loadNeeds', 'methodology', 'presizing',
     'system', 'performance',
     'internalCosts', 'pricing', 'economics',
@@ -98,7 +101,6 @@ export const DEFAULT_COMPOSITION: Readonly<Record<DocKind, readonly SectionId[]>
   ],
   proforma: [
     'cover', 'identity',
-    'system',
     'pricing', 'payment', 'conditions', 'signature',
   ],
   dossier_exec: [

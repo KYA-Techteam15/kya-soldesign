@@ -4,7 +4,7 @@ import { AioCalculations } from '../../src/app/adapters/aioCalculations.js';
 import { CanonicalCatalog } from '../../src/app/adapters/canonicalCatalog.js';
 import { InMemoryProjects } from '../../src/app/adapters/inMemoryProjects.js';
 import { projectFileToView, projectViewToFile } from '../../src/app/models/projectAdapters.js';
-import { projectToAioInput } from '../../src/app/adapters/projectToAio.js';
+import { projectToAioInput, projectToPresizingInput } from '../../src/app/adapters/projectToAio.js';
 import { canonicalWeatherFileToProjectPayload } from '../../src/app/adapters/weatherFiles.js';
 
 describe('Page 1 project to AIO integration', () => {
@@ -195,5 +195,98 @@ describe('Page 1 project to AIO integration', () => {
     if (state.status !== 'ready') return;
     expect(state.envelope.output.hourlyPoaWm2).toHaveLength(8_760);
     expect(state.envelope.output.gamma.status).toBe('unavailable');
+  });
+});
+
+/**
+ * Parcours du profil annuel.
+ *
+ * Un profil de 8 760 heures a traversé l'écran et le moteur, mais s'est arrêté
+ * net sur l'adaptateur : les puissances de pointe partaient à 8 760 valeurs
+ * quand la charge normalisée en portait 24, et le schéma météo refusait le
+ * couple. Les moteurs seuls ne pouvaient pas le voir — c'est l'assemblage qui
+ * cassait, il se teste donc ici.
+ */
+describe('profil de charge annuel de bout en bout', () => {
+  /** Année où seul le jour 200 est chargé : le jour retenu est vérifiable. */
+  const annualProfile = (peakDay: number) => Array.from({ length: 8_760 }, (_, hour) => {
+    const day = Math.floor(hour / 24);
+    const activePowerW = day === peakDay ? 2_000 : 500;
+    return { hour, realPower: activePowerW / 1_000, peakPower: (activePowerW * 1.5) / 1_000 };
+  });
+
+  const projectWithAnnualLoad = async (catalog: CanonicalCatalog, projects: InMemoryProjects, peakDay: number) => {
+    const weatherFile = (await catalog.listWeatherFiles())[0]!;
+    const payload = canonicalWeatherFileToProjectPayload(weatherFile);
+    const view = projectFileToView(projects.create('standalone-all-in-one', 'fr'));
+    view.site.latitude = weatherFile.document.inputs.location.latitude;
+    view.site.longitude = weatherFile.document.inputs.location.longitude;
+    view.site.tilt = 15;
+    view.site.azimuth = 180;
+    view.site.timezoneIana = 'Africa/Lome';
+    view.site.weatherSourceId = 'pvgis-import:bombouaka';
+    view.site.downloadedSource = {
+      name: 'Import UTC', provider: 'PVGIS', versionOrDate: 'TMY 2005–2023', locator: 'import://bombouaka.json',
+      retrievedAtIso: weatherFile.metadata.retrievedAtIso, qualityFlags: ['pvgis-hourly-file-verified'],
+      ...payload, timezoneOffsetMinutes: 0,
+    };
+    view.load.profiles[0]!.source = 'hourly';
+    view.load.profiles[0]!.hourly = annualProfile(peakDay);
+    projects.replace(projectViewToFile(view));
+    return view;
+  };
+
+  it('lit la ressource solaire sans buter sur la longueur des pointes', async () => {
+    const projects = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000201');
+    const catalog = new CanonicalCatalog();
+    const view = await projectWithAnnualLoad(catalog, projects, 200);
+    const calculations = new AioCalculations((id) => projects.get(id), {
+      localities: await catalog.listLocalities(), weatherSources: await catalog.listWeatherSources(), loadProfiles: await catalog.listLoadProfiles(),
+    });
+
+    const state = await calculations.read<SolarResourceAnalysisOutputV1>(view.id, 'solar-resource');
+    expect(state.status).toBe('ready');
+    if (state.status !== 'ready') return;
+
+    // Les deux séries décrivent une journée, et la même : celle du jour 200.
+    expect(state.envelope.output.loadHourlyEnergyWh).toHaveLength(24);
+    expect(state.envelope.output.loadHourlyPeakPowerW).toHaveLength(24);
+    expect(state.envelope.output.loadHourlyEnergyWh!.every((value) => Math.abs(value - 2_000) < 1e-6)).toBe(true);
+    expect(state.envelope.output.loadHourlyPeakPowerW!.every((value) => Math.abs(value - 3_000) < 1e-6)).toBe(true);
+  });
+
+  it('prépare un prédimensionnement qui porte l’année entière', async () => {
+    const projects = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000202');
+    const catalog = new CanonicalCatalog();
+    const view = await projectWithAnnualLoad(catalog, projects, 200);
+    const references = {
+      localities: await catalog.listLocalities(), weatherSources: await catalog.listWeatherSources(), loadProfiles: await catalog.listLoadProfiles(),
+    };
+
+    const adapted = await projectToPresizingInput(projects.get(view.id)!, references);
+    expect(adapted.status).toBe('ready');
+    if (adapted.status !== 'ready') return;
+
+    // La simulation reçoit l'année ; le dimensionnement analytique, le jour
+    // le plus chargé — 2 000 W sur 24 heures.
+    expect(adapted.input.hourlyLoadWh).toHaveLength(8_760);
+    expect(adapted.input.dailyEnergyWh).toBeCloseTo(48_000, 6);
+    expect(adapted.input.peakPowerW).toBeCloseTo(3_000, 6);
+  });
+
+  it('exécute réellement le prédimensionnement sur ce dossier', async () => {
+    const projects = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000203');
+    const catalog = new CanonicalCatalog();
+    const view = await projectWithAnnualLoad(catalog, projects, 200);
+    const calculations = new AioCalculations(
+      (id) => projects.get(id),
+      { localities: await catalog.listLocalities(), weatherSources: await catalog.listWeatherSources(), loadProfiles: await catalog.listLoadProfiles() },
+      (project) => projects.replace(project),
+    );
+
+    // C'est le geste exact que l'écran déclenche : « Lancer le prédimensionnement ».
+    const envelope = await calculations.runPresizing(view.id, () => undefined);
+    expect(envelope.output.selected.pvPeakKw).toBeGreaterThan(0);
+    expect(envelope.output.selected.sri).toBeGreaterThan(0);
   });
 });

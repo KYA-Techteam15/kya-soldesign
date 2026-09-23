@@ -550,6 +550,14 @@ table.a4-tbl {
   display: block;
   width: 100%;
   height: auto;
+  /* La planche choisit sa feuille — A3, parfois A2 — et débordait du bas
+     quand on la ramenait à la seule largeur de la page. Le plafond de hauteur
+     la fait tenir entière ; `preserveAspectRatio` par défaut la centre sans
+     la déformer. */
+  max-height: 205mm;
+}
+.a4-landscape .a4-diagram svg {
+  max-height: 148mm;
 }
 
 @media print {
@@ -571,24 +579,25 @@ table.a4-tbl {
    sans image, la couverture reste typographique — jamais un cadre vide.
 --------------------------------------------------------------------------- */
 
-.a4-cover { padding: 20mm 16mm 14mm; }
-.cover-brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; }
-.cover-brand .a4-logo-image { max-height: 18mm; max-width: 52mm; object-fit: contain; }
-.cover-rule { display: flex; height: 1.6mm; margin-top: 6mm; }
+.a4-cover {
+  padding: 22mm 20mm 16mm;
+  text-align: center;
+  /* Un cadre fin ferme la page : la couverture devient un objet, pas le début
+     d'un texte qui déborderait. */
+  box-shadow: 0 2px 14px rgb(26 26 26 / 0.16), inset 0 0 0 0.4mm var(--orange);
+}
+
+/* Le logo ouvre la page, seul et centré : c'est la signature de l'émetteur. */
+.cover-mark { display: flex; justify-content: center; }
+.cover-mark img { max-height: 24mm; max-width: 70mm; object-fit: contain; }
+
+.cover-rule { display: flex; justify-content: center; height: 1.2mm; margin: 7mm auto 0; width: 46mm; }
 .cover-rule i { display: block; height: 100%; }
 .cover-rule i:first-child { width: 38%; background: var(--orange); }
 .cover-rule i:last-child { width: 62%; background: var(--teal); }
 
-.cover-image {
-  display: block;
-  width: 100%;
-  height: 62mm;
-  object-fit: cover;
-  margin-top: 8mm;
-}
-
 .cover-kind {
-  margin-top: 12mm;
+  margin-top: 11mm;
   font-size: 8pt;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -596,14 +605,43 @@ table.a4-tbl {
 }
 .cover-title {
   font-family: var(--font-display);
-  font-size: 30pt;
-  line-height: 1.05;
+  font-size: 23pt;
+  line-height: 1.2;
   margin: 3mm 0 2mm;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.01em;
+  /* Un nom de projet se lit comme un titre d'ouvrage : en capitales, il ne
+     dépend plus de la casse saisie au clavier. */
+  text-transform: uppercase;
 }
-.cover-sub { font-size: 10pt; color: var(--muted, #6b7684); }
+.cover-sub { font-size: 10pt; color: var(--ink-3); }
+
+/* L'image est montrée entière, jamais recadrée : c'est souvent un logo client
+   ou une vue du site, et un rognage y ferait perdre l'essentiel. */
+.cover-figure {
+  margin: 12mm auto 0;
+  max-width: 118mm;
+}
+.cover-figure img {
+  display: block;
+  width: 100%;
+  max-height: 92mm;
+  object-fit: contain;
+}
+
+/* Mentions de pied : elles ferment la page sans la disputer au titre. */
+.cover-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  margin-top: 8mm;
+  padding-top: 3mm;
+  border-top: 0.3mm solid var(--rule);
+  font-size: 7.5pt;
+  color: var(--ink-3);
+}
 
 .cover-band {
+  text-align: left;
   margin-top: 9mm;
   background: var(--band);
   border-left: 1.4mm solid var(--orange);
@@ -618,6 +656,6 @@ table.a4-tbl {
 .cover-seal { text-align: right; }
 .cover-seal b { font-family: var(--font-display); font-size: 24pt; color: var(--orange); line-height: 1; margin: 0; }
 
-.cover-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm 10mm; margin: 10mm 0 0; }
+.cover-grid { text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 6mm 10mm; margin: 10mm 0 0; }
 .cover-grid dt { font-size: 7pt; letter-spacing: 0.09em; text-transform: uppercase; color: #6b7684; }
 .cover-grid dd { margin: 1mm 0 0; font-size: 11pt; font-weight: 600; border-bottom: 0.3mm solid var(--rule); padding-bottom: 1.5mm; }

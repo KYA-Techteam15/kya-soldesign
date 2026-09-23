@@ -171,6 +171,11 @@ export function buildAnnualLoadSeries(input: {
     const profile = profileId === undefined ? undefined : profiles.get(profileId);
     if (!profile) throw new RangeError(`PROFILE_UNRESOLVED:${assignment.periodId}:${assignment.dayGroupId}`);
     const resolvedProfileId = profile.id;
+    // Une journée type se relit à chaque heure locale ; une série annuelle est
+    // déjà rangée dans l'ordre de l'année et suit donc le rang de la météo.
+    // C'est la même convention que la simulation de fiabilité, qui parcourt
+    // les deux séries du même pas : les deux doivent voir la même heure.
+    const slot = profile.hourlyEnergyWh.length === 24 ? local.hour : index;
     points.push({
       timestampUtcIso: weather.timestampUtcIso,
       localDateIso: local.dateIso,
@@ -178,8 +183,8 @@ export function buildAnnualLoadSeries(input: {
       periodId: assignment.periodId,
       dayGroupId: assignment.dayGroupId,
       profileId: resolvedProfileId,
-      activeEnergyWh: profile.hourlyEnergyWh[local.hour]!,
-      peakPowerW: profile.hourlyPeakPowerW?.[local.hour] ?? profile.hourlyEnergyWh[local.hour]!,
+      activeEnergyWh: profile.hourlyEnergyWh[slot]!,
+      peakPowerW: profile.hourlyPeakPowerW?.[slot] ?? profile.hourlyEnergyWh[slot]!,
     });
   }
   return { timezoneIana: input.timezoneIana, points };
@@ -235,8 +240,11 @@ export function calculateAnnualYEn(input: {
 }
 
 function validateHourlyProfile(profile: AnnualHourlyProfile): void {
-  if (profile.hourlyEnergyWh.length !== 24 || profile.hourlyEnergyWh.some((value) => !Number.isFinite(value) || value < 0)) throw new RangeError(`PROFILE_INVALID:${profile.id}`);
-  if (profile.hourlyPeakPowerW !== undefined && (profile.hourlyPeakPowerW.length !== 24 || profile.hourlyPeakPowerW.some((value, hour) => !Number.isFinite(value) || value < profile.hourlyEnergyWh[hour]!))) throw new RangeError(`PROFILE_PEAK_INVALID:${profile.id}`);
+  // 24 : une journée type, que le calendrier répète. 8 760 : l'année déjà
+  // écrite heure par heure, qui se lit telle quelle.
+  const hours = profile.hourlyEnergyWh.length;
+  if ((hours !== 24 && hours !== 8760) || profile.hourlyEnergyWh.some((value) => !Number.isFinite(value) || value < 0)) throw new RangeError(`PROFILE_INVALID:${profile.id}`);
+  if (profile.hourlyPeakPowerW !== undefined && (profile.hourlyPeakPowerW.length !== hours || profile.hourlyPeakPowerW.some((value, hour) => !Number.isFinite(value) || value < profile.hourlyEnergyWh[hour]!))) throw new RangeError(`PROFILE_PEAK_INVALID:${profile.id}`);
 }
 
 function periodContains(period: AnnualPeriod, dateOrIso: string): boolean {

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { queryAnnualChart, reduceAnnualChartPoints, type AnnualChartFrequency, type AnnualChartRange } from '@ksd/engine';
-import type { AnnualLoadPresentation } from '../../app/models/annualLoadPresentation';
+import type { AnnualLoadPresentationResult } from '../../app/models/annualLoadPresentation';
 import { useT } from '../../i18n';
 
-export function AnnualLoadChart({ presentation }: { readonly presentation: AnnualLoadPresentation | null }) {
+export function AnnualLoadChart({ result }: { readonly result: AnnualLoadPresentationResult }) {
+  const presentation = result.status === 'ready' ? result : null;
   const t = useT();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [range, setRange] = useState<AnnualChartRange>('year');
@@ -29,7 +30,7 @@ export function AnnualLoadChart({ presentation }: { readonly presentation: Annua
   const visiblePoints = useMemo(() => reduceAnnualChartPoints(chartWindow), [chartWindow]);
   const maximum = Math.max(...visiblePoints.map((point) => point.energyWh), 0.01);
   const selected = useMemo(() => presentation?.series.points.filter((point) => point.localDateIso === selectedDate) ?? [], [presentation, selectedDate]);
-  if (!presentation) return <section className="out is-pending"><div className="tbl-title"><h2 className="h-sec">{t('loads.calendarAnnualTitle')}</h2><span className="label">{t('loads.calendarWaiting')}</span></div></section>;
+  if (result.status !== 'ready') return <section className="out is-pending"><div className="tbl-title"><h2 className="h-sec">{t('loads.calendarAnnualTitle')}</h2><span className="label">{t(result.reasonKey)}</span></div></section>;
   const exportChart = () => {
     if (chart === null) return;
     const rows = [['bucket', 'start_date', 'end_date', 'energy_Wh', 'average_power_W', 'peak_power_W', 'mean_poa_Wm2'], ...chart.points.map((point) => [point.bucket, point.startDateIso, point.endDateIso, point.energyWh.toFixed(3), point.averagePowerW.toFixed(3), point.peakPowerW.toFixed(3), point.meanPoaWm2?.toFixed(3) ?? ''])];
@@ -38,10 +39,10 @@ export function AnnualLoadChart({ presentation }: { readonly presentation: Annua
   };
   const canNavigate = chart !== null && chart.points.length > displayLimit;
   return <section className="annual-load-view">
-    <div className="tbl-title"><h2 className="h-sec">{t('loads.calendarAnnualTitle')}</h2><span className="label">{t('loads.calendarWeightedYen')}</span><span className="sep" /><span className="metric-inline">{t('loads.yenLabel')} <b>{presentation.yEn.status === 'available' ? `${(presentation.yEn.annualGammaRatio * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %` : '—'}</b></span></div>
+    <div className="tbl-title"><h2 className="h-sec">{t('loads.calendarAnnualTitle')}</h2><span className="label">{t('loads.calendarWeightedYen')}</span><span className="sep" /><span className="metric-inline">{t('loads.yenLabel')} <b>{result.yEn.status === 'available' ? `${(result.yEn.annualGammaRatio * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %` : '—'}</b></span></div>
     <div className="annual-chart-controls" aria-label="Options du tracé annuel">
       <label><span>{t('loads.chartView')}</span><select value={range} onChange={(event) => setRange(event.target.value as AnnualChartRange)}><option value="year">{t('loads.chartYear')}</option><option value="period">{t('loads.chartPeriod')}</option><option value="month">{t('loads.chartMonth')}</option><option value="week">{t('loads.chartWeek')}</option><option value="day">{t('loads.chartDay')}</option><option value="custom-range">{t('loads.chartCustom')}</option></select></label>
-      {range === 'period' && <label><span>{t('loads.chartPeriod')}</span><select value={periodId} onChange={(event) => setPeriodId(event.target.value)}><option value="">{t('loads.chartAllPeriods')}</option>{presentation.periods.map((period) => <option key={period.id} value={period.id}>{period.name}</option>)}</select></label>}
+      {range === 'period' && <label><span>{t('loads.chartPeriod')}</span><select value={periodId} onChange={(event) => setPeriodId(event.target.value)}><option value="">{t('loads.chartAllPeriods')}</option>{result.periods.map((period) => <option key={period.id} value={period.id}>{period.name}</option>)}</select></label>}
       {range === 'month' && <label><span>{t('loads.chartMonth')}</span><select value={month} onChange={(event) => setMonth(Number(event.target.value))}>{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select></label>}
       {(['week', 'day'].includes(range)) && <label><span>{t('loads.chartAnchor')}</span><input type="date" value={effectiveAnchorDate} onChange={(event) => setAnchorDateIso(event.target.value)} /></label>}
       {range === 'custom-range' && <><label><span>{t('loads.chartStart')}</span><input type="date" value={effectiveStartDate} onChange={(event) => setStartDateIso(event.target.value)} /></label><label><span>{t('loads.chartEnd')}</span><input type="date" value={effectiveEndDate} onChange={(event) => setEndDateIso(event.target.value)} /></label></>}

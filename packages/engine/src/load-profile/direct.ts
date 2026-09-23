@@ -43,6 +43,28 @@ export function normalizeDirectHourlyRows(input: {
 }
 
 /**
+ * Rang horaire du premier point du jour le plus chargé.
+ *
+ * Exporté parce que plusieurs séries décrivent la même journée — les puissances
+ * moyennes et les puissances de pointe — et qu'elles doivent impérativement
+ * désigner le même jour. Deux règles séparées auraient collé les pointes d'août
+ * sur les moyennes de février, sans que rien ne le signale.
+ *
+ * Renvoie 0 pour une journée type, qui est déjà son propre jour dimensionnant.
+ */
+export function designDayStartIndex(hourlyPowerW: readonly number[]): number {
+  if (hourlyPowerW.length <= 24) return 0;
+  let bestStart = 0;
+  let bestEnergy = -1;
+  for (let start = 0; start + 24 <= hourlyPowerW.length; start += 24) {
+    let energy = 0;
+    for (let hour = 0; hour < 24; hour += 1) energy += hourlyPowerW[start + hour]!;
+    if (energy > bestEnergy) { bestEnergy = energy; bestStart = start; }
+  }
+  return bestStart;
+}
+
+/**
  * Journée de dimensionnement d'une série annuelle.
  *
  * Le contrat AIO v1 raisonne sur une journée. Prendre la moyenne des 365 jours
@@ -51,13 +73,7 @@ export function normalizeDirectHourlyRows(input: {
  */
 function designDay(hourlyPowerW: readonly number[]): readonly number[] {
   if (hourlyPowerW.length === 24) return hourlyPowerW;
-  let bestStart = 0;
-  let bestEnergy = -1;
-  for (let start = 0; start + 24 <= hourlyPowerW.length; start += 24) {
-    let energy = 0;
-    for (let hour = 0; hour < 24; hour += 1) energy += hourlyPowerW[start + hour]!;
-    if (energy > bestEnergy) { bestEnergy = energy; bestStart = start; }
-  }
+  const bestStart = designDayStartIndex(hourlyPowerW);
   return hourlyPowerW.slice(bestStart, bestStart + 24);
 }
 

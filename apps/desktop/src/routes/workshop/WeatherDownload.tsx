@@ -49,6 +49,16 @@ export function WeatherDownload({ lang, onClose, onSave }: {
   const [siteName, setSiteName] = useState('');
   const [timezoneIana, setTimezoneIana] = useState('Africa/Lome');
   const [hit, setHit] = useState<GeocodedSite | null>(null);
+  /**
+   * Le géocodage a échoué mais les coordonnées, elles, sont là.
+   *
+   * Nommer le site et lire son fuseau sont deux services d'agrément, hébergés
+   * ailleurs que PVGIS. Les laisser bloquer le téléchargement revenait à perdre
+   * une série d'irradiance parfaitement accessible parce qu'un annuaire
+   * n'avait pas répondu. On bascule alors sur une saisie explicite.
+   */
+  const [manual, setManual] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +77,8 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     abortRef.current?.abort();
     setMode(nextMode);
     setHit(null);
+    setManual(false);
+    setNotice(null);
     setPreview(null);
     setError(null);
     setOpenedFileName(null);
@@ -91,6 +103,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     abortRef.current = controller;
     setBusy(true);
     setError(null);
+    setNotice(null);
     setPreview(null);
     try {
       let found: GeocodedSite;
@@ -119,7 +132,15 @@ export function WeatherDownload({ lang, onClose, onSave }: {
       setTimezoneIana(found.timezoneIana);
     } catch (cause) {
       setHit(null);
-      if (!(cause instanceof GeocodingError && cause.code === 'GEOCODING_ABORTED')) {
+      if (cause instanceof GeocodingError && cause.code === 'GEOCODING_ABORTED') {
+        // Recherche annulée par l'utilisateur : rien à signaler.
+      } else if (mode === 'gps') {
+        // La position est connue : on ouvre la saisie manuelle et on explique,
+        // sans présenter l'incident comme une impasse.
+        setManual(true);
+        setSiteName((current) => current.trim() || '');
+        setNotice(`${geocodingErrorMessage(cause, mode, town.trim())} ${t('weather.manualFallback')}`);
+      } else {
         setError(geocodingErrorMessage(cause, mode, town.trim()));
       }
     } finally {
@@ -128,8 +149,27 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     }
   };
 
+  /**
+   * Site retenu pour le téléchargement.
+   *
+   * Il vient du géocodage quand celui-ci répond, et de la saisie quand il ne
+   * répond pas. PVGIS n'a besoin que d'une position ; le nom, le pays et le
+   * fuseau complètent le dossier et sont ici fournis à la main, validés de la
+   * même façon que dans le mode « Depuis un fichier ».
+   */
+  const manualHit: GeocodedSite | null = (() => {
+    if (!manual || mode !== 'gps') return null;
+    const lat = parseNumber(latitude);
+    const lon = parseNumber(longitude);
+    if (!isCoordinate(lat, -90, 90) || !isCoordinate(lon, -180, 180)) return null;
+    if (siteName.trim().length === 0 || !isCountryCode(countryCode) || !isTimezone(timezoneIana)) return null;
+    return { name: siteName.trim(), countryCode, latitudeDeg: lat, longitudeDeg: lon, timezoneIana };
+  })();
+  const resolved = hit ?? manualHit;
+
   const download = async () => {
-    if (!hit) return;
+    if (!resolved) return;
+    const hit = resolved;
     const controller = new AbortController();
     abortRef.current = controller;
     setBusy(true);
@@ -218,11 +258,17 @@ export function WeatherDownload({ lang, onClose, onSave }: {
         <label><span aria-hidden="true">&nbsp;</span><button aria-label="Rechercher" className="btn btn-field" disabled={busy || (mode === 'town' ? !town.trim() : !latitude.trim() || !longitude.trim())} onClick={() => void search()}>{busy ? 'Recherche…' : 'Rechercher'}</button></label>
       </div>
       {hit && <div className="form-rows" style={{ marginTop: 'var(--sp-3)' }}><label><span>{t('weather.siteName')}</span><input value={siteName} onChange={(event) => { setSiteName(event.target.value); setPreview(null); }} /></label><label><span>{t('weather.foundCoordinates')}</span><input readOnly value={`${fmt(hit.latitudeDeg, 4)}° / ${fmt(hit.longitudeDeg, 4)}°`} /></label><label><span>{t('weather.foundTimezone')}</span><input readOnly value={hit.timezoneIana} /></label></div>}
+      {manual && !hit && mode === 'gps' && <div className="form-rows" style={{ marginTop: 'var(--sp-3)' }}>
+        <label><span>{t('weather.siteName')}</span><input autoFocus placeholder={t('weather.siteNamePlaceholder')} value={siteName} onChange={(event) => { setSiteName(event.target.value); setPreview(null); }} /></label>
+        <label><span>{t('weather.country')}</span><select value={countryCode} onChange={(event) => { setCountryCode(event.target.value); setPreview(null); }}>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></label>
+        <label><span>{t('weather.timezoneIana')}</span><input aria-invalid={!isTimezone(timezoneIana)} value={timezoneIana} onChange={(event) => { setTimezoneIana(event.target.value); setPreview(null); }} /></label>
+      </div>}
     </>}
 
     {error && <div className="alert warn" role="alert" style={{ marginTop: 'var(--sp-3)' }}>{error}</div>}
+    {notice && <div className="alert" role="status" style={{ marginTop: 'var(--sp-3)' }}>{notice}</div>}
 
-    {mode !== 'file' && <div className={`dlg-step ${hit ? '' : 'is-off'}`}><span className="dlg-num">2</span><span className="dlg-step-t">{t('weather.downloadPreview')}</span><span className="sep" /><span className="label">rien n’est écrit à cette étape</span><button className="btn" disabled={!hit || busy} onClick={() => void download()}>{busy ? 'Téléchargement…' : preview ? 'Retélécharger' : 'Télécharger'}</button></div>}
+    {mode !== 'file' && <div className={`dlg-step ${resolved ? '' : 'is-off'}`}><span className="dlg-num">2</span><span className="dlg-step-t">{t('weather.downloadPreview')}</span><span className="sep" /><span className="label">rien n’est écrit à cette étape</span><button className="btn" disabled={!resolved || busy} onClick={() => void download()}>{busy ? 'Téléchargement…' : preview ? 'Retélécharger' : 'Télécharger'}</button></div>}
 
     {preview && <><div className="weather-preview"><div className="weather-bars" aria-label="Irradiation mensuelle calculée depuis le fichier">{preview.monthly.map((value, month) => <div key={month}><i aria-hidden="true" style={{ height: `${Math.max(2, value / max * 72)}px` }} /><span>{MONTHS[month]}</span><b>{fmt(value, 1)}</b></div>)}</div><div className="daily-note"><span>{preview.siteName} · {preview.countryCode}</span><span>· {fmt(preview.latitude, 4)}° / {fmt(preview.longitude, 4)}°</span><span className="sep" /><span className="label">SHA-256 {preview.payload.sourceSha256.slice(0, 12)}…</span></div></div><div className="dlg-step"><span className="dlg-num">{mode === 'file' ? '2' : '3'}</span><span className="dlg-step-t">{t('weather.save')}</span><span className="sep" /><span className="label">8 760 heures et leur preuve seront conservées dans la bibliothèque locale</span></div></>}
   </Dialog>;

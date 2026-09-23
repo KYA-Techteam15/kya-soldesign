@@ -12,7 +12,6 @@ import { useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
 import { buildReportDocument } from '../../app/export/reportModel';
 import { downloadDocx } from '../../app/export/docxWriter';
 import { buildProjectDiagram } from '../../app/diagram/projectDiagram';
-import { SYNOPTIC_OPTIONS } from '@ksd/diagram';
 import { defaultReportOptions, type DocKind, type ReportOptions } from '../../app/export/documentComposition';
 
 const DOCS: { key: DocKind; labelKey: string; noteKey: string }[] = [
@@ -21,6 +20,18 @@ const DOCS: { key: DocKind; labelKey: string; noteKey: string }[] = [
   { key: 'proforma', labelKey: 'documents.proforma', noteKey: 'documents.proformaNote' },
   { key: 'dossier_exec', labelKey: 'documents.execution', noteKey: 'documents.executionNote' },
 ];
+
+/**
+ * Pièces proposées à l'écran.
+ *
+ * L'offre interne et le dossier d'exécution restent construits et testés —
+ * leur composition, leurs sections et leurs garde-fous sont en place — mais ils
+ * ne sont pas encore présentables. On retire les boutons plutôt que de livrer
+ * une pièce qu'on ne veut pas voir sortir ; remettre la clé dans cette liste
+ * suffira à les rouvrir.
+ */
+const PUBLISHED: readonly DocKind[] = ['rapport', 'proforma'];
+const SHOWN = DOCS.filter((doc) => PUBLISHED.includes(doc.key));
 
 /** Ce que le dialogue de génération produira une fois validé. */
 type PendingAction = { readonly kind: DocKind; readonly action: 'word' | 'print' };
@@ -47,6 +58,8 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
   const [busy, setBusy] = useState<DocKind | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
+  /* Le Word doit recevoir le même visuel que l'aperçu, repli compris. */
+  const effectiveLogoUrl = logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png';
 
   /**
    * Composition retenue par pièce, pour la durée de la séance. Une composition
@@ -66,12 +79,12 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
     setError(null);
     try {
       const generated = sizing
-        ? buildProjectDiagram({ project, sizing, catalog, settings, lang: options.lang, options: kind === 'dossier_exec' ? undefined : SYNOPTIC_OPTIONS })
+        ? buildProjectDiagram({ project, sizing, catalog, settings, lang: options.lang })
         : null;
       await downloadDocx(buildReportDocument({
         project, kind, sizing, finance, solar, presizing, catalog, settings,
         t: (key: string) => translate(key, options.lang),
-        assets: { logoUrl, coverUrl, signatureUrl },
+        assets: { logoUrl: effectiveLogoUrl, coverUrl, signatureUrl },
         options,
         diagram: generated ? { svg: generated.svg, width: generated.plan.width, height: generated.plan.height, bom: generated.plan.bom } : null,
       }));
@@ -125,7 +138,7 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
   };
 
   return <>
-    <div className="proj-list">{DOCS.map((doc) => <div className="proj-row" key={doc.key}>
+    <div className="proj-list">{SHOWN.map((doc) => <div className="proj-row" key={doc.key}>
       <button style={{ textAlign: 'left' }} onClick={() => selectPreview(doc.key)}>
         <b>{t(doc.labelKey)}</b><small>{t(doc.noteKey)}</small>
       </button>

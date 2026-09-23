@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { Dialog } from '../../ui/Dialog';
 import { useT } from '../../i18n';
+import { useSettings } from '../../store/settings';
+import { reportAssetRepository, useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
 import {
   defaultReportOptions,
   offeredSections,
@@ -17,6 +19,55 @@ import {
  * bailleur sont des décisions ponctuelles. Elles se prennent ici, sans changer
  * les réglages de tout le monde.
  */
+/**
+ * Emplacement d'un visuel.
+ *
+ * Il montre ce qui sera réellement imprimé — pas une case à cocher — et permet
+ * de le remplacer sans quitter le dialogue. Sans aperçu, on ne découvrait le
+ * mauvais logo qu'une fois le document ouvert.
+ */
+function VisualSlot({ kind, label, assetId, onPick }: {
+  readonly kind: 'logo' | 'cover';
+  readonly label: string;
+  readonly assetId: string | null;
+  readonly onPick: (id: string | null) => void;
+}) {
+  const t = useT();
+  const url = useReportAssetUrl(assetId);
+  const [error, setError] = useState<string | null>(null);
+  const fallback = kind === 'logo' ? '/kya-sol-design-logo.png' : null;
+  const shown = url ?? fallback;
+
+  const replace = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const stored = await reportAssetRepository.store(file, kind);
+      onPick(stored.id);
+      setError(null);
+    } catch {
+      setError(t('settings.assetError'));
+    }
+  };
+
+  return <div className={`visual-slot visual-slot-${kind}`}>
+    <span className="visual-slot-label">{label}</span>
+    <span className="visual-slot-frame">
+      {shown === null
+        ? <span className="label">{t('generate.visualNone')}</span>
+        : <img src={shown} alt={label} />}
+    </span>
+    <span className="visual-slot-actions">
+      <label className="btn">{t('generate.visualReplace')}
+        <input type="file" accept="image/png,image/jpeg,image/svg+xml" aria-label={label} hidden onChange={(event) => { void replace(event); }} />
+      </label>
+      {assetId !== null && <button type="button" className="btn btn-ghost" onClick={() => { void reportAssetRepository.remove(assetId).then(() => onPick(null)); }}>{t('settings.assetRemove')}</button>}
+    </span>
+    {error !== null && <small className="error">{error}</small>}
+  </div>;
+}
+
 export function GenerateDialog({ kind, initial, confirmLabel, onCancel, onConfirm }: {
   readonly kind: DocKind;
   readonly initial: ReportOptions;
@@ -25,6 +76,7 @@ export function GenerateDialog({ kind, initial, confirmLabel, onCancel, onConfir
   readonly onConfirm: (options: ReportOptions) => void;
 }) {
   const t = useT();
+  const settings = useSettings();
   const [draft, setDraft] = useState<ReportOptions>(initial);
   const offered = offeredSections(kind);
   const chosen = new Set(draft.sections);
@@ -66,6 +118,18 @@ export function GenerateDialog({ kind, initial, confirmLabel, onCancel, onConfir
       </fieldset>
 
       <div className="generate-options">
+        {/* Les visuels appartiennent à l'entreprise, pas au tirage du jour :
+            les remplacer ici les remplace pour les quatre pièces et pour les
+            dossiers suivants. C'est ce qu'on attend d'une identité. */}
+        <fieldset className="generate-visuals">
+          <legend>{t('generate.visuals')}</legend>
+          <VisualSlot kind="logo" label={t('settings.logoFile')} assetId={settings.reports.logoAssetId}
+            onPick={(id) => settings.updateCategory('reports', { logoAssetId: id })} />
+          <VisualSlot kind="cover" label={t('settings.coverFile')} assetId={settings.reports.coverAssetId}
+            onPick={(id) => settings.updateCategory('reports', { coverAssetId: id })} />
+          <p className="label">{t('generate.visualsShared')}</p>
+        </fieldset>
+
         <label className="generate-switch">
           <input type="checkbox" checked={draft.withPrices} onChange={(event) => setDraft((current) => ({ ...current, withPrices: event.target.checked }))} />
           <span>{t('generate.withPrices')}<small className="label">{t('generate.withPricesHelp')}</small></span>

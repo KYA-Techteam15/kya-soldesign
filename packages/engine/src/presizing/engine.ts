@@ -45,10 +45,15 @@ function evaluateCandidate(input: PresizingInputV1, alphaA: number, alphaN: numb
   const exergyNeedKwh = dailyEnergyKwh / (conversionEfficiency * storageEfficiency)
     * ((-1 - alphaN + alphaA + storageEfficiency) * input.yEn + alphaN + 1);
   const pvPeakKw = exergyNeedKwh / (annualPoaKwh / 365 * input.systemPr);
-  // Page 2 reports useful storage energy directly. DoD and battery technology
-  // are deliberately deferred to the equipment-sizing page.
-  const storageKwh = dailyEnergyKwh / conversionEfficiency * (-input.yEn
-    + ((alphaA + storageEfficiency) * input.yEn + (1 + alphaN) * (1 - input.yEn)) / storageEfficiency);
+  // Nominal storage capacity S_t, Eq. (18) of the validated methodology:
+  // S_t = E_load,T * [(alphaA - alphaN - 1) * yEn + 1 + alphaN]. No
+  // conversion/storage efficiency factor belongs here — S_t is already the
+  // nominal (nameplate) battery capacity; DoD and battery technology are
+  // deliberately deferred to the equipment-sizing page. A previous version of
+  // this formula divided by (conversionEfficiency * storageEfficiency), which
+  // does not appear in Eq. (18) and silently inflated the sized capacity by
+  // roughly 1/(eta_c*eta_s) (~17% with the current defaults).
+  const storageKwh = dailyEnergyKwh * ((alphaA - alphaN - 1) * input.yEn + 1 + alphaN);
   if (pvPeakKw <= 0 || storageKwh < 0) return null;
   const inverterKw = Math.max(input.peakPowerW / 1000, pvPeakKw * input.inverterEfficiency);
   // La charge est soit une journée type répétée, soit une année complète. Le

@@ -68,7 +68,17 @@ export function queryAnnualChart(input: {
     bucket.sourcePointCount += 1;
     buckets.set(bucketKey, bucket);
   }
-  const points = [...buckets.values()].sort((left, right) => left.bucket.localeCompare(right.bucket)).map((bucket) => ({
+  /**
+   * L'ordre est celui de la série, pas celui des dates.
+   *
+   * Une année type PVGIS emprunte chaque mois à une année réelle différente :
+   * janvier peut venir de 2022 et novembre de 2005. Trier sur la date absolue
+   * plaçait alors novembre en tête et brisait la succession des saisons —
+   * l'axe affichait « 2005-11-01 … 2022-01-31 » pour une seule année type.
+   * Le fichier, lui, est bien rangé du 1er janvier au 31 décembre : conserver
+   * son ordre d'arrivée suffit, et vaut aussi pour une année réelle.
+   */
+  const points = [...buckets.values()].map((bucket) => ({
     bucket: bucket.bucket,
     startDateIso: bucket.startDateIso,
     endDateIso: bucket.endDateIso,

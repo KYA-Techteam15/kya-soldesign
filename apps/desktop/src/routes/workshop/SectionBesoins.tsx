@@ -17,7 +17,7 @@ import { isDecimalDraft } from '../../app/models/formValues';
 import { exportEquipmentWorkbook, inspectEquipmentWorkbook, exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
 import { ComposedProfilesDialog } from './ComposedProfilesDialog';
 import { AnnualLoadChart } from './AnnualLoadChart';
-import { buildAnnualLoadPresentation } from '../../app/models/annualLoadPresentation';
+import { buildAnnualLoadPresentationResult } from '../../app/models/annualLoadPresentation';
 
 const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
@@ -109,7 +109,7 @@ export function SectionBesoins() {
    * Le calcul est mémorisé — il déroule 8 760 heures à chaque frappe sinon.
    */
   const solarOutput = solarCalculation.status === 'ready' ? solarCalculation.envelope.output : null;
-  const annual = useMemo(() => buildAnnualLoadPresentation(project, solarOutput), [project, solarOutput]);
+  const annual = useMemo(() => buildAnnualLoadPresentationResult(project, solarOutput), [project, solarOutput]);
 
   const mutateProfile = (fn: (p: NamedProfile) => void) =>
     update((draft) => {
@@ -609,7 +609,7 @@ export function SectionBesoins() {
       )}
       </>}
 
-      <AnnualLoadChart presentation={annual} />
+      <AnnualLoadChart result={annual} />
 
       <ComposedProfilesDialog open={showComposer} initial={project.load.composition} onCancel={() => setShowComposer(false)} onApply={(composition) => { applyComposition(composition); setShowComposer(false); notify({ kind: 'success', title: 'Profils composés enregistrés', detail: 'Le calendrier annuel a été recalculé.' }); }} />
       {confirmSimpleSwitch && <Dialog title={t('loads.composedSwitchTitle')} onClose={() => setConfirmSimpleSwitch(false)} footer={<><button className="btn btn-ghost" onClick={() => setConfirmSimpleSwitch(false)}>{t('g.cancel')}</button><button className="btn btn-ok" onClick={() => { update((draft) => { draft.load.activeMode = 'simple'; }); setConfirmSimpleSwitch(false); }}>{t('g.confirm')}</button></>}><p>{t('loads.composedSwitchBody')}</p></Dialog>}

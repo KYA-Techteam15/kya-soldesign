@@ -10,14 +10,31 @@ export interface AnnualLoadPresentation {
   readonly daily: readonly { readonly dateIso: string; readonly energyKwh: number; readonly peakKw: number }[];
 }
 
-export function buildAnnualLoadPresentation(project: ProjectViewModel, solar: SolarResourceAnalysisOutputV1 | null): AnnualLoadPresentation | null {
+/**
+ * Pourquoi le tracé annuel n'a rien à montrer.
+ *
+ * Un `null` muet renvoyait toujours le même message — « en attente de la météo
+ * horaire » — y compris quand la météo était bien chargée et que l'obstacle
+ * était ailleurs. Le lecteur allait alors chercher au mauvais endroit.
+ */
+export type AnnualLoadUnavailable =
+  | { readonly status: 'unavailable'; readonly reasonKey: string };
+
+export type AnnualLoadPresentationResult =
+  | ({ readonly status: 'ready' } & AnnualLoadPresentation)
+  | AnnualLoadUnavailable;
+
+const unavailable = (reasonKey: string): AnnualLoadUnavailable => ({ status: 'unavailable', reasonKey });
+
+export function buildAnnualLoadPresentationResult(project: ProjectViewModel, solar: SolarResourceAnalysisOutputV1 | null): AnnualLoadPresentationResult {
   const resource = project.site.downloadedSource;
-  if (solar === null || resource?.hourlyIrradiance === undefined || resource.hourlyIrradiance.length !== solar.hourlyPoaWm2.length) return null;
+  if (solar === null || resource?.hourlyIrradiance === undefined) return unavailable('loads.annualNeedsWeather');
+  if (resource.hourlyIrradiance.length !== solar.hourlyPoaWm2.length) return unavailable('loads.annualWeatherMismatch');
   const activeProfile = project.load.profiles.find((profile) => profile.id === project.load.activeProfileId);
   // The invoice workflow has its own sourced-profile/YEn adjustment and must
   // remain the authority for that mode until an explicit hourly profile is
   // declared. A zero-filled hourly editor must never mask that result.
-  if (project.load.activeMode !== 'composed' && activeProfile?.source === 'meter') return null;
+  if (project.load.activeMode !== 'composed' && activeProfile?.source === 'meter') return unavailable('loads.annualMeterMode');
   const annualProfiles = project.load.activeMode === 'composed' && project.load.composition !== null
     ? project.load.composition.profiles.map((profile) => ({
       id: profile.id,
@@ -41,7 +58,7 @@ export function buildAnnualLoadPresentation(project: ProjectViewModel, solar: So
       : profile.hourly.map((point) => point.peakPower * 1_000);
       return { id: profile.id, hourlyEnergyWh, hourlyPeakPowerW };
     });
-  if (annualProfiles.length === 0) return null;
+  if (annualProfiles.length === 0) return unavailable('loads.annualNeedsProfile');
   const timestamps = resource.hourlyIrradiance.map((point) => point.timestampUtcIso);
   const weather = timestamps.map((timestamp, index) => ({ timestampUtcIso: timestamp, poaWm2: solar.hourlyPoaWm2[index]! }));
   try {
@@ -59,8 +76,17 @@ export function buildAnnualLoadPresentation(project: ProjectViewModel, solar: So
       byDate.set(point.localDateIso, current);
     }
     const activeCalendar = project.load.activeMode === 'composed' && project.load.composition !== null ? project.load.composition.calendar : project.load.calendar;
-    return { series, yEn, poaByTimestamp, periods: activeCalendar.periods, daily: [...byDate.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([dateIso, values]) => ({ dateIso, ...values })) };
-  } catch {
-    return null;
+    return { status: 'ready', series, yEn, poaByTimestamp, periods: activeCalendar.periods, daily: [...byDate.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([dateIso, values]) => ({ dateIso, ...values })) };
+  } catch (error) {
+    // Le motif du moteur est le seul indice utile ici ; l'effacer avait déjà
+    // coûté un diagnostic complet sur un profil annuel refusé en silence.
+    if (error instanceof Error) console.warn('[profil annuel] série non construite :', error.message);
+    return unavailable('loads.annualBuildFailed');
   }
+}
+
+/** Ancienne forme, conservée pour les appelants qui ne lisent que le résultat. */
+export function buildAnnualLoadPresentation(project: ProjectViewModel, solar: SolarResourceAnalysisOutputV1 | null): AnnualLoadPresentation | null {
+  const result = buildAnnualLoadPresentationResult(project, solar);
+  return result.status === 'ready' ? result : null;
 }

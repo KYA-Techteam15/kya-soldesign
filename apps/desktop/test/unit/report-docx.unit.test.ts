@@ -91,12 +91,13 @@ const headingsOf = (document: ReportDocument): string[] =>
   document.sections.flatMap((section) => section.blocks).flatMap((block) => block.kind === 'heading' ? [block.text] : []);
 
 describe('document Word', () => {
-  it('assemble le rapport en une garde et un corps, planche comprise', () => {
+  it('assemble le rapport en une garde, un corps et une planche couchée', () => {
     const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
-    // Page de garde d'un côté, tout le corps de l'autre : le synoptique du
-    // rapport tient debout, il n'a pas besoin d'une section couchée à lui.
-    expect(document.sections).toHaveLength(2);
+    // Garde, corps, puis la planche sur sa propre page couchée : un schéma
+    // ramené à la largeur d'une colonne portrait n'était plus lisible.
+    expect(document.sections).toHaveLength(3);
     expect(document.sections[0]!.blocks[0]!.kind).toBe('cover');
+    expect(document.sections.at(-1)!.orientation).toBe('landscape');
     expect(document.fileName).toBe('centrale-de-bouake-rapport.docx');
     expect(document.company.contact).toContain('Lomé');
     expect(headingsOf(document)).toEqual(expect.arrayContaining([
@@ -117,6 +118,7 @@ describe('document Word', () => {
   it('n’ouvre pas de section pour une planche absente', () => {
     const document = buildReportDocument({ project, kind: 'rapport', sizing: null, finance: null, solar: null, catalog, settings, t, diagram: null });
     expect(document.sections).toHaveLength(2);
+    expect(document.sections.every((section) => section.orientation === 'portrait')).toBe(true);
     expect(document.sections.flatMap((section) => section.blocks).some((block) => block.kind === 'image')).toBe(false);
   });
 
@@ -124,6 +126,40 @@ describe('document Word', () => {
     const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
     const rows = document.sections.flatMap((section) => section.blocks).flatMap((block) => block.kind === 'table' ? block.rows : []);
     expect(rows.some((row) => row.includes('32,0 A'))).toBe(true);
+  });
+
+  it('couche la planche de toutes les pièces, pas seulement du dossier d’exécution', () => {
+    for (const kind of ['rapport', 'offre', 'dossier_exec'] as const) {
+      const document = buildReportDocument({ project, kind, sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf(kind === 'dossier_exec' ? 'dossier_exec' : 'rapport') });
+      const plate = document.sections.find((section) => section.blocks.some((block) => block.kind === 'image'));
+      expect(plate, kind).toBeDefined();
+      expect(plate!.orientation, kind).toBe('landscape');
+    }
+  });
+
+  it('n’écrit plus « utile » nulle part dans le document', () => {
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    const strings = document.sections.flatMap((section) => section.blocks).flatMap((block) => {
+      if (block.kind === 'cover') return [block.system, block.subtitle, block.ownership];
+      if (block.kind === 'table') return block.rows.flat();
+      if (block.kind === 'kpis') return block.items.map((entry) => `${entry.label} ${entry.value} ${entry.unit}`);
+      return [];
+    });
+    // `report.useful` est la clé qui produisait « utiles » : elle ne doit plus
+    // être demandée, et le mot ne doit plus apparaître en clair.
+    expect(strings.some((value) => /utile/iu.test(value) || value.includes('report.useful'))).toBe(false);
+  });
+
+  it('porte sur sa couverture un libellé traduisible et une mention de propriété', () => {
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    const cover = document.sections[0]!.blocks[0]!;
+    expect(cover.kind).toBe('cover');
+    if (cover.kind !== 'cover') return;
+    // Le bandeau était écrit en dur dans le rédacteur Word : il sortait en
+    // français même sur un document demandé en anglais.
+    expect(cover.systemLabel).toBe('report.selectedSystem');
+    expect(cover.ownership).toContain('KYA-Energy Group');
+    expect(cover.ownership).toContain('©');
   });
 
   it('réduit la proforma à la pièce comptable', () => {
@@ -136,6 +172,26 @@ describe('document Word', () => {
     // Elle porte en revanche ce qui la rend payable.
     expect(headings).toContain('report.payment');
     expect(headings).toContain('report.conditions');
+  });
+
+  it('imprime des références lisibles, jamais les identifiants internes', () => {
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    const cells = document.sections.flatMap((section) => section.blocks).flatMap((block) => block.kind === 'table' ? block.rows.flat() : []);
+    expect(cells).toContain('CS7L-455');
+    expect(cells).toContain('GEL 200');
+    expect(cells).toContain('SUN-5K');
+    // « pv-module_5169… » ne se recopie pas sur un bon de commande.
+    expect(cells.some((cell) => /^(?:pv-module|battery|inverter)_/u.test(cell))).toBe(false);
+  });
+
+  it('nomme ce que chaque grandeur du système dimensionne', () => {
+    const document = buildReportDocument({ project, kind: 'rapport', sizing, finance: null, solar: null, catalog, settings, t, diagram: diagramOf('rapport') });
+    const cover = document.sections[0]!.blocks[0]!;
+    expect(cover.kind === 'cover' && cover.system).toContain('report.summaryPv');
+    expect(cover.kind === 'cover' && cover.system).toContain('report.summaryStorage');
+    expect(cover.kind === 'cover' && cover.system).toContain('report.summaryInverter');
+    // « kWh utiles » sans sujet laissait deviner de quoi on parlait.
+    expect(cover.kind === 'cover' && cover.system).not.toContain('report.useful');
   });
 
   it('réserve les coûts d’achat et les marges à l’offre interne', () => {

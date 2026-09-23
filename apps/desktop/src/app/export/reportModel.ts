@@ -6,6 +6,7 @@ import type { ApplicationSettingsV2 } from '../models/applicationSettings';
 import { dateFr, fmt } from '../../domain/format';
 import { projectProtections } from '../diagram/projectDiagram';
 import { buildReportLoadSummary, type ReportLoadSummary } from './reportLoadSummary.js';
+import { dailyLoadChart, monthlyIrradiationChart } from './reportCharts.js';
 import {
   defaultReportOptions,
   resolveSections,
@@ -34,7 +35,10 @@ export type Block =
       readonly project: string;
       readonly subtitle: string;
       readonly system: string;
+      readonly systemLabel: string;
       readonly sri: string;
+      /** Mention de propriété, en pied de couverture. */
+      readonly ownership: string;
       readonly cells: readonly { label: string; value: string }[];
       /** URLs d'objet des visuels choisis dans les réglages, s'il y en a. */
       readonly logoUrl: string | null;
@@ -93,6 +97,31 @@ const COMMISSIONING_KEYS = [
   'report.commissioning.inverterStart', 'report.commissioning.loadTransfer',
 ] as const;
 
+/**
+ * Système retenu, en toutes lettres.
+ *
+ * « 20,52 kWc · 69,12 kWh utiles · 20,00 kW » obligeait le lecteur à deviner
+ * quelle grandeur allait avec quel composant. Chaque valeur nomme désormais ce
+ * qu'elle dimensionne.
+ */
+function retainedSystem(sizing: SizingOutputV1 | null, t: (key: string) => string): string {
+  if (sizing === null) return t('report.sizingUnavailable');
+  return [
+    `${t('report.summaryPv')} ${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc`,
+    `${t('report.summaryStorage')} ${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh`,
+    `${t('report.summaryInverter')} ${fmt(sizing.inverter.obtainedPowerKw, 2)} kW`,
+  ].join(' · ');
+}
+
+/**
+ * Référence lisible d'un équipement.
+ *
+ * L'identifiant interne — « pv-module_51693395014a1148ba163e77 » — ne se lit
+ * pas, ne se cherche pas dans un catalogue fournisseur et ne se recopie pas sur
+ * un bon de commande. La référence commerciale, si.
+ */
+const reference = (equipment: Equipment | undefined) => equipment ? equipment.model : '—';
+
 const item = (list: readonly Equipment[], id: string | null) => list.find((equipment) => equipment.id === id);
 const name = (equipment: Equipment | undefined) => (equipment ? `${equipment.manufacturer} · ${equipment.model}` : '—');
 const dash = (value: string | number | undefined | null): string =>
@@ -129,10 +158,16 @@ export function buildReportDocument(input: ReportModelInput): ReportDocument {
   const built = new Map<SectionId, readonly Block[]>();
   for (const id of retained) built.set(id, blocksFor(id, input));
 
-  // La planche et sa nomenclature partagent une page ; en dossier d'exécution
-  // elle est couchée, sinon le synoptique tient debout avec le reste.
+  /**
+   * La planche et sa nomenclature occupent leur propre page, couchée.
+   *
+   * Le synoptique condensé tenait debout dans le corps du rapport, mais au prix
+   * d'un schéma illisible : un champ de trente modules ramené à la largeur
+   * d'une colonne ne se lit plus. Toutes les pièces reçoivent donc la planche
+   * complète, sur une page à part et en paysage.
+   */
   const plateIds: readonly SectionId[] = ['diagram', 'billOfMaterial'];
-  const landscape = kind === 'dossier_exec';
+  const landscape = true;
   const coverBlocks = built.get('cover') ?? [];
   const bodyBlocks = retained
     .filter((id) => id !== 'cover' && !(landscape && plateIds.includes(id)))
@@ -185,7 +220,8 @@ function blocksFor(id: SectionId, input: ReportModelInput): readonly Block[] {
   }
 }
 
-function coverBlock({ project, kind, sizing, finance, t, assets }: ReportModelInput): Block {
+function coverBlock(input: ReportModelInput): Block {
+  const { project, kind, sizing, finance, t, assets } = input;
   const details = project.details;
   const [titleKey, subtitleKey] = TITLE_KEYS[kind];
   return {
@@ -193,10 +229,10 @@ function coverBlock({ project, kind, sizing, finance, t, assets }: ReportModelIn
     docKind: t(titleKey),
     project: project.name,
     subtitle: `${t(subtitleKey)} · n° ${dash(details.projectNumber)}`,
-    system: sizing
-      ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc · ${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh ${t('report.useful')} · ${fmt(sizing.inverter.obtainedPowerKw, 2)} kW`
-      : t('report.sizingUnavailable'),
+    system: retainedSystem(sizing, t),
+    systemLabel: t('report.selectedSystem'),
     sri: finance ? fmt(finance.simulation.sri, 2) : '—',
+    ownership: `© ${input.settings.company.name || 'KYA-SolDesign'} ${new Date(details.projectDate || Date.now()).getFullYear() || new Date().getFullYear()}`,
     cells: [
       { label: t('report.client'), value: dash(details.clientName) },
       { label: t('report.site'), value: dash(details.projectLocation || project.site.region) },
@@ -208,7 +244,8 @@ function coverBlock({ project, kind, sizing, finance, t, assets }: ReportModelIn
   };
 }
 
-function identityBlocks({ project, kind, t }: ReportModelInput): readonly Block[] {
+function identityBlocks(input: ReportModelInput): readonly Block[] {
+  const { project, kind, t } = input;
   const details = project.details;
   const [titleKey, subtitleKey] = TITLE_KEYS[kind];
   return [
@@ -225,7 +262,11 @@ function identityBlocks({ project, kind, t }: ReportModelInput): readonly Block[
         },
         {
           label: t('report.solarResource'),
-          value: `${fmt(project.site.irradiation, 2)} kWh/m²/j`,
+          // La moyenne se lit sur l'analyse du moteur. `site.irradiation` n'est
+          // renseigné que par le dialogue de téléchargement : choisir une
+          // localité du catalogue le laissait à zéro, et le rapport affichait
+          // « 0,00 kWh/m²/j » sur un site parfaitement documenté.
+          value: `${fmt(dailyIrradiation(input), 2)} kWh/m²/j`,
           note: `${t('report.tilt')} ${fmt(project.site.tilt, 0)}° · ${t('report.azimuth')} ${fmt(project.site.azimuth, 0)}°`,
         },
       ],
@@ -233,13 +274,20 @@ function identityBlocks({ project, kind, t }: ReportModelInput): readonly Block[
   ];
 }
 
+/** Irradiation journalière moyenne en plan des modules, telle que calculée. */
+function dailyIrradiation({ project, solar }: ReportModelInput): number {
+  const monthly = solar?.monthlyAverageDailyPoaKWhM2Day;
+  if (monthly !== undefined && monthly.length === 12) {
+    return monthly.reduce((total, value) => total + value, 0) / 12;
+  }
+  return project.site.irradiation;
+}
+
 function headlineBlocks({ sizing, finance, t }: ReportModelInput): readonly Block[] {
   return [{
     kind: 'headline',
     label: t('report.selectedSystem'),
-    text: sizing
-      ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc · ${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh ${t('report.useful')} · ${fmt(sizing.inverter.obtainedPowerKw, 2)} kW ${t('report.inverter')}`
-      : t('report.sizingUnavailable'),
+    text: retainedSystem(sizing, t),
     sealValue: finance ? fmt(finance.simulation.sri, 2) : '—',
     sealLabel: 'SRI',
   }];
@@ -252,12 +300,20 @@ function headlineBlocks({ sizing, finance, t }: ReportModelInput): readonly Bloc
  * imprimée nulle part : le client recevait une puissance crête sans le gisement
  * qui la justifie.
  */
-function siteResourceBlocks({ project, solar, t }: ReportModelInput): readonly Block[] {
+function siteResourceBlocks(input: ReportModelInput): readonly Block[] {
+  const { project, solar, t } = input;
   const monthly = solar?.monthlyAverageDailyPoaKWhM2Day ?? project.site.monthlyIrradiation;
+  const dailyMean = dailyIrradiation(input);
   const source = project.site.downloadedSource;
   const blocks: Block[] = [{ kind: 'heading', text: t('report.siteResource') }];
 
   if (monthly.length === 12) {
+    // La courbe d'abord : on lit une saison d'un coup d'œil, le tableau ne
+    // sert qu'à relever un chiffre précis.
+    const chart = monthlyIrradiationChart(monthly, MONTH_KEYS.map((key) => t(key).slice(0, 4)));
+    if (chart !== null) {
+      blocks.push({ kind: 'image', svg: chart.svg, widthPx: chart.width, heightPx: chart.height, caption: t('report.irradiationChart') });
+    }
     blocks.push({
       kind: 'table',
       head: [t('report.month'), t('report.dailyIrradiation')],
@@ -273,6 +329,9 @@ function siteResourceBlocks({ project, solar, t }: ReportModelInput): readonly B
   blocks.push({
     kind: 'kpis',
     items: [
+      // La moyenne journalière est le chiffre que le lecteur retient ; elle se
+      // lit sur l'analyse, jamais sur la copie stockée dans le projet.
+      { label: t('report.solarResource'), value: fmt(dailyMean, 2), unit: 'kWh/m²/j' },
       { label: t('report.annualIrradiation'), value: solar ? fmt(solar.annualPoaKWhM2, 0) : '—', unit: 'kWh/m²' },
       { label: t('report.designMonth'), value: solar?.designMonth === null || solar?.designMonth === undefined ? '—' : t(MONTH_KEYS[solar.designMonth - 1] ?? 'month.jan'), unit: '' },
       { label: t('report.tilt'), value: fmt(project.site.tilt, 0), unit: '°' },
@@ -293,8 +352,20 @@ function siteResourceBlocks({ project, solar, t }: ReportModelInput): readonly B
 }
 
 function loadNeedsBlocks(input: ReportModelInput): readonly Block[] {
-  const load = buildReportLoadSummary(input.project, input.solar);
-  return [{ kind: 'heading', text: input.t('report.siteNeeds') }, ...loadBlocks(load, input.t)];
+  const { solar, t } = input;
+  const load = buildReportLoadSummary(input.project, solar);
+  const blocks: Block[] = [{ kind: 'heading', text: t('report.siteNeeds') }];
+
+  // Le profil tracé montre à quelle heure l'énergie est demandée — et, avec
+  // l'irradiance moyenne superposée, ce que le stockage devra reporter.
+  const chart = solar?.loadHourlyEnergyWh
+    ? dailyLoadChart(solar.loadHourlyEnergyWh, solar.meanHourlyPoaWm2 ?? null, { load: t('report.chartLoad'), sun: t('report.chartIrradiance') })
+    : null;
+  if (chart !== null) {
+    blocks.push({ kind: 'image', svg: chart.svg, widthPx: chart.width, heightPx: chart.height, caption: t('report.loadChart') });
+  }
+
+  return [...blocks, ...loadBlocks(load, t)];
 }
 
 /**
@@ -389,21 +460,21 @@ function systemBlocks({ project, sizing, catalog, t }: ReportModelInput): readon
       rows: [
         [
           `${t('report.pvModules')} — ${name(mod)}`,
-          dash(mod?.id),
+          reference(mod),
           sizing ? `${sizing.pv.modulesInSeries} S × ${sizing.pv.stringsInParallel} P` : '—',
           dash(sizing?.pv.totalModules),
           sizing ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc` : '—',
         ],
         [
           `${t('report.batteryBank')} — ${name(bat)}`,
-          dash(bat?.id),
+          reference(bat),
           sizing ? `${sizing.battery.unitsInSeries} S × ${sizing.battery.stringsInParallel} P` : '—',
           dash(sizing?.battery.totalUnits),
-          sizing ? `${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh ${t('report.useful')}` : '—',
+          sizing ? `${fmt(sizing.battery.usefulEnergyKwh, 2)} kWh` : '—',
         ],
         [
           `${t('report.inverters')} — ${name(inv)}`,
-          dash(inv?.id),
+          reference(inv),
           t('report.parallel'),
           dash(sizing?.inverter.count),
           sizing ? `${fmt(sizing.inverter.obtainedPowerKw, 2)} kW` : '—',

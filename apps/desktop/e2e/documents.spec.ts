@@ -18,28 +18,40 @@ async function openDocuments(page: import('@playwright/test').Page) {
   await expect(page.locator('.a4').first()).toBeVisible();
 }
 
-test('les quatre pièces ne portent pas le même contenu', async ({ page }) => {
+test('le rapport et la proforma ne portent pas le même contenu', async ({ page }) => {
   await openDocuments(page);
+  const report = page.locator('.paper-wrap');
 
   // Le rapport raconte le projet : gisement, hypothèses, méthode.
-  await page.getByRole('button', { name: 'Aperçu' }).first().click();
-  const report = page.locator('.paper-wrap');
+  await page.locator('.proj-row', { hasText: 'Rapport technique' }).getByRole('button', { name: 'Aperçu' }).click();
   await expect(report).toContainText('Site et gisement solaire');
   await expect(report).toContainText('Méthode et hypothèses');
   await expect(report).not.toContainText('Coûts d’achat et marges');
-
-  // L'offre interne est la seule à montrer les coûts d'achat et les marges.
-  await page.locator('.proj-row', { hasText: 'Offre technique interne' }).getByRole('button', { name: 'Aperçu' }).click();
-  await expect(report).toContainText('Coûts d’achat et marges');
 
   // La proforma est une pièce comptable : pas de câbles, pas de planche.
   await page.locator('.proj-row', { hasText: 'Facture proforma' }).getByRole('button', { name: 'Aperçu' }).click();
   await expect(report).toContainText('Modalités de règlement');
   await expect(report).not.toContainText('Protections et câbles');
+});
 
-  // Le dossier d'exécution porte la fiche de mise en service.
-  await page.locator('.proj-row', { hasText: "Dossier d'exécution" }).getByRole('button', { name: 'Aperçu' }).click();
-  await expect(report).toContainText('Mise en service et réception');
+test('ne propose que les pièces prêtes à être remises', async ({ page }) => {
+  await openDocuments(page);
+  // L'offre interne et le dossier d'exécution restent construits et testés,
+  // mais ne sont pas encore présentables : leurs boutons sont retirés.
+  await expect(page.locator('.proj-row')).toHaveCount(2);
+  await expect(page.locator('.proj-list')).not.toContainText('Offre technique interne');
+  await expect(page.locator('.proj-list')).not.toContainText("Dossier d'exécution");
+});
+
+test('la couverture ouvre sur le logo puis le titre', async ({ page }) => {
+  await openDocuments(page);
+  const cover = page.locator('.a4-cover').first();
+  await expect(cover.locator('.cover-mark img')).toBeVisible();
+  await expect(cover.locator('.cover-title')).toHaveText('Centrale de Bouaké');
+  // Les capitales viennent de la feuille de style : le nom saisi au clavier
+  // garde sa casse, la couverture l'affiche en titre d'ouvrage.
+  await expect(cover.locator('.cover-title')).toHaveCSS('text-transform', 'uppercase');
+  await expect(cover.locator('.cover-foot')).toContainText('©');
 });
 
 test('la composition se règle au moment de générer', async ({ page }) => {
@@ -63,11 +75,21 @@ test('la composition se règle au moment de générer', async ({ page }) => {
 
 test('une section confidentielle est signalée avant de générer', async ({ page }) => {
   await openDocuments(page);
-  await page.locator('.proj-row', { hasText: 'Offre technique interne' }).getByRole('button', { name: 'Configurer…' }).click();
+  // Le rapport ne porte aucune section confidentielle : l'alerte ne doit donc
+  // pas s'y afficher. Elle reste réservée aux pièces qui exposent des marges.
+  await page.locator('.proj-row', { hasText: 'Rapport technique' }).getByRole('button', { name: 'Configurer…' }).click();
   const dialog = page.locator('.modal');
-  await expect(dialog).toContainText('Elle n’est pas destinée au client');
-
-  // Retirée, l'alerte disparaît : elle décrit ce que la pièce porte vraiment.
-  await dialog.getByRole('checkbox', { name: 'Coûts d’achat et marges (confidentiel)' }).uncheck();
+  await expect(dialog).toContainText('Générer le document');
   await expect(dialog).not.toContainText('Elle n’est pas destinée au client');
+});
+
+test('le dialogue montre les visuels réellement imprimés', async ({ page }) => {
+  await openDocuments(page);
+  await page.locator('.proj-row', { hasText: 'Rapport technique' }).getByRole('button', { name: 'Configurer…' }).click();
+  const dialog = page.locator('.modal');
+  // Deux emplacements, avec l'aperçu du fichier : sans lui, on ne découvrait
+  // le mauvais logo qu'une fois le document ouvert.
+  await expect(dialog.locator('.visual-slot')).toHaveCount(2);
+  await expect(dialog.locator('.visual-slot-logo img')).toBeVisible();
+  await expect(dialog).toContainText('communs aux quatre pièces');
 });

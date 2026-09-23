@@ -8,7 +8,6 @@ import { useUi } from '../../store/ui';
 import { translate } from '../../i18n';
 import { useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
 import { buildProjectDiagram } from '../../app/diagram/projectDiagram';
-import { SYNOPTIC_OPTIONS } from '@ksd/diagram';
 import { buildReportDocument, type Block, type DocSection } from '../../app/export/reportModel';
 import { defaultReportOptions, type DocKind, type ReportOptions } from '../../app/export/documentComposition';
 
@@ -40,21 +39,28 @@ export function ReportA4({ project, kind, sizing, finance, solar, presizing, cat
   const resolved = options ?? defaultReportOptions(kind, uiLang);
   const t = useMemo(() => (key: string) => translate(key, resolved.lang), [resolved.lang]);
 
-  const landscape = kind === 'dossier_exec';
+  /**
+   * Visuel de marque effectif.
+   *
+   * Sans fichier importé, l'aperçu retombait sur le logo livré avec
+   * l'application tandis que le Word, lui, ne recevait rien : le même dossier
+   * sortait signé à l'écran et anonyme dans le document.
+   */
+  const effectiveLogoUrl = logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png';
+
+  // Toutes les pièces reçoivent la planche complète : le synoptique condensé
+  // tenait dans une colonne, mais n'y était plus lisible.
   const diagram = useMemo(() => {
     if (!sizing) return null;
-    const built = buildProjectDiagram({
-      project, sizing, catalog, settings, lang: resolved.lang,
-      options: landscape ? undefined : SYNOPTIC_OPTIONS,
-    });
+    const built = buildProjectDiagram({ project, sizing, catalog, settings, lang: resolved.lang });
     return { svg: built.svg, width: built.plan.width, height: built.plan.height, bom: built.plan.bom };
-  }, [project, sizing, catalog, settings, resolved.lang, landscape]);
+  }, [project, sizing, catalog, settings, resolved.lang]);
 
   const document = useMemo(() => buildReportDocument({
     project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram,
-    assets: { logoUrl, coverUrl, signatureUrl },
+    assets: { logoUrl: effectiveLogoUrl, coverUrl, signatureUrl },
     options: resolved,
-  }), [project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram, logoUrl, coverUrl, signatureUrl, resolved]);
+  }), [project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram, effectiveLogoUrl, coverUrl, signatureUrl, resolved]);
 
   const brandContact = [settings.company.address, settings.company.phone, settings.company.email].filter(Boolean).join(' · ');
 
@@ -66,7 +72,7 @@ export function ReportA4({ project, kind, sizing, finance, solar, presizing, cat
       companyName={settings.company.name}
       contact={brandContact}
       editedOn={`${t('report.editedOn')} ${dateFr(project.details.projectDate)}`}
-      logo={logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png'}
+      logo={effectiveLogoUrl}
       watermark={document.watermark}
       page={index + 1}
       total={document.sections.length}
@@ -108,22 +114,26 @@ function Page({ section, documentFooter, companyName, contact, editedOn, logo, w
 
 function BlockView({ block, companyName, contact }: { block: Block; companyName: string; contact: string }) {
   switch (block.kind) {
+    // Page de garde : l'œil descend du logo au titre, du titre à l'image, et
+    // ne rencontre les mentions administratives qu'ensuite. Tout est centré —
+    // une couverture n'est pas une page de texte.
     case 'cover':
       return <>
-        <div className="cover-brand">
-          <img className="a4-logo-image" src={block.logoUrl || '/kya-sol-design-logo.png'} alt={companyName || 'KYA-SolDesign'} />
-          <div className="a4-who"><b>{companyName}</b><br />{contact}</div>
+        <div className="cover-mark">
+          <img src={block.logoUrl || '/kya-sol-design-logo.png'} alt={companyName || 'KYA-SolDesign'} />
         </div>
         <div className="cover-rule"><i /><i /></div>
-        {block.coverUrl && <img className="cover-image" src={block.coverUrl} alt="" />}
         <div className="cover-kind">{block.docKind}</div>
         <h1 className="cover-title">{block.project}</h1>
         <div className="cover-sub">{block.subtitle}</div>
+        {block.coverUrl && <figure className="cover-figure"><img src={block.coverUrl} alt="" /></figure>}
+        <div className="a4-spacer" />
         <div className="cover-band">
-          <div><span className="cover-lbl">{block.docKind}</span><b>{block.system}</b></div>
+          <div><span className="cover-lbl">{block.systemLabel}</span><b>{block.system}</b></div>
           <div className="cover-seal"><b>{block.sri}</b><span className="cover-lbl">SRI</span></div>
         </div>
         <dl className="cover-grid">{block.cells.map((cell) => <div key={cell.label}><dt>{cell.label}</dt><dd>{cell.value}</dd></div>)}</dl>
+        <div className="cover-foot"><span>{block.ownership}</span><span>{contact}</span></div>
       </>;
 
     case 'title':

@@ -47,6 +47,9 @@ const FONT = 'Calibri';
 
 /** Zone utile, marges d'impression déduites. */
 const USABLE_MM = { portrait: 178, landscape: 267 } as const;
+/* Hauteur utile, en-tête et pied de page déduits : la planche doit tenir sous
+   le filet du haut et au-dessus de la pagination. */
+const USABLE_HEIGHT_MM = { portrait: 232, landscape: 148 } as const;
 const MARGIN_MM = 16;
 
 const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } as const;
@@ -102,28 +105,33 @@ function renderBlock(
     // Page de garde : mêmes éléments et mêmes couleurs que la couverture
     // imprimée, pour que le Word et le PDF soient la même pièce.
     case 'cover': {
+      // Même composition que l'aperçu : logo, filet, titre, image, puis les
+      // mentions. Tout est centré — une couverture n'est pas une page de texte.
       const visuals = art.get(block);
       const out: (Paragraph | Table)[] = [];
       if (visuals?.logo) {
         out.push(new Paragraph({
-          spacing: { after: 120 },
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 160 },
           children: [new ImageRun({ type: 'png', data: visuals.logo.png, transformation: { width: visuals.logo.widthPx, height: visuals.logo.heightPx } })],
         }));
       }
       out.push(new Paragraph({
-        spacing: { after: visuals?.cover ? 200 : 320 },
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 280 },
         border: { bottom: { style: BorderStyle.SINGLE, size: 14, color: ORANGE, space: 4 } },
         children: [],
       }));
+      out.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [text(block.docKind, { size: 8, color: TEAL_DARK, caps: true })] }));
+      out.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [text(block.project.toUpperCase(), { bold: true, size: 20 })] }));
+      out.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 300 }, children: [text(block.subtitle, { size: 10, color: MUTED })] }));
       if (visuals?.cover) {
         out.push(new Paragraph({
-          spacing: { after: 320 },
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 340 },
           children: [new ImageRun({ type: 'png', data: visuals.cover.png, transformation: { width: visuals.cover.widthPx, height: visuals.cover.heightPx } })],
         }));
       }
-      out.push(new Paragraph({ spacing: { after: 60 }, children: [text(block.docKind, { size: 8, color: TEAL_DARK, caps: true })] }));
-      out.push(new Paragraph({ spacing: { after: 40 }, children: [text(block.project, { bold: true, size: 26 })] }));
-      out.push(new Paragraph({ spacing: { after: 260 }, children: [text(block.subtitle, { size: 10, color: MUTED })] }));
       out.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER, insideVertical: NO_BORDER },
@@ -134,7 +142,7 @@ function renderBlock(
               margins: { top: 160, bottom: 160, left: 180, right: 100 },
               borders: { top: NO_BORDER, bottom: NO_BORDER, left: { style: BorderStyle.SINGLE, size: 20, color: ORANGE }, right: NO_BORDER },
               children: [
-                new Paragraph({ children: [text('SYSTÈME RETENU', { size: 7, color: MUTED, caps: true })] }),
+                new Paragraph({ children: [text(block.systemLabel, { size: 7, color: MUTED, caps: true })] }),
                 new Paragraph({ spacing: { before: 50 }, children: [text(block.system, { bold: true, size: 12 })] }),
               ],
             }),
@@ -170,6 +178,13 @@ function renderBlock(
         }));
         out.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
       }
+      // La mention de propriété ferme la page, comme sur l'aperçu.
+      out.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 280 },
+        border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE, space: 6 } },
+        children: [text(block.ownership, { size: 7.5, color: MUTED })],
+      }));
       return out;
     }
     case 'title':
@@ -509,13 +524,19 @@ async function rasterizeImages(document: ReportDocument): Promise<Map<Block, Ras
   const images = new Map<Block, Raster>();
   for (const section of document.sections) {
     const usableMm = USABLE_MM[section.orientation];
+    const usableHeightMm = USABLE_HEIGHT_MM[section.orientation];
     for (const block of section.blocks) {
       if (block.kind !== 'image') continue;
-      const raster = await rasterizeSvg(block.svg, block.widthPx, block.heightPx, usableMm);
+      const raster = await rasterizeSvg(block.svg, block.widthPx, block.heightPx, usableMm, usableHeightMm);
+      // La taille posée dans le document suit la même contrainte que la
+      // rastérisation : occuper toute la largeur sans jamais dépasser la
+      // hauteur utile, sinon la planche sort coupée en bas de page.
+      const ratio = block.heightPx / block.widthPx;
+      const placedWidthMm = Math.min(usableMm, usableHeightMm / ratio);
       images.set(block, {
         png: raster.png,
-        widthPx: mmToDocxPx(usableMm),
-        heightPx: Math.round(mmToDocxPx(usableMm) * (block.heightPx / block.widthPx)),
+        widthPx: mmToDocxPx(placedWidthMm),
+        heightPx: Math.round(mmToDocxPx(placedWidthMm) * ratio),
       });
     }
   }

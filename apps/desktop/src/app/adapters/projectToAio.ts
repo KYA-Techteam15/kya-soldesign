@@ -1,5 +1,5 @@
 import type { AioSizingRequestV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { adjustHourlyFractionsToGamma, analyzeSolarResource, buildAnnualLoadSeries, calculateAnnualYEn, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import { adjustHourlyFractionsToGamma, analyzeSolarResource, buildAnnualLoadSeries, calculateAnnualYEn, designDayStartIndex, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
@@ -303,14 +303,28 @@ function annualGammaForProject(input: ProjectInputsV1, references: Page1Referenc
       if (normalized.status === 'blocked') continue;
       hourlyEnergyWh = normalized.load.hourlyEnergyWh;
     }
-    profiles.push({ id: profile.id, hourlyEnergyWh, hourlyPeakPowerW: profile.hourlyPoints.map((point) => point.peakPowerW ?? point.activePowerW) });
+    /**
+     * Les pointes ne servent pas au y_En : il ne pèse que des énergies. Les
+     * joindre quand elles ne correspondent pas à la série d'énergie faisait
+     * rejeter tout le profil — un inventaire d'appareils porte 24 énergies et
+     * un éditeur horaire resté à zéro, donc des « pointes » inférieures aux
+     * énergies. Le profil partait alors en silence, et le y_En annuel
+     * retombait sur celui d'une seule journée.
+     */
+    const peaks = profile.hourlyPoints.map((point) => point.peakPowerW ?? point.activePowerW);
+    const coherentPeaks = peaks.length === hourlyEnergyWh.length
+      && peaks.every((value, hour) => Number.isFinite(value) && value >= hourlyEnergyWh[hour]!);
+    profiles.push({ id: profile.id, hourlyEnergyWh, ...(coherentPeaks ? { hourlyPeakPowerW: peaks } : {}) });
   }
   if (profiles.length === 0) return null;
   try {
     const weather = resource.hourlyIrradiance.map((point, index) => ({ timestampUtcIso: point.timestampUtcIso, poaWm2: hourlyPoaWm2[index]! }));
     const series = buildAnnualLoadSeries({ timezoneIana: input.site.timezoneIana, weather, calendar, profiles });
     return calculateAnnualYEn({ series, poaByTimestamp: new Map(weather.map((point) => [point.timestampUtcIso, point.poaWm2])), thresholdWm2: input.load.minimumOperatingIrradianceWPerM2 ?? 10 });
-  } catch {
+  } catch (error) {
+    // Sans ce mot, le repli sur le y_En d'une journée type passe inaperçu et
+    // le dimensionnement change sans que personne ne sache pourquoi.
+    if (error instanceof Error) console.warn('[y_En annuel] série non construite, repli sur la journée type :', error.message);
     return null;
   }
 }
@@ -323,7 +337,13 @@ function deriveProjectPeakPower(input: ProjectInputsV1, hourlyMeanPowerW: readon
   }
   const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId);
   if (profile === undefined) return null;
-  return deriveHourlyPeakPower(profile.source, profile.hourlyPoints.map((point) => point.peakPowerW), hourlyMeanPowerW, startupEvents);
+  // Les pointes doivent décrire la même journée que les moyennes. Sur une série
+  // annuelle, `normalizeDirectHourlyRows` a déjà retenu le jour le plus chargé :
+  // on découpe les pointes sur ce jour-là, avec la règle du moteur et non une
+  // seconde règle locale qui pourrait désigner un autre jour.
+  const start = designDayStartIndex(profile.hourlyPoints.map((point) => point.activePowerW));
+  const peaks = profile.hourlyPoints.slice(start, start + 24).map((point) => point.peakPowerW);
+  return deriveHourlyPeakPower(profile.source, peaks, hourlyMeanPowerW, startupEvents);
 }
 
 async function declaredProvenance(sourceId: string, sourceRecordId: string, value: unknown): Promise<Provenance> {

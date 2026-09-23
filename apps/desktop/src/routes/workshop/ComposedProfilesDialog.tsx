@@ -71,6 +71,13 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
     wide
     onClose={onCancel}
     footer={<>
+      <button className="btn btn-ghost" onClick={() => {
+        const example = makeExampleComposition();
+        setDraft(example);
+        setSelectedProfileId(example.profiles[0]!.id);
+        setImportMessage(t('loads.composedExampleLoaded'));
+      }}>{t('loads.composedExample')}</button>
+      <span className="sep" />
       <button className="btn btn-ghost" onClick={onCancel}>{t('loads.composedCancel')}</button>
       <button className="btn btn-ok" disabled={issues.length > 0} onClick={() => onApply(structuredClone(draft))}>{t('loads.composedApply')}</button>
     </>}
@@ -138,6 +145,67 @@ function validateComposition(composition: LoadCompositionView) {
   const calendarIssues = validateAnnualCalendar(composition.calendar).map((issue) => ({ code: issue.code, path: issue.path, message: issue.message }));
   const unknown = composition.calendar.assignments.filter((assignment) => !profileIds.has(assignment.profileId)).map((assignment) => ({ code: 'PROFILE_UNKNOWN', path: assignment.profileId, message: 'Une combinaison référence un profil inexistant' }));
   return [...directIssues, ...calendarIssues, ...unknown];
+}
+
+/**
+ * Jeu d'essai cohérent.
+ *
+ * Quatre profils saisis à la main, c'est une heure de travail avant de pouvoir
+ * seulement regarder à quoi ressemble un calendrier annuel. Cet exemple décrit
+ * un petit site tertiaire sahélien : deux saisons — chaude et tempérée — et,
+ * dans chacune, un rythme de semaine et un rythme de week-end.
+ *
+ * Les valeurs ne prétendent à rien : elles servent à voir l'outil fonctionner,
+ * et l'utilisateur les remplace par les siennes.
+ */
+export function makeExampleComposition(): LoadCompositionView {
+  // Base permanente : froid alimentaire et veilles, jamais nulle.
+  const base = 1.2;
+  // Bureau : 08 h → 17 h, avec une pause à midi.
+  const office = (hour: number) => (hour >= 8 && hour < 12 ? 3.4 : hour >= 12 && hour < 14 ? 1.9 : hour >= 14 && hour < 18 ? 3.1 : 0);
+  // Climatisation : elle suit le soleil, et double en saison chaude.
+  const cooling = (hour: number) => (hour >= 11 && hour < 17 ? 2.6 : hour >= 10 && hour < 11 ? 1.1 : 0);
+  // Soirée : éclairage et usages domestiques.
+  const evening = (hour: number) => (hour >= 18 && hour < 22 ? 1.8 : hour >= 22 && hour < 23 ? 0.9 : 0);
+
+  const shape = (coolingFactor: number, officeFactor: number) => Array.from({ length: 24 }, (_, hour) => {
+    const mean = base + office(hour) * officeFactor + cooling(hour) * coolingFactor + evening(hour);
+    // La pointe couvre les démarrages de la climatisation ; ailleurs, une
+    // réserve de 25 % suffit à représenter les appels courts.
+    const peak = cooling(hour) > 0 ? mean + cooling(hour) * coolingFactor * 1.5 : mean * 1.25;
+    return { hour, realPower: Number(mean.toFixed(3)), peakPower: Number(peak.toFixed(3)) };
+  });
+
+  const profiles = [
+    { id: 'example-hot-week', name: 'Saison chaude · ouvré', color: '#F99D32', hourly: shape(1, 1) },
+    { id: 'example-hot-weekend', name: 'Saison chaude · week-end', color: '#E9724C', hourly: shape(0.6, 0.2) },
+    { id: 'example-mild-week', name: 'Saison tempérée · ouvré', color: '#2B9C8F', hourly: shape(0.35, 1) },
+    { id: 'example-mild-weekend', name: 'Saison tempérée · week-end', color: '#1CA18C', hourly: shape(0.2, 0.2) },
+  ];
+
+  const dayGroups = [
+    { id: 'workweek', kind: 'workweek' as const, weekdaysIso: [1, 2, 3, 4, 5] },
+    { id: 'weekend', kind: 'weekend' as const, weekdaysIso: [6, 7] },
+  ];
+  // Deux périodes qui couvrent l'année sans trou ni recouvrement.
+  const periods = [
+    { id: 'example-hot', name: 'Saison chaude', startMonthDay: '02-01', endMonthDay: '05-31' },
+    { id: 'example-mild', name: 'Saison tempérée', startMonthDay: '06-01', endMonthDay: '01-31' },
+  ];
+
+  return {
+    organization: 'periods-by-day-type',
+    calendar: {
+      version: 2, mode: 'periods-by-day-type', dayGroups, periods,
+      assignments: [
+        { periodId: 'example-hot', dayGroupId: 'workweek', profileId: 'example-hot-week' },
+        { periodId: 'example-hot', dayGroupId: 'weekend', profileId: 'example-hot-weekend' },
+        { periodId: 'example-mild', dayGroupId: 'workweek', profileId: 'example-mild-week' },
+        { periodId: 'example-mild', dayGroupId: 'weekend', profileId: 'example-mild-weekend' },
+      ],
+    },
+    profiles,
+  };
 }
 
 function makeDefaultComposition(): LoadCompositionView {
