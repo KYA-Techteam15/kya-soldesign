@@ -39,12 +39,12 @@
 
 ## Lot 4 — Accueil, cycle de vie, site
 
-- [ ] T026 Format : versions émises, verrou ; migration (D8)
-- [ ] T027 Émettre / lecture seule / Créer une révision / versions réimprimables (FR-008 → FR-011)
-- [ ] T028 Accueil premier lancement et tableau de bord, filtres d'état (FR-004 → FR-006)
-- [ ] T029 Projet exemple embarqué (FR-007)
-- [ ] T030 Site : météo d'abord, mois critique expliqué (FR-034, FR-035)
-- [ ] T031 Tests ; `pnpm verify:phase`
+- [x] T026 Format : versions émises, verrou ; migration (D8)
+- [x] T027 Émettre / lecture seule / Créer une révision / versions réimprimables (FR-008 → FR-011)
+- [x] T028 Accueil premier lancement et tableau de bord, filtres d'état (FR-004 → FR-006)
+- [x] T029 Projet exemple embarqué (FR-007)
+- [x] T030 Site : météo d'abord, mois critique expliqué (FR-034, FR-035)
+- [x] T031 Tests ; `pnpm verify:phase`
 
 ## Lot 5 — Fermeture
 

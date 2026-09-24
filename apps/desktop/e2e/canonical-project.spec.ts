@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('creates and edits a canonical project through the preserved workshop', async ({ page }) => {
   await page.goto('/accueil');
-  await expect(page.locator('.home-resume.is-empty')).toContainText('Aucun projet');
+  await expect(page.getByRole('heading', { name: 'Bienvenue dans KYA-SolDesign' })).toBeVisible();
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
   await expect(page).toHaveURL(/\/projet\/[0-9a-f-]{36}\/atelier\/projet$/);
 

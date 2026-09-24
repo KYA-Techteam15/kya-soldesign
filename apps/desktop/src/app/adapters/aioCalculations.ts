@@ -6,6 +6,7 @@ import type { Locality, NormalizedHourlyProfile, WeatherSource } from '@ksd/doma
 import type { ProjectFileV1 } from '@ksd/project-format';
 import type { CalculationCapabilityPort, CapabilityId, CapabilityState } from '../contracts.js';
 import { unavailableCalculations } from './unavailableCalculations.js';
+import { isIssuedSnapshotId } from '../models/projectLifecycle.js';
 import { projectToAioInput, projectToFinanceInput, projectToPresizingInput, projectToSizingInput, projectToSolarAnalysis } from './projectToAio.js';
 
 export class AioCalculations implements CalculationCapabilityPort {
@@ -25,6 +26,14 @@ export class AioCalculations implements CalculationCapabilityPort {
     if (capability !== 'presizing' && capability !== 'sizing' && capability !== 'solar-resource' && capability !== 'finance') return unavailableCalculations.read(projectId, capability);
     const project = this.getProject(projectId);
     if (project === null) return { status: 'error', code: 'PROJECT_NOT_FOUND', messageKey: 'state.projectNotFound', retryable: false };
+    // Version émise : ses calculs font foi tels qu'ils ont été remis, même si le catalogue a
+    // évolué depuis ; les documents doivent se réimprimer à l'identique.
+    if (isIssuedSnapshotId(projectId) && (capability === 'presizing' || capability === 'sizing')) {
+      const frozen = capability === 'presizing' ? project.lastCalculation : project.sizingCalculation ?? null;
+      return frozen === null
+        ? { status: 'empty', messageKey: capability === 'presizing' ? 'PRESIZING_NOT_RUN' : 'SIZING_NOT_RUN' }
+        : { status: 'ready', runId: `${projectId}:${frozen.inputHash}`, createdAt: project.updatedAt, envelope: frozen as never };
+    }
     if (capability === 'solar-resource') {
       const solarAnalysis = projectToSolarAnalysis(project, this.references);
       if (solarAnalysis === null) return { status: 'empty', messageKey: 'WEATHER_FILE_MISSING' };
@@ -89,7 +98,7 @@ export class AioCalculations implements CalculationCapabilityPort {
   private async sizingFreshness(project: ProjectFileV1): Promise<{ readonly status: 'ready' } | { readonly status: 'stale'; readonly previousHash: string; readonly currentHash: string } | { readonly status: 'missing'; readonly code: string }> {
     const envelope = project.sizingCalculation as SizingEnvelopeV1 | null | undefined;
     if (envelope === undefined || envelope === null) return { status: 'missing', code: 'SIZING_NOT_RUN' };
-    if (this.references.equipment === undefined) return envelope.output.valid ? { status: 'ready' } : { status: 'missing', code: 'SIZING_INVALID' };
+    if (this.references.equipment === undefined || isIssuedSnapshotId(project.id)) return envelope.output.valid ? { status: 'ready' } : { status: 'missing', code: 'SIZING_INVALID' };
     const adapted = projectToSizingInput(project, this.references.equipment);
     if (adapted.status === 'blocked') return { status: 'missing', code: adapted.issues.map((issue) => issue.code).join(',') };
     const currentHash = hashInput(adapted.input);
@@ -109,6 +118,7 @@ export class AioCalculations implements CalculationCapabilityPort {
   public async runPresizing(projectId: string, onProgress: (progress: PresizingProgress) => void): Promise<PresizingEnvelopeV1> {
     const project = this.getProject(projectId);
     if (project === null) throw new Error('PROJECT_NOT_FOUND');
+    if (project.issue?.locked === true) throw new Error('PROJECT_ISSUED');
     const adapted = await projectToPresizingInput(project, this.references);
     if (adapted.status === 'blocked') throw new Error(adapted.issues.map((issue) => issue.code).join(','));
     const envelope = await this.presizingEngine.calculate(adapted.input, onProgress, () => new Promise((resolve) => setTimeout(resolve, 0)));
@@ -120,6 +130,7 @@ export class AioCalculations implements CalculationCapabilityPort {
   public async runSizing(projectId: string, onProgress: (progress: SizingProgress) => void): Promise<SizingEnvelopeV1> {
     const project = this.getProject(projectId);
     if (project === null) throw new Error('PROJECT_NOT_FOUND');
+    if (project.issue?.locked === true) throw new Error('PROJECT_ISSUED');
     if (this.references.equipment === undefined) throw new Error('EQUIPMENT_CATALOG_MISSING');
     const adapted = projectToSizingInput(project, this.references.equipment);
     if (adapted.status === 'blocked') throw new Error(adapted.issues.map((issue) => issue.code).join(','));
@@ -145,8 +156,7 @@ export class AioCalculations implements CalculationCapabilityPort {
   /**
    * Simule sur l'année des systèmes candidats, avec la charge, la météo et les rendements du projet :
    * les propositions de l'optimisation affichent un SRI et une LPSP simulés, pas ceux du
-   * prédimensionnement. 
-ull si le projet ne permet pas encore de simuler.
+   * prédimensionnement. `null` si le projet ne permet pas encore de simuler.
    */
   public async simulateSystems(projectId: string, systems: readonly { readonly pvPeakKw: number; readonly storageKwh: number; readonly inverterKw: number }[]): Promise<readonly RetainedSystemSimulationV1[] | null> {
     const project = this.getProject(projectId);

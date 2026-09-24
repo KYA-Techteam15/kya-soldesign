@@ -248,6 +248,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     updatedAt: project.updatedAt,
     lastCalculation: project.lastCalculation,
     sizingCalculation: project.sizingCalculation ?? null,
+    issue: project.issue ?? { locked: false, versions: [] },
     currency: input.currencyCode,
     details: {
       clientName: input.details.clientName,
@@ -573,6 +574,7 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
       .filter((id): id is string => id !== null),
     lastCalculation: view.lastCalculation,
     sizingCalculation: view.sizingCalculation,
+    ...(view.issue.versions.length === 0 && !view.issue.locked ? {} : { issue: view.issue }),
   });
 }
 

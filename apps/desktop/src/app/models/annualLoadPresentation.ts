@@ -2,6 +2,7 @@ import { buildAnnualLoadSeries, computeLocalHours, calculateAnnualYEn, type Annu
 import type { SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import type { ProjectViewModel } from './projectView.js';
 import { localHoursCache } from '../adapters/projectToAio.js';
+import { inventoryDirectProfile } from './loadSources.js';
 
 export interface AnnualLoadPresentation {
   readonly series: AnnualLoadSeries;
@@ -44,21 +45,14 @@ export function buildAnnualLoadPresentationResult(project: ProjectViewModel, sol
     }))
     : project.load.profiles.map((profile) => {
     // Journée type ou année importée : la série de la source, telle quelle.
-    const direct = profile.source === 'annual' ? profile.annual ?? [] : profile.hourly;
-    const equipmentProfile = profile.appliances.map((row) => ({
-      id: row.id, label: row.name, quantity: row.qty, usefulPowerW: row.unitPower,
-      efficiencyRatio: row.yield, hourlyOperatingFractions: row.operatingFractions,
-      startupPowerMultiplier: row.startupCoef > 1 ? row.startupCoef : null,
-    }));
-    const hourlyEnergyWh = profile.source === 'equipments' && equipmentProfile.length > 0
-      ? Array.from({ length: 24 }, (_, hour) => equipmentProfile.reduce((total, row) => total + row.usefulPowerW * row.quantity / (row.efficiencyRatio ?? 1) * row.hourlyOperatingFractions[hour]!, 0))
-      : direct.map((point) => point.realPower * 1_000);
-    const hourlyPeakPowerW = profile.source === 'equipments' && equipmentProfile.length > 0
-      ? Array.from({ length: 24 }, (_, hour) => equipmentProfile.reduce((total, row) => {
-        const running = row.usefulPowerW * row.quantity / (row.efficiencyRatio ?? 1) * row.hourlyOperatingFractions[hour]!;
-        return Math.max(total, running * (row.startupPowerMultiplier ?? 1));
-      }, 0))
-      : direct.map((point) => (point.peakPower ?? point.realPower) * 1_000);
+    // Appareils : puissance et pointe par les règles du moteur. La pointe d'une heure est la somme
+    // des appareils en marche plus leurs démarrages, jamais le plus gros appareil seul — sinon elle
+    // passait sous la puissance moyenne dès que deux appareils tournaient ensemble.
+    const direct = profile.source === 'equipments' && profile.appliances.length > 0
+      ? inventoryDirectProfile(profile.appliances, profile).hourly
+      : profile.source === 'annual' ? profile.annual ?? [] : profile.hourly;
+    const hourlyEnergyWh = direct.map((point) => point.realPower * 1_000);
+    const hourlyPeakPowerW = direct.map((point) => (point.peakPower ?? point.realPower) * 1_000);
       return { id: profile.id, hourlyEnergyWh, hourlyPeakPowerW };
     });
   if (annualProfiles.length === 0) return unavailable('loads.annualNeedsProfile');

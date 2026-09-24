@@ -1,11 +1,16 @@
+import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useProjects } from '../../store/project';
+import { projectFileToView } from '../../app/models/projectAdapters';
+import { issuedSnapshotId, latestVersion, resolveIssuedSnapshot } from '../../app/models/projectLifecycle';
+import { IssuePanel } from './IssuePanel';
 import type { SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { StepHead } from '../../ui/Flow';
 import { useCalculationState } from '../../app/CalculationProvider';
 import { useCalculationFacts } from '../../app/calculation/useCalculationFacts';
 import { sectionStates, type Level } from '../../domain/completion';
-import { currencyLabel, fmt } from '../../domain/format';
+import { currencyLabel, dateLong, fmt } from '../../domain/format';
 import { useCatalog } from '../../app/CatalogProvider';
 import { DossierDocuments } from '../dossier/DossierDocuments';
 import { SynopticView } from '../dossier/SynopticView';
@@ -34,11 +39,21 @@ const LEVEL: Record<Level, { readonly tone: string; readonly key: string }> = {
 export function SectionDossier() {
   const t = useT();
   const lang = useUi((state) => state.lang);
-  const project = useProject();
+  const current = useProject();
+  const canonical = useProjects((session) => session.canonicalProjects);
   const { equipment } = useCatalog();
   const [params, setParams] = useSearchParams();
   const asked = params.get('vue');
   const tab: Tab = TABS.some((item) => item.key === asked) ? asked as Tab : 'synthese';
+  // Une version émise se relit depuis son instantané : ses documents sortent à l'identique.
+  const askedVersion = Number(params.get('version'));
+  const versionView = useMemo(() => {
+    if (!Number.isInteger(askedVersion) || askedVersion < 1) return null;
+    const file = resolveIssuedSnapshot(canonical, issuedSnapshotId(current.id, askedVersion));
+    return file === null ? null : projectFileToView(file);
+  }, [askedVersion, canonical, current.id]);
+  const project = versionView ?? current;
+  const shownVersion = project.issue.locked ? latestVersion(project) : null;
   const { facts, sizing, finance, presizing } = useCalculationFacts(project);
   const solarState = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
   const solar = solarState.status === 'ready' ? solarState.envelope.output : null;
@@ -51,14 +66,21 @@ export function SectionDossier() {
       <StepHead slug="dossier" aside={
         <div className="seg" role="tablist" aria-label={t('dossier.tabs')}>
           {TABS.map((item) => (
-            <button key={item.key} role="tab" aria-selected={tab === item.key} onClick={() => setParams(item.key === 'synthese' ? {} : { vue: item.key }, { replace: true })}>{t(item.label)}</button>
+            <button key={item.key} role="tab" aria-selected={tab === item.key} onClick={() => setParams({ ...(item.key === 'synthese' ? {} : { vue: item.key }), ...(versionView ? { version: String(askedVersion) } : {}) }, { replace: true })}>{t(item.label)}</button>
           ))}
         </div>
       } />
+      {versionView && shownVersion && (
+        <div className="alert info issued-version-note" role="note">
+          <div><b>{t('issue.viewingVersion').replace('{n}', String(shownVersion.number))}</b> {t('issue.issuedOnDate').replace('{date}', dateLong(shownVersion.issuedAt, lang))}</div>
+          <button className="btn" onClick={() => setParams(tab === 'synthese' ? {} : { vue: tab }, { replace: true })}>{t('issue.backToCurrent')}</button>
+        </div>
+      )}
       {tab === 'synoptique' ? <SynopticView project={project} sizing={sizing} pending={false} catalog={equipment} />
-        : tab === 'documents' ? <DossierDocuments project={project} sizing={sizing} finance={finance} solar={solar} presizing={presizing} catalog={equipment} facts={facts} />
+        : tab === 'documents' ? <DossierDocuments project={project} sizing={sizing} finance={finance} solar={solar} presizing={presizing} catalog={equipment} facts={facts} version={shownVersion ? { number: shownVersion.number, issuedAtIso: shownVersion.issuedAt } : null} />
           : (
             <>
+              {versionView === null && <IssuePanel project={current} facts={facts} onShowVersion={(number) => setParams({ vue: 'documents', version: String(number) }, { replace: true })} />}
               <section className="out">
                 <div className="out-head">
                   <span className="out-tag">{t('dossier.summaryTag')}</span>

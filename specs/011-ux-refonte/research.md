@@ -48,6 +48,28 @@
 - Le sélecteur manuel place l'actuel puis les références en tête ; le reste garde l'ordre du
   catalogue (pas de tri par adéquation, qui supposerait une simulation par ligne).
 
+## R7 — Cycle de vie, accueil, site
+
+- Format : champ facultatif `issue { locked, versions[] }` ; un fichier 1.0 sans ce champ est lu
+  « jamais émis », sans migration à écrire. Une version porte l'instantané (nom, entrées,
+  sélection, deux enveloppes de calcul) et leurs empreintes (`inputHash`).
+- Réimpression : l'instantané est relu sous l'identifiant `<projet>~v<n>` par le même service de
+  calcul ; pour ces identifiants, prédimensionnement et dimensionnement enregistrés font foi, même
+  si le catalogue a changé depuis. Les documents portent « n° réf · vN » et la date d'émission.
+- Verrou : la session refuse toute modification, annulation et rétablissement d'un dossier émis ;
+  le service de calcul refuse de relancer (`PROJECT_ISSUED`). Émettre et réviser passent hors de
+  l'historique d'annulation. L'écran s'appuie sur un `fieldset disabled` pour les étapes 1 à 7.
+- Projet exemple : **écart avec D9** — plutôt qu'un `.ksd` figé embarqué (1,3 Mo de météo et des
+  empreintes vouées à périmer à la prochaine évolution du moteur), un modèle d'entrées est complété
+  à l'ouverture avec la météo PVGIS déjà livrée, puis calculé par le moteur courant (≈ 3 s).
+  L'exemple n'est jamais périmé ; son matériel a été choisi parmi les propositions de
+  l'optimisation (onduleur hybride hors réseau) et un test vérifie qu'il existe et reste valide.
+- Accueil : « Périmé » = calcul enregistré qui ne correspond plus aux entrées, lu par le service de
+  calcul projet après projet, sans bloquer l'affichage.
+- Correctif découvert : la vue annuelle prenait pour pointe horaire le plus gros appareil seul ;
+  dès que deux appareils tournaient ensemble, la pointe passait sous la puissance moyenne et la
+  série était refusée (`PROFILE_PEAK_INVALID`). Elle suit désormais les règles du moteur.
+
 ## Baselines modifiées
 
 | Test | Avant | Après | Raison |
@@ -59,3 +81,7 @@
 | Captures `catalog-*` | sans colonne étoile | colonne ★ et filtre Mes références | FR-027 |
 | Captures `equipment-*` | faux bouton « Sélectionnez un onduleur » | texte d'état | FR-033 |
 | E2E réglages | 6 catégories | 7 (Dimensionnement et optimisation) | FR-028 |
+| Captures `home-*`, `palette-*` | héros, chiffres cumulés, cartes système | premier lancement en trois cartes | FR-004, FR-006, P-1 |
+| Captures `dossier-*` | — | panneau « Émission » en tête | FR-009 |
+| Captures `site-real-*` | — | note « Mois critique » | FR-035 |
+| E2E `navigation`, `i18n`, `canonical-project` | titre « Concevez des systèmes… » | « Bienvenue dans KYA-SolDesign », tableau de bord | FR-004, FR-005 |

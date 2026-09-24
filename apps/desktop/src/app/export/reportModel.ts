@@ -149,6 +149,8 @@ export interface ReportModelInput {
   readonly assets?: { readonly logoUrl: string | null; readonly coverUrl: string | null; readonly signatureUrl?: string | null };
   /** Date d'émission du document ; à défaut, maintenant. */
   readonly issuedAtIso?: string;
+  /** Version émise du dossier : son numéro et sa date figurent sur le document. */
+  readonly version?: { readonly number: number; readonly issuedAtIso: string } | null;
   /** Choix faits au moment de générer ; à défaut, la composition par défaut. */
   readonly options?: ReportOptions;
 }
@@ -189,7 +191,7 @@ export function buildReportDocument(input: ReportModelInput): ReportDocument {
   const chosenName = options.fileName.trim();
 
   return {
-    fileName: `${chosenName.length > 0 ? slug(chosenName) : `${slug(project.name)}-${kind}`}.docx`,
+    fileName: `${chosenName.length > 0 ? slug(chosenName) : `${slug(project.name)}-${kind}`}${input.version ? `-v${input.version.number}` : ''}.docx`,
     title,
     issuedOn: `${t('report.editedOn')} ${dateLong(issuedAt(input), options.lang)}`,
     company: { name: settings.company.name || 'KYA-SolDesign', contact },
@@ -228,7 +230,12 @@ function blocksFor(id: SectionId, input: ReportModelInput): readonly Block[] {
 }
 
 /** Date d'émission : celle de la génération, jamais une date saisie ailleurs. */
-function issuedAt(input: ReportModelInput): string { return input.issuedAtIso ?? new Date().toISOString(); }
+function issuedAt(input: ReportModelInput): string { return input.version?.issuedAtIso ?? input.issuedAtIso ?? new Date().toISOString(); }
+/** « n° KSD-001 · v2 » : la référence du dossier et, s'il est émis, sa version. */
+function referenceLabel(input: ReportModelInput): string {
+  const reference = `n° ${dash(input.project.details.projectNumber)}`;
+  return input.version ? `${reference} · v${input.version.number}` : reference;
+}
 function lang(input: ReportModelInput): 'fr' | 'en' { return input.options?.lang ?? 'fr'; }
 
 /** Site affiché partout de la même façon : libellé saisi, sinon localité et pays. */
@@ -250,7 +257,7 @@ function coverBlock(input: ReportModelInput): Block {
     kind: 'cover',
     docKind: t(titleKey),
     project: project.name,
-    subtitle: `${t(subtitleKey)} · n° ${dash(details.projectNumber)}`,
+    subtitle: `${t(subtitleKey)} · ${referenceLabel(input)}`,
     system: retainedSystem(sizing, t),
     systemLabel: t('report.selectedSystem'),
     sri: finance ? fmt(finance.simulation.sri, 2) : '—',
@@ -259,7 +266,7 @@ function coverBlock(input: ReportModelInput): Block {
       { label: t('report.client'), value: dash(details.clientName) },
       { label: t('report.site'), value: siteLabel(input) },
       { label: t('report.follower'), value: dash(details.followerName) },
-      { label: t('report.editedOn'), value: dateLong(issuedAt(input), lang(input)) },
+      { label: input.version ? t('report.issuedOn') : t('report.editedOn'), value: dateLong(issuedAt(input), lang(input)) },
     ],
     logoUrl: assets?.logoUrl ?? null,
     coverUrl: assets?.coverUrl ?? null,
@@ -277,7 +284,7 @@ function identityBlocks(input: ReportModelInput): readonly Block[] {
       kind: 'meta',
       items: [
         { label: t('report.client'), value: dash(details.clientName), note: details.clientTel || details.clientEmail || '' },
-        { label: t('report.project'), value: project.name, note: `n° ${dash(details.projectNumber)} · ${t(`report.applicationType.${details.applicationType}`)}` },
+        { label: t('report.project'), value: project.name, note: `${referenceLabel(input)} · ${t(`report.applicationType.${details.applicationType}`)}` },
         {
           label: t('report.site'),
           value: site,

@@ -106,6 +106,37 @@ export function SectionSite() {
     ? sortedLocalities.filter((l) => l.name.toLowerCase().includes(needle)).slice(0, 8)
     : sortedLocalities.slice(0, 8);
 
+  /* Sans météo, rien ne se calcule : la source météo devient alors la première action de la page
+     (FR-034). Une fois la série liée, elle reprend sa place sous les coordonnées. */
+  const missingWeather = s.downloadedSource === null;
+  const weatherSection = (
+    <section className={missingWeather ? 'weather-first' : undefined}>
+      <div className="tbl-title">
+        <h2 className="h-sec">{t('site.weatherSource')}</h2>
+        {/* La série suit la localité : elle se lit, elle ne se choisit plus.
+            Un seul fournisseur et une série par lieu — le choix portait sur
+            des objets indiscernables. */}
+        <span className="label">
+          {bound
+            ? `${bound.sourceName} · ${bound.provider} · ${t('site2.verifiedWithLocality')}`
+            : s.downloadedSource
+              ? `${s.downloadedSource.name} · ${s.downloadedSource.provider} · ${t('site2.downloadedForProject')}`
+              : located
+                ? t('site2.aucuneSeriePourCette')
+                : t('site2.aucuneLocaliteChoisie')}
+        </span>
+        <span className="sep" />
+        {/* Le geste reste « télécharger » : depuis cet écran on peut viser n'importe quel site, y
+            compris un autre que celui du dossier. Le dialogue dira lui-même s'il remplace. */}
+        <button className="btn btn-accent" onClick={() => setAskDownload(true)}>
+          {t('weather2.telechargerLesDonneesD')}…
+        </button>
+      </div>
+      {missingWeather && <p className="weather-first-lead">{t('site.weatherFirstLead')}</p>}
+      {solarState.status !== 'ready' && <CapabilityNotice capability="solar-resource" state={solarState} compact />}
+    </section>
+  );
+
 
   return (
     <div className="sheet">
@@ -117,6 +148,8 @@ export function SectionSite() {
           </span>
         }
       />
+
+      {missingWeather && weatherSection}
 
       <div className="form-grid">
         <Group title={t('site2.coordonnees')}>
@@ -235,6 +268,7 @@ export function SectionSite() {
               </option>
               {displayMonthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
             </select>
+            <span className="ro-note field-hint">{t('site.designMonthHint')}</span>
           </label>
           {/* L'irradiation n'est jamais saisie : elle est sommée depuis la
               série météo sous l'orientation courante. Sans série, « 0,00 » se
@@ -285,34 +319,7 @@ export function SectionSite() {
         </Group>
       </div>
 
-      <section>
-        <div className="tbl-title">
-          <h2 className="h-sec">{t('site.weatherSource')}</h2>
-          {/* La série suit la localité : elle se lit, elle ne se choisit plus.
-              Un seul fournisseur et une série par lieu — le choix portait sur
-              des objets indiscernables. */}
-          <span className="label">
-            {bound
-              ? `${bound.sourceName} · ${bound.provider} · ${t('site2.verifiedWithLocality')}`
-              : s.downloadedSource
-                ? `${s.downloadedSource.name} · ${s.downloadedSource.provider} · ${t('site2.downloadedForProject')}`
-                : located
-                  ? t('site2.aucuneSeriePourCette')
-                  : t('site2.aucuneLocaliteChoisie')}
-          </span>
-          <span className="sep" />
-          {/* Rang accentué : action dominante de cette rangée, sans lui
-              donner l'aplat de l'avancement, qui reste au pied de page. */}
-          <button className="btn btn-accent" onClick={() => setAskDownload(true)}>
-            {/* Le geste reste « télécharger » : depuis cet écran on peut
-                viser n'importe quel site, y compris un autre que celui du
-                dossier. Le dialogue dira lui-même s'il remplace, une fois
-                le lieu connu. */}
-            {t('weather2.telechargerLesDonneesD')}…
-          </button>
-        </div>
-        {solarState.status !== 'ready' && <CapabilityNotice capability="solar-resource" state={solarState} compact />}
-      </section>
+      {!missingWeather && weatherSection}
 
       <div className="chart-duo">
       <section>

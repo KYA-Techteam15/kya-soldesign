@@ -1,239 +1,208 @@
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { TopBar } from '../shell/TopBar';
 import { StatusBar } from '../shell/StatusBar';
 import { useT } from '../i18n';
 import { useProjects } from '../store/project';
 import { useUi } from '../store/ui';
-import { fmt, relativeTime } from '../domain/format';
-import { projectProgress, studioMetrics } from '../app/models/homeMetrics';
+import { relativeTime } from '../domain/format';
+import { WORKSHOP_STEPS, projectProgress } from '../app/models/homeMetrics';
 import { useSettings } from '../store/settings';
-import { readProjectResumeTarget } from '../app/navigationSession';
-import type { SystemType } from '../app/models/projectView';
-import schemaAllInOne from '../assets/systems/standalone-all-in-one.webp';
-import schemaInverterController from '../assets/systems/standalone-inverter-controller.webp';
-import schemaGridTied from '../assets/systems/grid-tied.webp';
-import schemaPvDiesel from '../assets/systems/pv-diesel.webp';
-import schemaStreetLight from '../assets/systems/solar-street-light.webp';
-import schemaWaterPumping from '../assets/systems/solar-water-pumping.webp';
+import { latestVersion, matchesFilter, nextVersionNumber, projectStatus, type ProjectFilter, type ProjectStatus } from '../app/models/projectLifecycle';
+import type { ProjectViewModel, SystemType } from '../app/models/projectView';
+import { useStaleProjects, type Staleness } from '../app/calculation/useStaleProjects';
+import { CanonicalCatalog } from '../app/adapters/canonicalCatalog';
+import { createExampleProject } from '../app/services/exampleProject';
+import { ImportProjectButton } from './ImportProjectButton';
+
+/** Une seule architecture disponible ; les autres sont annoncées sur une ligne (FR-006). */
+const UPCOMING: readonly SystemType[] = ['standalone_inverter_controller', 'grid_tied', 'pv_diesel', 'solar_street_light', 'solar_water_pumping'];
+const STEP_ORDER: readonly string[] = [...WORKSHOP_STEPS, 'dossier'];
+const FILTERS: readonly ProjectFilter[] = ['all', 'in-progress', 'ready', 'issued', 'stale'];
+const STATUS_TONE: Record<ProjectStatus, string> = { draft: '', 'in-progress': '', revision: 'warn', ready: 'ok', issued: 'ok' };
+
+interface Row {
+  readonly project: ProjectViewModel;
+  readonly progress: ReturnType<typeof projectProgress>;
+  readonly status: ProjectStatus;
+  readonly stale: Staleness | null;
+}
 
 /**
- * `schema` porte le synoptique de l'architecture. Le visuel complète le titre et
- * montre ce qui distingue deux systèmes autonomes —
- * un seul appareil qui fait tout, ou deux appareils autour d'un parc commun.
+ * Accueil (spec 011, FR-004 → FR-007). Premier lancement : trois gestes pour démarrer. Ensuite :
+ * reprendre le dernier dossier là où il attend, et retrouver chaque projet par son état.
  */
-const SYSTEMS: {
-  type: SystemType;
-  ready: boolean;
-  schema?: string;
-}[] = [
-  {
-    type: 'standalone_all_in_one',
-    ready: true,
-    schema: schemaAllInOne,
-  },
-  {
-    type: 'standalone_inverter_controller',
-    ready: false,
-    schema: schemaInverterController,
-  },
-  { type: 'grid_tied', ready: false, schema: schemaGridTied },
-  { type: 'pv_diesel', ready: false, schema: schemaPvDiesel },
-  {
-    type: 'solar_street_light',
-    ready: false,
-    schema: schemaStreetLight,
-  },
-  {
-    type: 'solar_water_pumping',
-    ready: false,
-    schema: schemaWaterPumping,
-  },
-];
-
 export function Home() {
   const t = useT();
   const nav = useNavigate();
   const projects = useProjects((s) => s.projects);
   const create = useProjects((s) => s.create);
-  const notify = useUi((s) => s.notify);
+  const addCanonical = useProjects((s) => s.addCanonical);
+  const { notify } = useUi();
   const lang = useUi((s) => s.lang);
-  const recentLimit = useSettings((s) => s.projects.recentProjectLimit);
   const companyName = useSettings((s) => s.company.name);
+  const stale = useStaleProjects(projects);
+  const [filter, setFilter] = useState<ProjectFilter>('all');
+  const [query, setQuery] = useState('');
+  const [preparingExample, setPreparingExample] = useState(false);
 
-  const sorted = [...projects].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const recent = sorted.slice(0, recentLimit);
-  const metrics = studioMetrics(projects);
-  // La dernière étude ouverte tient lieu de point d'entrée : reprendre son
-  // travail est le geste le plus fréquent, il mérite la place du décor.
-  const last = sorted[0] ? { project: sorted[0], progress: projectProgress(sorted[0], lang) } : null;
+  const rows = useMemo<Row[]>(() => [...projects]
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .map((project) => {
+      const progress = projectProgress(project, lang);
+      return { project, progress, status: projectStatus(project, progress), stale: stale.get(project.id) ?? null };
+    }), [lang, projects, stale]);
 
-  const resumeLast = () => {
-    const project = recent[0];
-    if (project) void nav(readProjectResumeTarget(project.id) ?? `/projet/${project.id}/atelier/projet`);
-  };
-
-  const start = (type: SystemType, ready: boolean) => {
-    if (!ready) {
-      notify({
-        kind: 'info',
-        title: t('home.comingSoon'),
-        detail: `${t(`sys.${type}`)} — ${t('home.unavailableDetail')}`,
-      });
-      return;
+  const newProject = () => { void nav(`/projet/${create('standalone_all_in_one')}/atelier/projet`); };
+  const openExample = async () => {
+    setPreparingExample(true);
+    try {
+      const catalog = new CanonicalCatalog();
+      const [localities, weatherSources, weatherFiles, loadProfiles, equipment] = await Promise.all([catalog.listLocalities(), catalog.listWeatherSources(), catalog.listWeatherFiles(), catalog.listLoadProfiles(), catalog.list()]);
+      const file = await createExampleProject({ localities, weatherSources, weatherFiles, loadProfiles, equipment }, useSettings.getState(), lang);
+      addCanonical(file);
+      void nav(`/projet/${file.id}/atelier/projet`);
+    } catch (error) {
+      notify({ kind: 'error', title: t('home.exampleFailed'), detail: error instanceof Error ? error.message : '' });
+    } finally {
+      setPreparingExample(false);
     }
-    const id = create(type);
-    void nav(`/projet/${id}/atelier/projet`);
+  };
+  const exampleButton = (className: string, label: string) => (
+    <button className={className} disabled={preparingExample} onClick={() => { void openExample(); }}>{preparingExample ? t('home.examplePreparing') : label}</button>
+  );
+  const upcoming = (
+    <p className="home-architectures">
+      <span className="label">{t('home.architectures')} :</span> <b>{t('sys.standalone_all_in_one')}</b>
+      <span className="label"> · {t('home.upcomingSection')} :</span> {UPCOMING.map((type) => t(`sys.${type}`)).join(' · ')}
+    </p>
+  );
+
+  if (projects.length === 0) {
+    return (
+      <div className="page page-home">
+        <TopBar secondary={{ label: t('home.recent'), badge: '0', onClick: () => nav('/accueil/projets'), title: t('home.allProjects') }} primary={{ label: t('home.newProject'), onClick: newProject }} />
+        <div className="page-body"><div className="page-inner">
+          <h1 className="page-title">{t('home.firstTitle')}</h1>
+          <p className="page-lead">{t('home.firstLead')}</p>
+          <div className="home-start">
+            <article className="home-start-card">
+              <span className="home-start-rank">1</span>
+              <h2>{t('home.startCompany')}</h2>
+              <p>{companyName.trim() ? t('home.startCompanyDone').replace('{name}', companyName.trim()) : t('home.startCompanyLead')}</p>
+              <button className="btn" onClick={() => nav('/reglages')}>{t('home.startCompanyCta')}</button>
+            </article>
+            <article className="home-start-card">
+              <span className="home-start-rank">2</span>
+              <h2>{t('home.startExample')}</h2>
+              <p>{t('home.startExampleLead')}</p>
+              {exampleButton('btn', t('home.startExampleCta'))}
+            </article>
+            <article className="home-start-card is-primary">
+              <span className="home-start-rank">3</span>
+              <h2>{t('home.startNew')}</h2>
+              <p>{t('sys.standalone_all_in_one')}</p>
+              <button className="btn btn-primary" onClick={newProject}>{t('home.startNewCta')}</button>
+            </article>
+          </div>
+          <p className="home-import">{t('home.importLead')} <ImportProjectButton label={t('home.importCta')} /></p>
+          {upcoming}
+        </div></div>
+        <StatusBar />
+      </div>
+    );
+  }
+
+  const last = rows[0]!;
+  const target = resumeStep(last);
+  const needle = query.trim().toLocaleLowerCase();
+  const shown = rows.filter((row) => matchesFilter(row.status, row.stale !== null, filter)
+    && (!needle || `${row.project.name} ${row.project.details.clientName} ${row.project.details.projectNumber} ${row.project.details.projectLocation}`.toLocaleLowerCase().includes(needle)));
+  const count = (candidate: ProjectFilter) => rows.filter((row) => matchesFilter(row.status, row.stale !== null, candidate)).length;
+  const statusLabel = (row: Row) => {
+    if (row.stale !== null && row.status !== 'issued') return t('home.status.stale');
+    const version = row.status === 'issued' ? latestVersion(row.project)?.number : nextVersionNumber(row.project);
+    return t(`home.status.${row.status}`).replace('{n}', String(version ?? 1));
   };
 
   return (
-    // `page-home` isole l'accueil : c'est le seul écran autorisé à en faire
-    // beaucoup. L'atelier, où l'on passe la journée, reste calme.
     <div className="page page-home">
-      <TopBar
-        secondary={{ label: t('home.recent'), badge: String(projects.length), onClick: () => nav('/accueil/projets'), title: t('home.allProjects') }}
-        primary={{
-          label: t('home.newProject'),
-          onClick: () => start('standalone_all_in_one', true),
-        }}
-      />
-      <div className="page-body">
-        <div className="page-inner">
-          <div className="home-hero">
-            <div className="home-hero-copy">
-              <span className="home-eyebrow">{t('home.welcome')}</span>
-              <h1 className="home-hero-title">{t('home.heroTitle')}</h1>
-              <p className="page-lead">{t('home.heroLead')}</p>
-              {metrics.projects > 0 && (
-                <dl className="home-figures">
-                  <div><dt>{t('home.figureStudies')}</dt><dd>{metrics.projects}</dd></div>
-                  <div><dt>{t('home.figureClients')}</dt><dd>{metrics.clients || '—'}</dd></div>
-                  <div><dt>{t('home.figurePv')}</dt><dd>{metrics.pvKwc === null ? '—' : fmt(metrics.pvKwc, 1)}<span>kWc</span></dd></div>
-                  <div><dt>{t('home.figureStorage')}</dt><dd>{metrics.storageKwh === null ? '—' : fmt(metrics.storageKwh, 1)}<span>kWh</span></dd></div>
-                </dl>
-              )}
-            </div>
-
-            {last ? (
-              <button className="home-resume" onClick={resumeLast}>
-                <span className="home-resume-tag">{t('home.resumeLast')}</span>
-                <b>{last.project.name}</b>
-                <small>{last.project.details.clientName || t('home.clientMissing')} · {last.project.details.projectLocation || t('home.locationMissing')}</small>
-                <span className="home-meter" aria-hidden="true">
-                  <i style={{ width: `${Math.round((last.progress.done / last.progress.total) * 100)}%` }} />
-                </span>
-                <span className="home-resume-foot">
-                  <span>{last.progress.done}/{last.progress.total} {t('home.stepsDone')}</span>
-                  {last.progress.nextStep && <span className="home-next">{t('ws.section.' + last.progress.nextStep)} →</span>}
-                </span>
-              </button>
-            ) : (
-              <div className="home-resume is-empty">
-                <b>{t('home.noProject')}</b>
-                <small>{t('home.emptyHint')}</small>
-                <button className="btn btn-ok" onClick={() => start('standalone_all_in_one', true)}>{t('home.emptyCta')}</button>
-              </div>
-            )}
+      <TopBar secondary={{ label: t('home.recent'), badge: String(projects.length), onClick: () => nav('/accueil/projets'), title: t('home.allProjects') }} primary={{ label: t('home.newProject'), onClick: newProject }} />
+      <div className="page-body"><div className="page-inner">
+        <h1 className="page-title">{t('home.dashboardTitle')}</h1>
+        {!companyName.trim() && (
+          <div className="alert info home-identity" role="note">
+            <div><b>{t('home.identityTitle')}</b> {t('home.identityLead')}</div>
+            <button className="btn" onClick={() => nav('/reglages')}>{t('home.identityCta')}</button>
           </div>
+        )}
 
-          {!companyName.trim() && (
-            <div className="alert info home-identity" role="note">
-              <div>
-                <b>{t('home.identityTitle')}</b> {t('home.identityLead')}
-              </div>
-              <button className="btn" onClick={() => nav('/reglages')}>{t('home.identityCta')}</button>
-            </div>
-          )}
+        <section className="home-resume-card" aria-labelledby="home-resume-title">
+          <span className="home-resume-tag">{t('home.resume')}</span>
+          <h2 id="home-resume-title">{last.project.name}</h2>
+          <small>{[last.project.details.clientName, last.project.details.projectNumber].filter(Boolean).join(' · ') || t('home.clientMissing')}</small>
+          <span className="home-meter" aria-hidden="true"><i style={{ width: `${Math.round((last.progress.done / last.progress.total) * 100)}%` }} /></span>
+          <span className="home-resume-foot">
+            <span>{last.progress.done}/{last.progress.total} {t('home.stepsDone')} · {statusLabel(last)}</span>
+            <span>{t('home.modified')} {relativeTime(last.project.updatedAt, lang)}</span>
+          </span>
+          {last.stale !== null && last.status !== 'issued' && <p className="home-stale">⚠ {t(last.stale === 'presizing' ? 'home.stalePresizing' : 'home.staleSizing')}</p>}
+          <button className="btn btn-primary" onClick={() => nav(`/projet/${last.project.id}/atelier/${target}`)}>
+            {t('home.continueAt').replace('{n}', String(STEP_ORDER.indexOf(target) + 1)).replace('{step}', t(`ws.section.${target}`))}
+          </button>
+        </section>
 
-          <section>
-            <div className="rowline" style={{ marginBottom: 8 }}>
-              <h2 className="h-sec">{t('home.systems')}</h2>
-              <span className="sep" />
-              <button className="btn" onClick={() => nav('/catalogue')}>
-                {t('home.catalog')}
-              </button>
-              <button className="btn" onClick={() => nav('/reglages')}>
-                {t('home.settings')}
-              </button>
-            </div>
-            <h3 className="h-sec">{t('home.availableSection')}</h3>
-            <div className="sys-grid">
-              {SYSTEMS.filter((s) => s.ready).map((s) => (
-                <button
-                  key={s.type}
-                  className={`sys-card ${s.schema ? 'has-schema' : ''}`}
-                  disabled={!s.ready}
-                  onClick={() => start(s.type, s.ready)}
-                >
-                  {s.schema && (
-                    <img className="sys-schema" src={s.schema} alt="" aria-hidden="true" />
-                  )}
-                  <span className="sys-name"><b>{t(`sys.${s.type}`)}</b></span>
-                  <span className="sys-desc">{t(`sysd.${s.type}`)}</span>
-                  <span className="sys-state">
-                    {s.ready ? t('home.available') : t('home.comingSoon')}
-                  </span>
-                </button>
+        <section className="home-projects" aria-labelledby="home-projects-title">
+          <div className="rowline">
+            <h2 className="h-sec" id="home-projects-title">{t('home.projects')}</h2>
+            <div className="seg home-filters" role="group" aria-label={t('home.filters')}>
+              {FILTERS.map((item) => (
+                <button key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{t(`home.filter.${item}`)} <span className="label">{count(item)}</span></button>
               ))}
             </div>
-            {/* Les architectures à venir tiennent en une ligne : l'accueil montre
-                d'abord ce que l'on peut faire aujourd'hui. */}
-            <div className="upcoming-list">
-              <span className="label">{t('home.upcomingSection')} :</span>
-              {SYSTEMS.filter((s) => !s.ready).map((s) => (
-                <span key={s.type} className="upcoming-item" title={t('sysd.' + s.type)}>{t('sys.' + s.type)}</span>
-              ))}
-            </div>
-          </section>
-
-
-          <section>
-            <div className="rowline" style={{ marginBottom: 8 }}>
-              <h2 className="h-sec">{t('home.recent')}</h2>
-              <span className="sep" />
-              <button className="linkish" onClick={() => nav('/accueil/projets')}>
-                {t('home.allProjects')} →
-              </button>
-            </div>
-            {recent.length === 0 ? (
-              <div className="empty">
-                <b>{t('home.noProject')}</b>
-                <span>{t('home.emptyHint')}</span>
-                <button className="btn btn-ok" onClick={() => start('standalone_all_in_one', true)}>{t('home.emptyCta')}</button>
-              </div>
-            ) : (
-              <div className="proj-list">
-                {recent.map((p) => {
-                  const progress = projectProgress(p, lang);
-                  return (
-                    <button
-                      key={p.id}
-                      className="proj-row"
-                      onClick={() => nav(readProjectResumeTarget(p.id) ?? `/projet/${p.id}/atelier/projet`)}
-                    >
-                      <span>
-                        <b>{p.name}</b>
-                        <small>
-                          {p.details.clientName || t('home.clientMissing')} ·{' '}
-                          {p.details.projectLocation || t('home.locationMissing')}
-                        </small>
-                      </span>
-                      <span className="row-progress" title={`${progress.done}/${progress.total}`}>
-                        <span className="home-meter" aria-hidden="true">
-                          <i style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} />
-                        </span>
-                        <small>{progress.done}/{progress.total}</small>
-                      </span>
-                      <span className="when">n° {p.details.projectNumber || '—'}</span>
-                      <span className="when">{relativeTime(p.updatedAt, lang)}</span>
-                    </button>
-                  );
-                })}
+            <span className="sep" />
+            <input className="hdr-search" placeholder={t('g.search')} aria-label={t('g.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
+            <button className="linkish" onClick={() => nav('/accueil/projets')}>{t('home.allProjects')} →</button>
+          </div>
+          {shown.length === 0
+            ? <div className="empty"><b>{t('projects.noneFound')}</b><span>{t('projects.noMatch')}</span></div>
+            : (
+              <div className="tbl-wrap">
+                <table className="tbl home-table">
+                  <thead><tr><th>{t('home.col.project')}</th><th>{t('home.col.status')}</th><th className="num">{t('home.col.step')}</th><th className="when">{t('home.col.modified')}</th></tr></thead>
+                  <tbody>
+                    {shown.map((row) => (
+                      <tr key={row.project.id}>
+                        <td>
+                          <Link className="home-open" to={`/projet/${row.project.id}/atelier/${resumeStep(row)}`}>{row.project.name}</Link>
+                          <small>{[row.project.details.clientName, row.project.details.projectLocation].filter(Boolean).join(' · ') || '—'}</small>
+                        </td>
+                        <td><span className={`badge ${row.stale !== null && row.status !== 'issued' ? 'warn' : STATUS_TONE[row.status]}`}>{statusLabel(row)}</span></td>
+                        <td className="num">{row.progress.done}/{row.progress.total}</td>
+                        <td className="when">{relativeTime(row.project.updatedAt, lang)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-          </section>
-        </div>
-      </div>
+          <div className="rowline home-foot">
+            <ImportProjectButton />
+            {exampleButton('btn', t('home.exampleCta'))}
+            <span className="sep" />
+            {upcoming}
+          </div>
+        </section>
+      </div></div>
       <StatusBar />
     </div>
   );
+}
+
+/** Où reprendre : le calcul à relancer d'abord, sinon la première étape non terminée. */
+function resumeStep(row: Row): string {
+  if (row.status === 'issued') return 'dossier';
+  if (row.stale === 'presizing') return 'hypotheses';
+  if (row.stale === 'sizing') return 'materiel';
+  return row.progress.nextStep ?? 'dossier';
 }

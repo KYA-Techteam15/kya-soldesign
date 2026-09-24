@@ -10,6 +10,7 @@ import {
 } from './models/projectAdapters.js';
 import type { ProjectViewModel, SystemType } from './models/projectView.js';
 import { applyProjectDefaults } from './services/createProject.js';
+import { issueProject, reviseProject } from './models/projectLifecycle.js';
 import { readNavigationSession, writeNavigationSession } from './navigationSession.js';
 import { useSettings } from '../store/settings.js';
 
@@ -41,6 +42,10 @@ interface ProjectSessionContextValue {
   /** Supprime et renvoie la restauration exacte du projet, pour l'action « Annuler ». */
   readonly remove: (id: string) => (() => void) | null;
   readonly update: (mutate: ProjectMutation) => void;
+  /** Émet le dossier (version N+1, lecture seule) ; hors historique d'annulation. */
+  readonly issue: (id: string) => void;
+  /** Ouvre la révision d'un dossier émis. */
+  readonly revise: (id: string) => void;
   readonly replaceCanonical: (project: ProjectFileV1) => void;
   readonly addCanonical: (project: ProjectFileV1) => void;
 }
@@ -54,6 +59,10 @@ const noopSubscribe = () => () => undefined;
 
 function filesToViews(files: readonly ProjectFileV1[]): ProjectViewModel[] {
   return files.map((project) => projectFileToView(project));
+}
+
+function isCurrentLocked(projects: readonly ProjectViewModel[], id: string): boolean {
+  return projects.find((project) => project.id === id)?.issue.locked === true;
 }
 
 function errorMessage(error: unknown): string {
@@ -130,7 +139,7 @@ export function ProjectSessionProvider({
     if (currentId === null) return;
     const present = projectsRef.current.find((project) => project.id === currentId);
     const history = histories[currentId];
-    if (!present || !history) return;
+    if (!present || !history || present.issue.locked) return;
     const source = direction === 'undo' ? history.past : history.future;
     const target = source.at(-1);
     if (!target) return;
@@ -171,7 +180,8 @@ export function ProjectSessionProvider({
   const update = useCallback((mutate: ProjectMutation) => {
     if (currentId === null) return;
     const present = projectsRef.current.find((project) => project.id === currentId);
-    if (!present) return;
+    // Un dossier émis ne change plus : on crée une révision pour le modifier.
+    if (!present || present.issue.locked) return;
     const draft = cloneProject(present);
     mutate(draft);
     draft.updatedAt = new Date().toISOString();
@@ -181,6 +191,23 @@ export function ProjectSessionProvider({
     persist(draft);
   }, [currentId, persist, pushHistory]);
 
+  /**
+   * Émission et révision passent hors de l'historique : « Annuler » ne doit ni défaire une
+   * émission ni ramener un état antérieur dans un dossier émis.
+   */
+  const transition = useCallback((id: string, next: (file: ProjectFileV1) => ProjectFileV1) => {
+    const file = service.get(id);
+    if (file === null) return;
+    const updated = next(file);
+    service.replace(updated);
+    setCanonicalProjects(service.list());
+    const view = projectFileToView(updated);
+    projectsRef.current = projectsRef.current.map((project) => (project.id === id ? view : project));
+    setProjects(projectsRef.current);
+    setHistories((all) => { const { [id]: _cleared, ...rest } = all; return rest; });
+    lastHistoryPush.current = null;
+  }, [service]);
+
   const value = useMemo<ProjectSessionContextValue>(() => ({
     projects,
     canonicalProjects,
@@ -188,8 +215,8 @@ export function ProjectSessionProvider({
     saveState,
     retrySave: () => { void service.retry?.(); },
     validationErrors,
-    canUndo: () => currentId !== null && (histories[currentId]?.past.length ?? 0) > 0,
-    canRedo: () => currentId !== null && (histories[currentId]?.future.length ?? 0) > 0,
+    canUndo: () => currentId !== null && !isCurrentLocked(projects, currentId) && (histories[currentId]?.past.length ?? 0) > 0,
+    canRedo: () => currentId !== null && !isCurrentLocked(projects, currentId) && (histories[currentId]?.future.length ?? 0) > 0,
     undo: () => step('undo'),
     redo: () => step('redo'),
     current: () => projects.find((project) => project.id === currentId) ?? null,
@@ -201,6 +228,8 @@ export function ProjectSessionProvider({
     create,
     remove,
     update,
+    issue: (id) => transition(id, (file) => issueProject(file)),
+    revise: (id) => transition(id, (file) => reviseProject(file)),
     replaceCanonical: (project) => {
       service.replace(project);
       setCanonicalProjects(service.list());
@@ -215,7 +244,7 @@ export function ProjectSessionProvider({
       setCanonicalProjects(service.list());
       setProjects(filesToViews(service.list()));
     },
-  }), [canonicalProjects, create, currentId, histories, projects, remove, saveState, service, step, update, validationErrors]);
+  }), [canonicalProjects, create, currentId, histories, projects, remove, saveState, service, step, transition, update, validationErrors]);
 
   return <ProjectSessionContext.Provider value={value}>{children}</ProjectSessionContext.Provider>;
 }

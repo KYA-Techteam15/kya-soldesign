@@ -1,4 +1,7 @@
-import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { latestVersion, nextVersionNumber } from '../../app/models/projectLifecycle';
+import type { ProjectViewModel } from '../../app/models/projectView';
+import { dateLong } from '../../domain/format';
 import { useEffect, useRef } from 'react';
 import { TopBar } from '../../shell/TopBar';
 import { StatusBar } from '../../shell/StatusBar';
@@ -37,6 +40,34 @@ export const SECTIONS = [
   { slug: 'dossier', key: 'ws.section.dossier' },
 ] as const;
 
+/**
+ * Où en est le dossier : émis (lecture seule, « Créer une révision ») ou en révision (la version
+ * émise reste consultable). Rien pour un dossier jamais émis.
+ */
+function LifecycleBanner({ project, onDossier }: { readonly project: ProjectViewModel; readonly onDossier: boolean }) {
+  const t = useT();
+  const lang = useUi((s) => s.lang);
+  const revise = useProjects((s) => s.revise);
+  const nav = useNavigate();
+  const latest = latestVersion(project);
+  if (latest === null) return null;
+  const next = String(nextVersionNumber(project));
+  if (project.issue.locked) {
+    return (
+      <div className="alert info lifecycle-banner" role="note">
+        <div><b>{t('issue.bannerIssued').replace('{n}', String(latest.number)).replace('{date}', dateLong(latest.issuedAt, lang))}</b> {t('issue.bannerReadOnly')}</div>
+        <button className="btn" onClick={() => revise(project.id)}>{t('issue.revise').replace('{n}', next)}</button>
+      </div>
+    );
+  }
+  return (
+    <div className="alert lifecycle-banner is-revision" role="note">
+      <div><b>{t('issue.bannerRevision').replace('{n}', next)}</b> {t('issue.bannerRevisionLead').replace('{n}', String(latest.number))}</div>
+      {!onDossier && <button className="btn" onClick={() => nav(`/projet/${project.id}/atelier/dossier`)}>{t('issue.bannerOpenDossier')}</button>}
+    </div>
+  );
+}
+
 export function WorkshopLayout() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -51,6 +82,7 @@ export function WorkshopLayout() {
   const project = projects.find((p) => p.id === id) ?? null;
   const { facts } = useCalculationFacts(project ?? PLACEHOLDER_PROJECT);
   const presizing = useCalculationState<PresizingOutputV1>(project?.id ?? '', 'presizing', project?.updatedAt ?? '');
+  const onDossier = useLocation().pathname.endsWith('/dossier');
 
   useEffect(() => {
     if (id) open(id);
@@ -81,6 +113,7 @@ export function WorkshopLayout() {
   }
 
   const states = sectionStates(project, lang, facts);
+  const hasNotices = Boolean(validationError) || project.issue.versions.length > 0;
   return (
     <div className={`app ${verdictCollapsed ? 'verdict-off' : ''}`}>
       {/* Plus de bouton « Dossier client » : le dossier est la huitième étape
@@ -142,9 +175,19 @@ export function WorkshopLayout() {
           </div>
         </nav>
 
-        <main className="pane pane-center pinned" ref={centerRef}>
-          {validationError && <div className="alert warn" role="alert"><div><b>{t('workshop.notSaved')}</b> {t('workshop.notSavedHelp')} <code>{validationError}</code></div></div>}
-          <Outlet context={project} />
+        <main className={`pane pane-center pinned ${hasNotices ? 'has-notices' : ''}`} ref={centerRef}>
+          {/* Les avis tiennent dans une rangée à eux, au-dessus de la feuille qui défile. */}
+          {hasNotices && (
+            <div className="pane-notices">
+              {validationError && <div className="alert warn" role="alert"><div><b>{t('workshop.notSaved')}</b> {t('workshop.notSavedHelp')} <code>{validationError}</code></div></div>}
+              <LifecycleBanner project={project} onDossier={onDossier} />
+            </div>
+          )}
+          {/* Dossier émis : chaque étape se lit, rien ne se modifie. L'étape 8 reste active pour
+              consulter et réimprimer les documents. */}
+          {project.issue.locked && !onDossier
+            ? <fieldset className="ro-lock" disabled><Outlet context={project} /></fieldset>
+            : <Outlet context={project} />}
           <MoreBelow containerRef={centerRef} />
           <StepNext />
         </main>

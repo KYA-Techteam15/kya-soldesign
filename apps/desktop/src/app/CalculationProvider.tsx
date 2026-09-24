@@ -17,6 +17,7 @@ import { unavailableCalculations } from './adapters/unavailableCalculations.js';
 import { AioCalculations } from './adapters/aioCalculations.js';
 import { CanonicalCatalog } from './adapters/canonicalCatalog.js';
 import { useProjectSession } from './ProjectSessionProvider.js';
+import { resolveIssuedSnapshot } from './models/projectLifecycle.js';
 
 const CalculationContext = createContext<CalculationCapabilityPort | null>(null);
 
@@ -45,7 +46,7 @@ export function CalculationProvider({
     return () => { active = false; };
   }, [catalog]);
   const defaultService = useMemo<CalculationCapabilityPort>(() => references === null ? unavailableCalculations : new AioCalculations(
-    (id) => projectsRef.current.find((project) => project.id === id) ?? null,
+    (id) => projectsRef.current.find((project) => project.id === id) ?? resolveIssuedSnapshot(projectsRef.current, id),
     references,
     (project) => replaceRef.current(project),
   ), [references]);

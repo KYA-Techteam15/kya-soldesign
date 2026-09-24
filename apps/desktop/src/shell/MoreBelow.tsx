@@ -32,7 +32,8 @@ export function MoreBelow({ containerRef }: { containerRef: React.RefObject<HTML
     let detach = () => {};
 
     const attach = () => {
-      const next = host.querySelector<HTMLElement>(':scope > .sheet');
+      // Dossier émis : la feuille est enveloppée par le verrou de lecture seule.
+      const next = host.querySelector<HTMLElement>(':scope > .sheet, :scope > .ro-lock > .sheet');
       if (next === sheet) return;
       detach();
       sheet = next;

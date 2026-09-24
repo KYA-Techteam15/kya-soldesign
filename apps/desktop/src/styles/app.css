@@ -4228,3 +4228,48 @@ table.tbl.t-dayprofile { min-width: 1150px; }
 
 /* Catalogue : la colonne étoile ne décale pas l'alignement des colonnes de texte. */
 .catalog-table th:nth-child(2), .catalog-table td:nth-child(2), .catalog-table th:nth-child(3), .catalog-table td:nth-child(3), .catalog-table td.txt { text-align: left; }
+
+/* Cycle de vie du dossier (spec 011, FR-008 → FR-010). */
+.ro-lock { border: 0; padding: 0; margin: 0; min-width: 0; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr); }
+.pane-center.pinned > .ro-lock > .sheet { overflow: auto; scrollbar-width: thin; }
+/* Avis au-dessus de la feuille : une rangée de plus, la feuille garde la sienne et défile. */
+.pane-center.pinned.has-notices { grid-template-rows: auto minmax(0, 1fr) auto; }
+.pane-notices { display: grid; gap: var(--sp-2); padding: var(--sp-4) var(--sp-4) 0; }
+.pane-notices > .alert { margin: 0; }
+.lifecycle-banner { display: flex; align-items: center; gap: var(--sp-3); }
+.issued-version-note { display: flex; align-items: center; gap: var(--sp-3); }
+.lifecycle-banner > div, .issued-version-note > div { flex: 1; }
+.lifecycle-banner.is-revision { background: var(--surface-2); }
+.issue-lead { margin: 0; padding: var(--sp-3) var(--sp-4); color: var(--text-muted); }
+.issue-blockers { color: var(--danger); }
+.issue-versions { margin: 0 var(--sp-4) var(--sp-3); width: calc(100% - 2 * var(--sp-4)); }
+.issue-versions caption { text-align: left; padding: 0 0 var(--sp-2); }
+
+/* Accueil (spec 011, FR-004 → FR-007) : premier lancement, puis tableau de bord. */
+.home-start { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); margin: var(--sp-4) 0; }
+.home-start-card { display: grid; align-content: start; gap: var(--sp-2); padding: var(--sp-4); border: 1px solid var(--border); background: var(--surface); }
+.home-start-card.is-primary { border-color: var(--accent); }
+.home-start-card h2 { margin: 0; font-size: 15px; }
+.home-start-card p { margin: 0; color: var(--text-muted); font-size: 12.5px; }
+.home-start-card .btn { justify-self: start; }
+.home-start-rank { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); font-size: 11px; font-weight: 700; }
+.home-import { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.home-architectures { margin: 0; font-size: 12px; color: var(--text-muted); }
+.home-resume-card { display: grid; gap: 4px; justify-items: start; padding: var(--sp-4); margin: var(--sp-3) 0 0; border: 1px solid var(--border); background: var(--surface); }
+.home-resume-card h2 { margin: 0; font-size: 16px; }
+.home-resume-card small { color: var(--text-muted); }
+.home-resume-card .home-meter, .home-resume-card .home-resume-foot { width: 100%; }
+.home-resume-card .btn { margin-top: var(--sp-2); }
+.home-stale { margin: var(--sp-1) 0 0; color: var(--accent); font-weight: 600; }
+.home-projects .rowline { flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.home-filters button { display: inline-flex; gap: 6px; align-items: center; }
+.home-filters button[aria-pressed='true'] { background: var(--surface); color: var(--text); font-weight: 600; }
+.home-table td small { display: block; color: var(--text-muted); font-size: 11.5px; }
+.home-table .when { text-align: right; white-space: nowrap; color: var(--text-muted); }
+.home-open { font-weight: 600; color: var(--text); text-decoration: none; }
+.home-open:hover { color: var(--accent); text-decoration: underline; }
+.home-foot { margin-top: var(--sp-3); }
+@media (max-width: 900px) { .home-start { grid-template-columns: minmax(0, 1fr); } }
+/* Site sans météo : la source météo passe en tête (FR-034). */
+.weather-first { padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); border: 1px solid var(--accent); background: var(--accent-soft); }
+.weather-first-lead { margin: var(--sp-1) 0 0; }.ro-note.field-hint { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }

@@ -21,8 +21,9 @@ export type { DocKind };
  * même rapport avaient fini par diverger — l'écran annonçait des puissances que
  * le moteur n'avait jamais calculées.
  */
-export function ReportA4({ project, kind, sizing, finance, solar, presizing, catalog, options }: {
+export function ReportA4({ project, kind, sizing, finance, solar, presizing, catalog, options, version = null }: {
   project: ProjectViewModel;
+  version?: { readonly number: number; readonly issuedAtIso: string } | null;
   kind: DocKind;
   sizing: SizingOutputV1 | null;
   finance: FinanceOutputV1 | null;
@@ -60,7 +61,8 @@ export function ReportA4({ project, kind, sizing, finance, solar, presizing, cat
     project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram,
     assets: { logoUrl: effectiveLogoUrl, coverUrl, signatureUrl },
     options: resolved,
-  }), [project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram, effectiveLogoUrl, coverUrl, signatureUrl, resolved]);
+    version,
+  }), [project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram, effectiveLogoUrl, coverUrl, signatureUrl, resolved, version]);
 
   const brandContact = [settings.company.address, settings.company.phone, settings.company.email].filter(Boolean).join(' · ');
 

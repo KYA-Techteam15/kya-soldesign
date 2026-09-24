@@ -37,8 +37,10 @@ const SHOWN = DOCS.filter((doc) => PUBLISHED.includes(doc.key));
 /** Ce que le dialogue de génération produira une fois validé. */
 type PendingAction = { readonly kind: DocKind; readonly action: 'word' | 'print' };
 
-export function DossierDocuments({ project, sizing, finance, solar, presizing, catalog, facts }: {
+export function DossierDocuments({ project, sizing, finance, solar, presizing, catalog, facts, version = null }: {
   project: ProjectViewModel;
+  /** Version émise affichée : numéro et date portés par les documents. */
+  version?: { readonly number: number; readonly issuedAtIso: string } | null;
   facts: CalculationFacts;
   sizing: SizingOutputV1 | null;
   finance: FinanceOutputV1 | null;
@@ -109,6 +111,7 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
         t: (key: string) => translate(key, options.lang),
         assets: { logoUrl: effectiveLogoUrl, coverUrl, signatureUrl },
         options,
+        version,
         diagram: generated ? { svg: generated.svg, width: generated.plan.width, height: generated.plan.height, bom: generated.plan.bom } : null,
       }));
     } catch (cause) {
@@ -189,6 +192,7 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
         presizing={presizing}
         catalog={catalog}
         options={optionsFor(preview)}
+        version={version}
       />
     </div>
 

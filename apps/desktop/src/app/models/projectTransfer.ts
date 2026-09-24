@@ -10,7 +10,9 @@ export function parseProjectTransfer(value: unknown): ProjectFileV1 {
   return parseProjectFile(candidate);
 }
 export function duplicateProject(project: ProjectFileV1, idFactory = () => crypto.randomUUID(), now = () => new Date().toISOString()): ProjectFileV1 {
-  const timestamp = now(); return parseProjectFile({ ...project, id: idFactory(), name: `${project.name} · copie`, createdAt: timestamp, updatedAt: timestamp });
+  // Une copie repart en brouillon : les versions émises appartiennent au dossier d'origine.
+  const { issue: _issued, ...rest } = project;
+  const timestamp = now(); return parseProjectFile({ ...rest, id: idFactory(), name: `${project.name} · copie`, createdAt: timestamp, updatedAt: timestamp });
 }
 export function inspectProjectImport(text: string, existing: readonly ProjectFileV1[]): ImportInspection {
   try { const project = parseProjectTransfer(JSON.parse(text)); const current = existing.find((item) => item.id === project.id); if (!current) return { status: 'valid-new', project }; return { status: 'valid-conflict', project, sameContent: JSON.stringify(current) === JSON.stringify(project) }; } catch (error) { return { status: 'invalid', code: error instanceof Error ? error.message : 'PROJECT_IMPORT_INVALID' }; }

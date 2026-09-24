@@ -1,3 +1,5 @@
+import type { ProjectIssueV1 } from '@ksd/project-format';
+
 export type SystemType =
   | 'standalone_all_in_one'
   | 'standalone_inverter_controller'
@@ -83,6 +85,8 @@ export interface ProjectViewModel {
   selection: { moduleId: string | null; batteryId: string | null; inverterId: string | null };
   cables: { segment: CableSegment; length: number; material: 'copper' | 'aluminium'; installation: 'buried' | 'not_buried'; maxVoltageDropPercent: number }[];
   protections: { segment: CableSegment; caliberA: number | null; type: 'Fusible gPV' | 'Fusible gG' | 'Disjoncteur DC' | 'Disjoncteur AC' | null }[];
+  /** Versions émises et verrou ; un projet jamais émis n'a aucune version. */
+  issue: ProjectIssueV1;
   costing: { useGlobalCost: boolean; moduleUnitPrice: number; moduleMargin: number; batteryUnitPrice: number; batteryMargin: number; inverterUnitPrice: number; inverterMargin: number; definedCostForAccessories: boolean; cablingPrice: number; cablingMargin: number; electricalBoxPrice: number; electricalBoxMargin: number; supportsPrice: number; supportsMargin: number; transportPrice: number; transportMargin: number; installationPrice: number; installationMargin: number; tvaPercent: number; reductionPercent: number; downPaymentPercent: number; deliveryTime: number; offerValidity: number; productWarranty: number; additional: { id: string; name: string; description: string; quantity: number; costPrice: number; marginPercent: number }[] };
 }
 
