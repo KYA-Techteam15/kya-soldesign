@@ -25,10 +25,10 @@ const PROTECTION_STATE: Record<ProtectionSizingResult['state'], { readonly key: 
   unavailable: { key: 'protections.state.unavailable', tone: 'bad' },
 };
 
-const CABLE_STATE: Record<CableSizingResult['state'], string> = {
-  valid: 'cables.state.valid',
-  blocked: 'cables.state.blocked',
-  unavailable: 'cables.state.unavailable',
+const CABLE_STATE: Record<CableSizingResult['state'], { readonly key: string; readonly tone: 'ok' | 'warn' | 'bad' }> = {
+  valid: { key: 'cables.state.valid', tone: 'ok' },
+  blocked: { key: 'cables.state.blocked', tone: 'warn' },
+  unavailable: { key: 'cables.state.unavailable', tone: 'bad' },
 };
 
 export function SectionProtections() {
@@ -196,8 +196,8 @@ function CableRow({ cable, result, label, onChange }: {
           {[1, 2, 3].map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
       </td>
-      <td className="derived num">{result.currentA > 0 ? fmt(result.currentA, 1) : '—'}</td>
-      <td className="derived num">
+      <td className={`derived num${result.provisional ? ' provisional' : ''}`} title={result.provisional ? t(`cables.basis.${result.currentBasis}`) : undefined}>{result.currentA > 0 ? fmt(result.currentA, 1) : '—'}</td>
+      <td className={`derived num${result.provisional ? ' provisional' : ''}`}>
         <Prov
           title={t('cables.col.thermal')}
           formula={t('cables.formula')}
@@ -212,8 +212,12 @@ function CableRow({ cable, result, label, onChange }: {
           {result.thermalSection > 0 ? fmt(result.thermalSection, 1) : '—'}
         </Prov>
       </td>
-      <td className="derived num"><b>{result.state === 'valid' ? fmt(result.normalizedSection, 1) : '—'}</b></td>
-      <td className="derived">{t(CABLE_STATE[result.state])}</td>
+      <td className={`derived num${result.provisional ? ' provisional' : ''}`}><b>{result.state === 'valid' ? fmt(result.normalizedSection, 1) : '—'}</b></td>
+      <td>
+        {result.state === 'valid' && result.provisional
+          ? <span className="badge warn" title={t(`cables.basis.${result.currentBasis}`)}>{t('cables.state.provisional')}</span>
+          : <span className={`badge ${CABLE_STATE[result.state].tone}`}>{t(CABLE_STATE[result.state].key)}</span>}
+      </td>
     </tr>
   );
 }

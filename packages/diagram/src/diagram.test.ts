@@ -58,6 +58,8 @@ const cables: CableSizingResult[] = (['pv_inverter', 'inverter_battery', 'invert
   resistivity: 0.017,
   correctionFactor: 1,
   installationMethod: 'C',
+  currentBasis: 'selected-rating',
+  provisional: false,
   designTemperatureC: 30,
   temperatureAssumed: true,
   ampacityA: 36,

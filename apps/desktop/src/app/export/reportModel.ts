@@ -777,7 +777,7 @@ function buildProtectionRows(
       protection.kind,
       `${fmt(protection.requiredA, 1)} A`,
       protection.caliberA === null ? '—' : `${fmt(protection.caliberA, 1)} A`,
-      result && result.state === 'valid' ? `${fmt(result.normalizedSection, 1)} mm²` : '—',
+      result && result.state === 'valid' && !result.provisional ? `${fmt(result.normalizedSection, 1)} mm²` : '—',
       cable ? `${fmt(cable.length, 1)} m` : '—',
     ];
   });

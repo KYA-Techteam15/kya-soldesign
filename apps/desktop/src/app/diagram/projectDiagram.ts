@@ -1,5 +1,5 @@
 import type { Equipment } from '@ksd/catalog';
-import { sizeCableSegment, sizeProtectionSegment, type CableSizingResult, type ProtectionSizingResult, type SizingOutputV1 } from '@ksd/engine';
+import { cableDesignCurrent, sizeCableSegment, sizeProtectionSegment, type CableSizingResult, type ProtectionSizingResult, type SizingOutputV1 } from '@ksd/engine';
 import {
   EN_LABELS,
   FR_LABELS,
@@ -75,9 +75,12 @@ export function projectProtections(
 
   const cables = project.cables.map((cable) => {
     const protection = protections.find((item) => item.segment === cable.segment);
+    // Sans calibre retenu, la section est calculée sur le calibre suggéré et reste provisoire.
+    const design = protection ? cableDesignCurrent(protection) : { currentA: 0, basis: 'selected-rating' as const };
     return sizeCableSegment({
       segment: cable.segment,
-      currentA: protection?.caliberA ?? 0,
+      currentA: design.currentA,
+      currentBasis: design.basis,
       voltageV: protection?.serviceVoltageV ?? 0,
       lengthM: cable.length,
       material: cable.material,

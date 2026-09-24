@@ -1614,31 +1614,7 @@ select.cell-in {
   text-align: left;
   font-family: var(--font-sans);
 }
-/* Un sélecteur en cellule doit tenir son option la plus longue : à
-   `width:100%` dans une colonne serrée, « Cuivre » devenait « C... »
-   (valeur rognée, critère B5). On élargit la colonne plutôt que le contrôle,
-   sinon le tableau pousse sa dernière colonne hors du cadre. */
-table.tbl.t-cables {
-  table-layout: fixed;
-}
-/* En `table-layout: fixed`, une `min-width` de cellule n'est pas honorée : la
-   première colonne ne récupérait que le reliquat, 62 px, et « Onduleur →
-   Batterie » se cassait en trois lignes. Largeurs explicites, donc, calculées
-   pour que le plus long segment tienne d'un trait. */
-.t-cables th:nth-child(1), .t-cables td:nth-child(1) { width: 150px; }
-.t-cables th:nth-child(2), .t-cables td:nth-child(2) { width: 62px; }
-/* Matériau et pose portent un sélecteur : ils gardent de quoi afficher leur
-   option la plus longue en entier, chevron compris (critère B5). La colonne
-   « Tension » ayant rejoint le popover de provenance, les 74 px libérés vont
-   à ces deux sélecteurs et au nom de segment. */
-.t-cables th:nth-child(3), .t-cables td:nth-child(3) { width: 90px; }
-.t-cables th:nth-child(4), .t-cables td:nth-child(4) { width: 90px; }
-.t-cables th:nth-child(5), .t-cables td:nth-child(5) { width: 54px; }
-.t-cables th:nth-child(6), .t-cables td:nth-child(6) { width: 54px; }
-/* « Section min. » ne se coupe pas en deux mots plus courts : la colonne se
-   règle sur son en-tête, pas sur ses trois chiffres. */
-.t-cables th:nth-child(7), .t-cables td:nth-child(7) { width: 74px; }
-.t-cables th:nth-child(8), .t-cables td:nth-child(8) { width: 78px; }
+/* Table des câbles : voir « Table des câbles » en fin de feuille. */
 
 /* Table des protections : sept colonnes dans les mêmes 676 px. La dernière
    porte un badge, on lui laisse le reste. */
@@ -3797,8 +3773,6 @@ table.tbl select.cell-in {
   overflow-wrap: break-word;
   line-height: 1.25;
 }
-.t-cables th:nth-child(3), .t-cables td:nth-child(3) { width: 104px; }
-.t-cables th:nth-child(4), .t-cables td:nth-child(4) { width: 112px; }
 .t-prot th:nth-child(5), .t-prot td:nth-child(5) { width: 78px; }
 
 /* Un sélecteur en cellule ne doit pas rogner son option : « Non enterré »
@@ -4015,6 +3989,18 @@ table.tbl select.cell-in {
 /* Les types de protection et leur mention « recommandé » dimensionnent la colonne. */
 table.tbl.t-prot { table-layout: auto; }
 .t-prot select.cell-in { min-width: 150px; }
+
+/* Table des câbles : colonnes réglées sur leur contenu. En largeurs fixes, un
+   écran large donnait tout le reliquat à « État » et rognait les en-têtes
+   (« Section therm… ») et les options (« Non enter… »). */
+table.tbl.t-cables { table-layout: auto; }
+.t-cables th { white-space: nowrap; }
+.t-cables td:nth-child(2) .cell-in { width: 72px; }
+.t-cables td:nth-child(3) select.cell-in { min-width: 110px; }
+.t-cables td:nth-child(4) select.cell-in { min-width: 150px; }
+.t-cables td:nth-child(5) select.cell-in { min-width: 56px; }
+.t-cables select.cell-in { text-overflow: clip; }
+.t-cables td.derived.provisional { color: var(--text-muted); font-style: italic; }
 
 /* Attente du chargement d'un écran : un espace neutre, sans texte clignotant. */
 .screen-loading { min-height: 240px; }

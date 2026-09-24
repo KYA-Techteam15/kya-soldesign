@@ -51,14 +51,21 @@ async function buildProject(page: Page) {
   await expect(page.locator('.runbar')).toContainText('Dimensionnement à jour', { timeout: 30_000 });
 
   await step(page, 5);
-  for (const [segment, type] of [['PV → Onduleur', 'Fusible gPV'], ['Onduleur → Batterie', 'Disjoncteur DC'], ['Onduleur → Charges', 'Disjoncteur AC']] as const) {
-    await page.getByLabel(`Type retenu · ${segment}`).selectOption(type);
-    await page.getByLabel(`Calibre retenu · ${segment}`).selectOption({ index: 1 });
+  const segments = [['PV → Onduleur', 'Fusible gPV'], ['Onduleur → Batterie', 'Disjoncteur DC'], ['Onduleur → Charges', 'Disjoncteur AC']] as const;
+  for (const [segment] of segments) {
     await page.getByLabel(`Longueur · ${segment}`).fill('5');
     await page.keyboard.press('Tab');
   }
+  // Avant tout choix de calibre, les sections sont calculées sur le calibre suggéré et restent provisoires.
+  await expect(page.locator('.t-cables .badge.warn', { hasText: 'Provisoire' })).toHaveCount(3);
+  for (const row of await page.locator('.t-cables tbody tr').all()) await expect(row.locator('td').nth(7)).toHaveText(/^\d+(?:,\d+)?$/u);
+  for (const [segment, type] of segments) {
+    await page.getByLabel(`Type retenu · ${segment}`).selectOption(type);
+    await page.getByLabel(`Calibre retenu · ${segment}`).selectOption({ index: 1 });
+  }
   await expect(page.locator('.t-prot .badge.ok')).toHaveCount(3);
-  await expect(page.locator('.t-cables')).not.toContainText('À compléter');
+  await expect(page.locator('.t-cables .badge.ok')).toHaveCount(3);
+  await expect(page.locator('.t-cables')).not.toContainText('Provisoire');
 }
 
 test('produces a coherent client file from creation to Word', async ({ page }) => {
@@ -75,7 +82,9 @@ test('produces a coherent client file from creation to Word', async ({ page }) =
   // Le bilan financier arrive après le dimensionnement : attendre la valeur, pas la lire une fois.
   await expect(page.locator('.sheet .out-cell', { hasText: 'SRI' }).locator('.out-val')).toHaveText(retainedSri, { timeout: 30_000 });
 
-  await page.getByRole('tab', { name: 'Imprimer les documents' }).click();
+  // Le bouton de la barre d'avancement mène à l'impression (le repère « suite plus bas » ne le masque plus).
+  await page.locator('.stepnext .btn-primary').click({ timeout: 5_000 });
+  await expect(page.getByRole('tab', { name: 'Imprimer les documents' })).toHaveAttribute('aria-selected', 'true');
   const paper = page.locator('.paper-wrap');
   await expect(paper).toContainText('Édité le');
   await expect(paper).not.toContainText('Édité le —');

@@ -78,6 +78,10 @@ for (const file of await files(root)) {
     // Texte JSX qui suit une expression (« {n} lignes ») ou qui continue sur la ligne suivante.
     const afterExpression = /^\s*\{[^{}]*\}\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ ]*?)\s*(?:$|<|\{)/u.exec(code);
     if (afterExpression && !isTechnical(afterExpression[1])) report('text', afterExpression[1]);
+    // Texte après une balise fermante, suivi d'une expression ou de la fin de ligne (« </span> nouvelle ligne ·{' '} »).
+    for (const match of code.matchAll(/<\/[a-z]+>\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .·…-]*?)\s*(?:\{|$)/gu)) {
+      if (!isTechnical(match[1]) && /[a-zà-ÿ]{2}/u.test(match[1])) report('text', match[1]);
+    }
     // Texte en tête de ligne avant une balise ou une expression (« Crête <b>… », « + Ajouter {…} »).
     const beforeMarkup = /^\s*[+·]?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .…-]*?)\s*(?:<[A-Za-z/]|\{)/u.exec(code);
     if (beforeMarkup && !CODE_WORDS.test(beforeMarkup[1]) && !isTechnical(beforeMarkup[1]) && /[a-zà-ÿ]{2}/u.test(beforeMarkup[1])) report('text', beforeMarkup[1]);

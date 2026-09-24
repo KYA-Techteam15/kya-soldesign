@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ampacityA, BATTERY_CUTOFF_VOLTAGE_RATIO, sizeCableSegment, sizeProtectionSegment, temperatureCorrectionFactor } from '../../src/index.js';
+import { ampacityA, BATTERY_CUTOFF_VOLTAGE_RATIO, cableDesignCurrent, sizeCableSegment, sizeProtectionSegment, temperatureCorrectionFactor } from '../../src/index.js';
 
 describe('protections (core v2)', () => {
   it('proposes the smallest standard gPV rating but never applies it', () => {
@@ -89,6 +89,22 @@ describe('cables (IEC 60364-5-52)', () => {
     expect(aluminium.thermalSection).toBeGreaterThan(copper.thermalSection);
   });
 
+  it('sizes the cable on the suggested rating until the engineer chooses one, and says so', () => {
+    const protection = sizeProtectionSegment({ segment: 'pv_inverter', moduleIscA: 8.8, moduleVocV: 38.1, pvStrings: 3, pvModulesInSeries: 5, inverterPowerW: 2400, dcVoltageV: 48, acVoltageV: 230, selectedType: null });
+    const suggested = cableDesignCurrent(protection);
+    expect(suggested).toEqual({ currentA: 15, basis: 'suggested-rating' });
+    const provisional = sizeCableSegment({ segment: 'pv_inverter', currentA: suggested.currentA, currentBasis: suggested.basis, voltageV: 300, lengthM: 10, material: 'copper', installation: 'not_buried', phase: 'dc' });
+    expect(provisional).toMatchObject({ state: 'valid', provisional: true, currentBasis: 'suggested-rating' });
+    expect(provisional.normalizedSection).toBeGreaterThan(0);
+
+    const chosen = sizeProtectionSegment({ segment: 'pv_inverter', moduleIscA: 8.8, moduleVocV: 38.1, pvStrings: 3, pvModulesInSeries: 5, inverterPowerW: 2400, dcVoltageV: 48, acVoltageV: 230, selectedType: 'Fusible gPV', selectedCaliberA: 20 });
+    expect(cableDesignCurrent(chosen)).toEqual({ currentA: 20, basis: 'selected-rating' });
+    expect(sizeCableSegment({ segment: 'pv_inverter', currentA: 20, voltageV: 300, lengthM: 10, material: 'copper', installation: 'not_buried', phase: 'dc' }).provisional).toBe(false);
+  });
+
+  it('falls back on the required current when no standard rating covers it', () => {
+    expect(cableDesignCurrent({ caliberA: null, recommendedRatingA: null, requiredA: 900 })).toEqual({ currentA: 900, basis: 'design-current' });
+  });
   it('is blocked without a protection rating', () => {
     expect(sizeCableSegment({ segment: 'pv_inverter', currentA: 0, voltageV: 300, lengthM: 10, material: 'copper', installation: 'not_buried', phase: 'dc' }).issues).toContain('CURRENT_MISSING');
   });

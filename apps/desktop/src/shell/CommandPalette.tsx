@@ -172,8 +172,8 @@ export function CommandPalette() {
           ))}
         </div>
         <div className="palette-foot">
-          <span className="kbd">↑</span> <span className="kbd">↓</span> naviguer ·{' '}
-          <span className="kbd">{t('loads2.entree')}</span> {t('palette.executer')} <span className="kbd">{t('palette.echap')}</span> fermer
+          <span className="kbd">↑</span> <span className="kbd">↓</span> {t('palette.navigate')} ·{' '}
+          <span className="kbd">{t('loads2.entree')}</span> {t('palette.executer')} <span className="kbd">{t('palette.echap')}</span> {t('g.close').toLowerCase()}
         </div>
       </div>
     </div>

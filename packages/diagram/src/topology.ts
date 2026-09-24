@@ -146,7 +146,8 @@ function findCable(
   conductors: number,
 ): CableSpec | null {
   const found = cables.find((item) => item.segment === segment);
-  if (!found || found.state !== 'valid') return null;
+  // Une section provisoire (calibre non retenu) ne figure pas sur un plan livrable.
+  if (!found || found.state !== 'valid' || found.provisional) return null;
   return {
     conductors,
     sectionMm2: positive(found.normalizedSection),

@@ -1,4 +1,4 @@
-import type { CableSizingInput, CableSizingResult, ProtectionSegment, ProtectionSizingInput, ProtectionSizingResult, ProtectionType } from './contracts.js';
+import type { CableCurrentBasis, CableSizingInput, CableSizingResult, ProtectionSegment, ProtectionSizingInput, ProtectionSizingResult, ProtectionType } from './contracts.js';
 import { ampacityA, IEC_SECTIONS_MM2, REFERENCE_TEMPERATURE_C, temperatureCorrectionFactor, type InstallationMethod } from './iec60364.js';
 
 export const STANDARD_SECTIONS = IEC_SECTIONS_MM2;
@@ -78,6 +78,17 @@ export function sizeProtectionSegment(input: ProtectionSizingInput): ProtectionS
 }
 
 /**
+ * Courant qui dimensionne le câble d'un tronçon : le calibre retenu, sinon le
+ * calibre normalisé suggéré, sinon le courant requis. Les deux derniers cas donnent
+ * une section provisoire, affichée pour guider le choix mais jamais livrée.
+ */
+export function cableDesignCurrent(protection: Pick<ProtectionSizingResult, 'caliberA' | 'recommendedRatingA' | 'requiredA'>): { readonly currentA: number; readonly basis: CableCurrentBasis } {
+  if (protection.caliberA !== null) return { currentA: protection.caliberA, basis: 'selected-rating' };
+  if (protection.recommendedRatingA !== null) return { currentA: protection.recommendedRatingA, basis: 'suggested-rating' };
+  return { currentA: protection.requiredA, basis: 'design-current' };
+}
+
+/**
  * Section de câble : la plus petite section normalisée dont le courant admissible
  * corrigé couvre le courant (IEC 60364-5-52) et qui tient la chute de tension.
  */
@@ -90,7 +101,8 @@ export function sizeCableSegment(input: CableSizingInput): CableSizingResult {
   const assumed = method === 'D1' || input.ambientTemperatureC === undefined || input.ambientTemperatureC === null;
   const designTemperatureC = method === 'C' && !assumed ? input.ambientTemperatureC! : REFERENCE_TEMPERATURE_C[method];
   const factor = temperatureCorrectionFactor(method, designTemperatureC);
-  const base = { segment: input.segment, currentA: current, voltageV: voltage, maxDropPercent: maxDrop, resistivity, installationMethod: method, designTemperatureC, temperatureAssumed: assumed } as const;
+  const currentBasis = input.currentBasis ?? 'selected-rating';
+  const base = { segment: input.segment, currentA: current, voltageV: voltage, maxDropPercent: maxDrop, resistivity, installationMethod: method, designTemperatureC, temperatureAssumed: assumed, currentBasis, provisional: currentBasis !== 'selected-rating' } as const;
   const issues: string[] = [];
   if (current <= 0) issues.push('CURRENT_MISSING');
   if (voltage <= 0) issues.push('VOLTAGE_MISSING');

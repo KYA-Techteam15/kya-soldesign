@@ -406,9 +406,9 @@ export function SectionBesoins() {
                   + {t('loads.addRow')}
                 </button>
                 <span className="sep" />
-                <span className="kbd">{t('loads2.entree')}</span> nouvelle ligne ·{' '}
-                <span className="kbd">Ctrl D</span> recopier vers le bas ·{' '}
-                <span className="kbd">Ctrl V</span> coller une plage Excel
+                <span className="kbd">{t('loads2.entree')}</span> {t('loads.kbd.newRow')} ·{' '}
+                <span className="kbd">Ctrl D</span> {t('loads.kbd.fillDown')} ·{' '}
+                <span className="kbd">Ctrl V</span> {t('loads.kbd.pasteRange')}
               </div>
             </div>
           </section>

@@ -32,7 +32,16 @@ export interface CableSizingInput {
   readonly maxDropPercent?: number;
   /** Température ambiante maximale (air) du site ; sans valeur, la référence du tableau est retenue et signalée. */
   readonly ambientTemperatureC?: number | null;
+  /** Origine du courant de dimensionnement ; par défaut, le calibre retenu par l'ingénieur. */
+  readonly currentBasis?: CableCurrentBasis;
 }
+/**
+ * Courant qui dimensionne le câble (IEC 60364-4-43 : Iz ≥ In) :
+ * - `selected-rating` : calibre choisi par l'ingénieur, résultat définitif ;
+ * - `suggested-rating` : plus petit calibre normalisé qui couvre le besoin, résultat provisoire ;
+ * - `design-current` : aucun calibre normalisé ne couvre le besoin, résultat provisoire sur le courant requis.
+ */
+export type CableCurrentBasis = 'selected-rating' | 'suggested-rating' | 'design-current';
 export interface CableSizingResult {
   readonly segment: ProtectionSegment; readonly state: 'blocked' | 'valid' | 'unavailable'; readonly currentA: number; readonly voltageV: number;
   readonly minimalSection: number; readonly normalizedSection: number; readonly dropPercent: number; readonly maxDropPercent: number;
@@ -41,6 +50,9 @@ export interface CableSizingResult {
   readonly installationMethod: 'C' | 'D1'; readonly designTemperatureC: number; readonly temperatureAssumed: boolean;
   /** Courant admissible corrigé de la section retenue, A. */
   readonly ampacityA: number;
+  readonly currentBasis: CableCurrentBasis;
+  /** Vrai tant que la protection du tronçon n'a pas de calibre retenu : la section n'est pas à livrer. */
+  readonly provisional: boolean;
   readonly issues: readonly string[];
 }
 export interface ProtectionCablingOutput { readonly protections: readonly ProtectionSizingResult[]; readonly cables: readonly CableSizingResult[]; }

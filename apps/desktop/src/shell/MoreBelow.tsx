@@ -21,14 +21,39 @@ export function MoreBelow({ containerRef }: { containerRef: React.RefObject<HTML
   const [bottom, setBottom] = useState(0);
   const sheetRef = useRef<HTMLElement | null>(null);
 
+  /* Les écrans de l'atelier sont chargés à la demande : la feuille apparaît
+     après le rendu de la coque. On la suit donc à chaque remplacement, faute de
+     quoi le repère restait mesuré sur « rien », posé sur la barre d'avancement,
+     et captait le clic de « Imprimer le dossier ». */
   useEffect(() => {
     const host = containerRef.current;
     if (!host) return;
-    const sheet = host.querySelector<HTMLElement>(':scope > .sheet');
-    sheetRef.current = sheet;
-    if (!sheet) return;
+    let sheet: HTMLElement | null = null;
+    let detach = () => {};
 
+    const attach = () => {
+      const next = host.querySelector<HTMLElement>(':scope > .sheet');
+      if (next === sheet) return;
+      detach();
+      sheet = next;
+      sheetRef.current = next;
+      host.dataset.more = '0';
+      if (next) detach = observe(host, next);
+    };
+    const observer = new MutationObserver(attach);
+    observer.observe(host, { childList: true });
+    attach();
+    return () => {
+      observer.disconnect();
+      detach();
+      delete host.dataset.more;
+    };
+  }, [containerRef]);
+
+  function observe(host: HTMLElement, sheet: HTMLElement): () => void {
     const measure = () => {
+      // Juste au-dessus de la barre d'avancement, quelle que soit sa hauteur.
+      setBottom(host.getBoundingClientRect().bottom - sheet.getBoundingClientRect().bottom + 10);
       const rest = sheet.scrollHeight - sheet.clientHeight - sheet.scrollTop;
       // 8 px de marge : un résidu d'arrondi n'est pas du contenu.
       const more = rest > 8;
@@ -55,21 +80,20 @@ export function MoreBelow({ containerRef }: { containerRef: React.RefObject<HTML
     sheet.addEventListener('scroll', measure, { passive: true });
     const ro = new ResizeObserver(measure);
     ro.observe(sheet);
+    ro.observe(host);
     for (const child of sheet.children) ro.observe(child);
+    // Un onglet qui remplace le contenu (dossier : synthèse → documents) change les blocs suivis.
+    const blocks = new MutationObserver(() => {
+      for (const child of sheet.children) ro.observe(child);
+      measure();
+    });
+    blocks.observe(sheet, { childList: true });
     return () => {
       sheet.removeEventListener('scroll', measure);
       ro.disconnect();
-      delete host.dataset.more;
+      blocks.disconnect();
     };
-  });
-
-  // Position verticale : juste au-dessus de la barre d'avancement.
-  useEffect(() => {
-    const host = containerRef.current;
-    const sheet = sheetRef.current;
-    if (!host || !sheet) return;
-    setBottom(host.getBoundingClientRect().bottom - sheet.getBoundingClientRect().bottom + 10);
-  });
+  }
 
   const jump = () => {
     const sheet = sheetRef.current;

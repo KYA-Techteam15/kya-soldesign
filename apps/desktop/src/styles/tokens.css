@@ -1398,13 +1398,24 @@ tfoot td:first-child {
   cursor: pointer;
   opacity: 0;
   transform: translateY(4px);
+  /* Invisible, le repère ne doit rien intercepter : transparent mais cliquable,
+     il masquait le bouton « Imprimer le dossier » de la barre d'avancement. */
+  visibility: hidden;
+  pointer-events: none;
   transition:
     opacity 120ms ease,
-    transform 120ms ease;
+    transform 120ms ease,
+    visibility 0s linear 120ms;
 }
 .pane-center.pinned[data-more='1'] .more-cue {
   opacity: 1;
   transform: none;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 0s;
 }
 .more-cue:hover {
   border-color: var(--accent);

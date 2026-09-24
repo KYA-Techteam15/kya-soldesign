@@ -1,10 +1,13 @@
-import type { FinanceOutputV1, PresizingOutputV1, SizingOutputV1 } from '@ksd/engine';
+import type { CableSizingResult, FinanceOutputV1, PresizingOutputV1, SizingOutputV1 } from '@ksd/engine';
 import { useCalculationState } from '../CalculationProvider.js';
 import { useCatalog } from '../CatalogProvider.js';
 import { projectProtections } from '../diagram/projectDiagram.js';
 import type { CapabilityState } from '../contracts.js';
 import type { ProjectViewModel } from '../models/projectView.js';
 import type { CalculationFact, CalculationFacts } from '../../domain/completion.js';
+
+/** Section calculée sur le calibre retenu : une section provisoire ne valide pas le tronçon. */
+const isConfirmedCable = (cable: CableSizingResult | undefined): boolean => cable?.state === 'valid' && !cable.provisional;
 
 function fact(state: CapabilityState<unknown>, valid = true): CalculationFact {
   if (state.status === 'ready') return valid ? 'ready' : 'invalid';
@@ -23,7 +26,7 @@ export function useCalculationFacts(project: ProjectViewModel): { readonly facts
   const financeState = useCalculationState<FinanceOutputV1>(project.id, 'finance', project.updatedAt);
   const sizing = sizingState.status === 'ready' ? sizingState.envelope.output : null;
   const { protections, cables } = projectProtections(project, sizing?.valid ? sizing : null, equipment);
-  const protectionsValid = protections.filter((protection) => protection.state === 'valid' && cables.find((cable) => cable.segment === protection.segment)?.state === 'valid').length;
+  const protectionsValid = protections.filter((protection) => protection.state === 'valid' && isConfirmedCable(cables.find((cable) => cable.segment === protection.segment))).length;
   return {
     facts: {
       presizing: fact(presizingState),
