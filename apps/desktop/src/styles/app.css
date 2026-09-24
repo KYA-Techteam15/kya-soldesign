@@ -120,51 +120,8 @@
 }
 
   /* ---------------------------------------------------------------- Accueil */
-
-.home-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 180px;
-    gap: var(--sp-6);
-    align-items: center;
-    padding: var(--sp-6);
-    margin-bottom: var(--gap-block);
-    border: 1px solid var(--border);
-    background: linear-gradient(120deg, var(--surface) 0%, var(--surface-2) 68%, var(--ok-soft) 100%);
-    overflow: hidden;
-  }
-  .home-hero-title { margin: 0 0 var(--sp-2); font-family: var(--font-display); font-size: clamp(24px, 3vw, 38px); line-height: 1.15; }
-  .home-hero-mark { position: relative; min-height: 150px; display: grid; place-items: center; color: var(--accent); font-size: 92px; font-family: var(--font-display); }
-  .home-hero-mark span { position: relative; z-index: 1; }
-  .home-hero-mark::before, .home-hero-mark::after { content: ''; position: absolute; border: 1px solid var(--accent); opacity: .35; }
-  .home-hero-mark::before { inset: 12px; transform: rotate(45deg); }
-  .home-hero-mark::after { inset: 32px; border-color: var(--ok); transform: rotate(-45deg); }
   .topbar-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 4px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-ink); font-size: 10px; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-
-.sys-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--sp-3);
-}
-.sys-card {
-  display: grid;
-  gap: 6px;
-  align-content: start;
-  padding: var(--sp-3) var(--sp-3) var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  text-align: left;
-  min-height: 96px;
-}
-.sys-card:not(:disabled):hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-.sys-card:disabled {
-  cursor: not-allowed;
-}
-  .upcoming-title { margin-top: var(--sp-5); }
 .splash-logo {
   display: block;
   width: min(280px, 62vw);
@@ -172,45 +129,9 @@
   object-fit: contain;
 }
 /* Les cartes à venir restent lisibles tout en signalant leur statut. */
-.sys-card:disabled b,
-.sys-card:disabled > span {
-  opacity: 0.6;
-}
-.sys-card b {
-  font-family: var(--font-display);
-  font-weight: 600;
-}
 /* Le nom reste aligné sur une ligne stable dans chaque carte. */
-.sys-name {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-width: 0;
-}
-.sys-name b {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 /* La ligne qui dit ce que l'architecture a de propre. Deux lignes au plus :
    au-delà, les six cartes cessent d'avoir la même hauteur. */
-.sys-desc {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.45;
-  min-height: calc(1.45em * 2);
-}
-.sys-state {
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-}
-.sys-card span {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
 
 /* Le synoptique de l'architecture, en tête de carte.
 
@@ -218,27 +139,8 @@
    schéma soit là ou non, et les six vignettes de la grille restent alignées.
    `object-fit: contain` protège le dessin d'un rognage qui couperait un bloc
    du schéma. */
-.sys-card.has-schema {
-  padding-top: 0;
-  overflow: hidden;
-}
-.sys-schema {
-  width: calc(100% + var(--sp-3) * 2);
-  margin: 0 calc(var(--sp-3) * -1) 2px;
-  aspect-ratio: 16 / 7;
-  object-fit: contain;
-  /* Le schéma est dessiné sur blanc : la bande reprend ce blanc pour que
-     l'image n'y flotte pas dans un rectangle plus clair qu'elle. */
-  background: #ffffff;
-  padding: var(--sp-2) 0;
-  border-bottom: 1px solid var(--border);
-  display: block;
-}
 /* Le schéma d'un type à venir s'atténue avec le reste de la carte : il décrit
    une architecture qui n'est pas encore ouverte. */
-.sys-card:disabled .sys-schema {
-  opacity: 0.55;
-}
 
 .proj-list {
   border: 1px solid var(--border);
@@ -309,29 +211,6 @@
 }
 
 /* ---------------------------------------------------------------- Bandeau simulation */
-
-.simbanner {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 10px;
-  height: 100%;
-  background: var(--accent-soft);
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
-  color: var(--accent-ink);
-  font-weight: 600;
-  font-size: var(--fs-xs);
-  white-space: nowrap;
-}
-.simbanner::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  background: var(--accent);
-  flex: none;
-}
 
 /* ---------------------------------------------------------------- Notifications */
 
@@ -456,32 +335,6 @@
   outline: none;
 }
 /* Récapitulatif d'une action qui écrit : ce qu'on touche, avant de toucher. */
-.dlg-recap {
-  margin-top: var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-}
-.dlg-recap div {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-3);
-  padding: 6px var(--sp-3);
-  border-bottom: 1px solid var(--grid-line);
-  font-size: var(--fs-sm);
-}
-.dlg-recap div:last-child {
-  border-bottom: none;
-}
-.dlg-recap span {
-  flex: none;
-  width: 116px;
-  color: var(--text-faint);
-}
-.dlg-recap b {
-  color: var(--text);
-  font-weight: 600;
-}
 /* Champ qui ouvre un dialogue : il a l'allure d'une saisie, pas d'un bouton. */
 /* Sélecteur en champ : ouvre un dialogue de choix, mais se présente comme la
    valeur qu'il porte. Il prend la hauteur et la bordure d'une saisie, pas
@@ -512,58 +365,6 @@
 }
 
 /* Bande de comparaison du cycle de vie, en pied de Chiffrage. */
-.lifebar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: 10px var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface);
-}
-.lifebar-say {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.lifebar-say b {
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-}
-.lifebar-say span {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-.lifebar-net {
-  margin-left: auto;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--r-sm);
-  white-space: nowrap;
-}
-.lifebar-net span {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-.lifebar-net b {
-  font-family: var(--font-mono);
-  font-size: 16px;
-}
-.lifebar-net.good {
-  background: var(--ok-soft);
-}
-.lifebar-net.good b {
-  color: var(--ok-strong);
-}
-.lifebar-net.bad {
-  background: var(--danger-soft);
-}
-.lifebar-net.bad b {
-  color: var(--danger);
-}
 
 /* Sélecteur de référence : chaque ligne dit ce que devient le système. */
 .pick-list {
@@ -627,26 +428,6 @@
   text-align: right;
 }
 /* Colonne conséquence : le nombre d'unités et la configuration obtenue. */
-.pick-conf {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-}
-.pick-conf b {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-}
-.pick-conf small {
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-  white-space: nowrap;
-}
-.pick-res {
-  text-align: right;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-}
 
 /* Variante catalogue : le contenu technique reste comparable sans se tasser
    en une phrase centrée. Les effets calculés du design validé seront branchés
@@ -739,21 +520,9 @@
 @media (max-width: 620px) {
   .pick-spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.dlg-check {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin-right: auto;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-}
 
 /* Ligne d'état d'une étape, dans la synthèse du dossier. */
 .checkline {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-3);
   padding: 5px 0;
   border-bottom: 1px solid var(--grid-line);
   font-size: var(--fs-sm);
@@ -890,14 +659,6 @@
   width: 100%;
   height: 62px;
 }
-.chart .hrs {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 2px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-faint);
-}
 
 /* ---------------------------------------------------------------- Tableaux éditables */
 
@@ -991,85 +752,11 @@ table.tbl td .cell-in:focus {
 /* Sélecteur des plages de fonctionnement, repris du dialogue historique :
    journée et nuit restent lisibles comme deux périodes, et chaque heure est
    nommée par son intervalle complet plutôt que par un index ambigu. */
-.operating-periods {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface);
-}
-.operating-period {
-  min-width: 0;
-  margin: 0;
-  padding: var(--sp-4);
-  border: 0;
-}
-.operating-period + .operating-period {
-  border-left: 1px solid var(--border);
-}
-.operating-period legend {
-  padding: 0;
-  color: var(--ok);
-  font-weight: 600;
-}
-.operating-period:last-child legend {
-  color: var(--text-muted);
-}
-.operating-hours {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sp-2) var(--sp-3);
-  margin-top: var(--sp-3);
-}
-.operating-hour {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.operating-hour input {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  accent-color: var(--ok-fill);
-}
-.operating-hour input:focus-visible {
-  outline: 2px solid var(--ok);
-  outline-offset: 2px;
-}
-.operating-hour:has(input:checked) {
-  color: var(--text);
-  font-weight: 600;
-  background: color-mix(in srgb, var(--ok-fill) 12%, transparent);
-  border-radius: var(--r-sm);
-  box-shadow: inset 3px 0 0 var(--ok-fill);
-  padding: 4px 6px;
-}
-.operating-hour:has(input:disabled) {
-  color: var(--text-faint);
-  cursor: not-allowed;
-}
-.operating-hour small {
-  color: var(--ok);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-}
 @media (max-width: 760px) {
   .topbar { gap: 6px; padding-inline: 8px; }
   .topbar .wordmark { flex: 0 0 42px; width: 42px; }
   .topbar > .btn { padding-inline: 6px; }
   .topbar > .btn-primary { flex: none; }
-  .operating-periods { grid-template-columns: minmax(0, 1fr); }
-  .operating-period + .operating-period {
-    border-left: 0;
-    border-top: 1px solid var(--border);
-  }
 }
 
 /* Formulaires */
@@ -1271,15 +958,6 @@ table.tbl td .cell-in:focus {
 }
 /* Mensuelles de l'aperçu : mêmes chiffres que la grille de saisie, mais en
    lecture — la série n'est pas encore acquise. */
-.prev-m {
-  height: 24px;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-sm);
-  color: var(--text);
-}
 /* Un graphe périmé reste lisible mais cesse de se présenter comme la
    réponse : il s'efface le temps qu'on relance le calcul. */
 .tbl-wrap.is-stale {
@@ -1290,39 +968,6 @@ table.tbl td .cell-in:focus {
    En champs séparés, « Début » et « Fin de pointe du matin » tombaient de
    part et d'autre d'un saut de rangée et la paire se lisait comme deux
    réglages indépendants. */
-.rf {
-  display: flex;
-  align-items: stretch;
-  min-width: 0;
-}
-.rf input {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-}
-.rf input:first-child {
-  border-radius: var(--r-md) 0 0 var(--r-md);
-  border-right: 0;
-}
-.rf input:last-child {
-  border-radius: 0 var(--r-md) var(--r-md) 0;
-  border-left: 0;
-}
-.rf-sep {
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  border: 1px solid var(--border-strong);
-  border-left: 0;
-  border-right: 0;
-  background: var(--surface-2);
-  color: var(--text-faint);
-  font-size: var(--fs-sm);
-}
-.rf:focus-within input,
-.rf:focus-within .rf-sep {
-  border-color: var(--accent);
-}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1461,17 +1106,12 @@ table.tbl.t-induct {
 }
 .t-classic th:nth-child(2), .t-classic td:nth-child(2) { width: 46px; }
 .t-classic th:nth-child(3), .t-classic td:nth-child(3) { width: 68px; }
-.t-classic th:nth-child(4), .t-classic td:nth-child(4) { width: 58px; }
-.t-classic th:nth-child(5), .t-classic td:nth-child(5) { width: 60px; }
 .t-classic th:nth-child(6), .t-classic td:nth-child(6) { width: 70px; }
 .t-classic th:nth-child(7), .t-classic td:nth-child(7) { width: 70px; }
 .t-classic th:nth-child(8), .t-classic td:nth-child(8) { width: 82px; }
 .t-classic th:nth-child(9), .t-classic td:nth-child(9) { width: 26px; }
 .t-induct th:nth-child(2), .t-induct td:nth-child(2) { width: 42px; }
 .t-induct th:nth-child(3), .t-induct td:nth-child(3) { width: 64px; }
-.t-induct th:nth-child(4), .t-induct td:nth-child(4) { width: 58px; }
-.t-induct th:nth-child(5), .t-induct td:nth-child(5) { width: 58px; }
-.t-induct th:nth-child(6), .t-induct td:nth-child(6) { width: 52px; }
 .t-induct th:nth-child(7), .t-induct td:nth-child(7) { width: 64px; }
 .t-induct th:nth-child(8), .t-induct td:nth-child(8) { width: 64px; }
 .t-induct th:nth-child(9), .t-induct td:nth-child(9) { width: 96px; }
@@ -1521,51 +1161,6 @@ table.tbl.t-induct td {
 }
 
 /* ---------------------------------------------------------------- Blocs matériel */
-
-.eq {
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  overflow: hidden;
-}
-.eq-head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: 7px var(--sp-3);
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
-}
-.eq-head .role {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  width: 92px;
-  flex: none;
-}
-.eq-head .ref {
-  font-weight: 600;
-}
-.eq-head .maker {
-  color: var(--text-muted);
-}
-.eq-head .sep {
-  flex: 1;
-}
-.eq-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 232px;
-}
-.eq-specs {
-  padding: var(--sp-3);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px var(--sp-4);
-  align-content: flex-start;
-}
 .spec {
   display: flex;
   align-items: baseline;
@@ -1579,12 +1174,6 @@ table.tbl.t-induct td {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-}
-.eq-fit {
-  padding: var(--sp-3);
-  display: grid;
-  gap: 5px;
-  align-content: start;
 }
 .fitline {
   display: flex;
@@ -1618,14 +1207,10 @@ select.cell-in {
 
 /* Table des protections : sept colonnes dans les mêmes 676 px. La dernière
    porte un badge, on lui laisse le reste. */
-table.tbl.t-prot {
-  table-layout: fixed;
-}
 .t-prot th:nth-child(1), .t-prot td:nth-child(1) { width: 136px; }
 .t-prot th:nth-child(2), .t-prot td:nth-child(2) { width: 104px; }
 .t-prot th:nth-child(3), .t-prot td:nth-child(3) { width: 92px; }
 .t-prot th:nth-child(4), .t-prot td:nth-child(4) { width: 88px; }
-.t-prot th:nth-child(5), .t-prot td:nth-child(5) { width: 66px; }
 .t-prot th:nth-child(6), .t-prot td:nth-child(6) { width: 48px; }
 .t-prot th:nth-child(7), .t-prot td:nth-child(7) { width: 122px; }
 /* Le nom du segment tient sur une ligne : trois lignes pour trois mots
@@ -1656,23 +1241,11 @@ table.tbl.t-cmp {
 .t-cmp td:nth-child(2) {
   color: var(--text-faint);
 }
-.cmp-ok {
-  color: var(--ok-strong);
-}
-.cmp-bad {
-  color: var(--danger);
-}
 
 /* Les libellés d'en-tête sont plus larges que les valeurs qu'ils coiffent.
    Plutôt que d'élargir neuf colonnes au-delà du cadre, on laisse l'intitulé
    passer à la ligne : la hauteur se paie une fois, en tête, pas sur chaque
    rangée — et aucun mot n'est rogné. */
-.t-prot th,
-.t-cables th {
-  white-space: normal;
-  line-height: 1.25;
-  vertical-align: bottom;
-}
 /* L'unité passe sous l'intitulé : accolée, elle forçait « Longueur m » à
    tenir d'un bloc et rognait un libellé que la colonne pouvait porter. */
 .t-prot th .unit,
@@ -1697,15 +1270,6 @@ table.tbl select.cell-in {
    et gardent leur hauteur de contenu (défaut vu au rendu, critère B5). */
 .sheet {
   align-content: start;
-}
-.sheet > * {
-  min-height: 0;
-}
-.eq {
-  overflow: visible;
-}
-.eq-head {
-  border-radius: var(--r-md) var(--r-md) 0 0;
 }
 
 /* Le grid comprimait les rangées quand la feuille a une hauteur définie.
@@ -1750,23 +1314,6 @@ table.tbl select.cell-in {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
 }
-.prov-grid {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: var(--sp-2) var(--sp-3);
-  overflow-wrap: anywhere;
-}
-.prov-grid > span { color: var(--text-faint); }
-.aio-audit {
-  border-top: 1px solid var(--border);
-  padding: var(--sp-3) var(--sp-4);
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-}
-.aio-audit summary { cursor: pointer; font-family: var(--font-mono); }
-.aio-audit > div { display: flex; gap: var(--sp-4); margin-top: var(--sp-2); }
-.aio-audit ul { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); }
-.aio-audit code { color: var(--text); }
 .month-grid .cell-in {
   padding: 0 2px;
   font-size: var(--fs-xs);
@@ -1843,43 +1390,6 @@ table.tbl select.cell-in {
   fill: var(--text-faint);
   font: 10px var(--font-mono);
 }
-.chart-gridline {
-  stroke: var(--border);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-.curve-load { stroke: var(--accent-fill); stroke-width: 2.5; }
-.curve-peak { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 5 3; }
-.curve-poa { stroke: var(--text); stroke-width: 1.5; opacity: .58; }
-.curve-legend {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--sp-2) var(--sp-4);
-  padding-top: var(--sp-2);
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-}
-.curve-legend > span:not(.sep)::before {
-  content: '';
-  display: inline-block;
-  width: 18px;
-  height: 2px;
-  margin-right: 6px;
-  vertical-align: middle;
-  background: transparent;
-}
-.curve-legend .legend-load::before { background: var(--accent-fill); }
-.curve-legend .legend-peak::before { background: var(--danger); }
-.curve-legend .legend-poa::before { background: var(--text); opacity: .58; }
-.inline-setting {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-}
-.inline-setting .uf { width: 118px; }
 .daily-note {
   display: flex;
   align-items: baseline;
@@ -2146,13 +1656,6 @@ table.tbl select.cell-in {
 }
 
 /* L'avertissement de pointe tient dans sa cellule ou n'y est pas */
-.flag {
-  display: inline-block;
-  margin-left: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--danger);
-}
 /* La barre supérieure ne pousse jamais l'application au-delà de la fenêtre :
    c'est le fil d'Ariane qui cède, pas la mise en page (critère D2). */
 .topbar {
@@ -2334,15 +1837,6 @@ table.tbl select.cell-in {
 .tree-sub div span:last-child {
   font-family: var(--font-mono);
   color: var(--text-muted);
-}
-.tree-note {
-  margin: 6px var(--sp-4) 0;
-  padding: 6px 8px;
-  border-left: 2px solid var(--accent);
-  background: var(--accent-soft);
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  line-height: 1.45;
 }
 
 /* ------------------------------------------------- Résultats de calcul
@@ -2695,7 +2189,6 @@ table.tbl select.cell-in {
 .fitgrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--sp-4);
 }
 .fitcell {
   display: grid;
@@ -2839,10 +2332,6 @@ table.tbl select.cell-in {
   .out-foot {
     flex-wrap: wrap;
   }
-
-  .out-foot-net {
-    margin-left: 0;
-  }
 }
 /* L'intitulé de famille porte le montage (« 3S x 1P = 3 modules ») : il doit
    tenir sur une ligne, quitte a etre tronque, sinon la hauteur des trois
@@ -2873,21 +2362,6 @@ table.tbl select.cell-in {
 }
 .verdict.is-wait .verdict-head {
   align-items: center;
-}
-.kpi-wait-cta {
-  display: block;
-  width: 100%;
-  padding: 8px var(--sp-3);
-  border: none;
-  background: none;
-  text-align: left;
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--accent);
-  cursor: pointer;
-}
-.kpi-wait-cta:hover {
-  background: var(--accent-soft);
 }
 
 /* ------------------------------------------------------- Étape 7 · chiffrage
@@ -2977,9 +2451,6 @@ table.tbl select.cell-in {
    unité, mesuré à 148 px. En dessous, la grille se replie d'elle-même : mieux
    vaut deux rangs lisibles qu'un rang de nombres tronqués. À 168 px elle
    tombait à deux colonnes alors que trois tenaient largement. */
-.out-grid-4 {
-  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-}
 .finance-summary {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
@@ -3010,42 +2481,6 @@ table.tbl select.cell-in {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.out-foot-net {
-  margin-left: auto;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 2px 10px;
-  border-radius: var(--r-md);
-  font-size: var(--fs-sm);
-  white-space: nowrap;
-  background: var(--surface-2);
-}
-.out-foot-net .mut {
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-}
-.out-foot-net b {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 15px;
-}
-.out-foot-net .unit {
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-}
-.out-foot-net.good {
-  background: var(--ok-soft);
-}
-.out-foot-net.good b {
-  color: var(--ok-strong);
-}
-.out-foot-net.bad {
-  background: var(--danger-soft);
-}
-.out-foot-net.bad b {
-  color: var(--danger);
 }
 .costrow {
   display: grid;
@@ -3189,9 +2624,6 @@ table.tbl select.cell-in {
   .accitem {
     gap: 2px;
   }
-  .out-grid-4 {
-    row-gap: 6px;
-  }
   .out-foot {
     margin-top: 6px;
     padding-top: 6px;
@@ -3212,31 +2644,17 @@ table.tbl select.cell-in {
    d'état, soit une centaine de pixels. Un 1280×720 ne laisse que 608 px à la
    feuille — c'est ce cas qu'il faut couvrir. */
 @media (max-height: 860px) {
-  .out-grid-4 .out-note {
-    display: none;
-  }
   .costrow {
     padding-top: 3px;
     padding-bottom: 3px;
   }
   /* Les notes ayant disparu, une valeur ne tient plus que sur deux lignes :
      les quatre montants reviennent sur un seul rang. */
-  .out-grid-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    column-gap: var(--sp-3);
-  }
   /* « Prix de revient » ne tient pas en un mot : à quatre colonnes serrées, le
      libellé se replie plutôt que de perdre sa fin. */
-  .out-grid-4 .out-lbl {
-    white-space: normal;
-    line-height: 1.2;
-  }
   /* Le TTC descend d'un cran de corps : huit chiffres en `--fs-xl` ne passent
      pas dans un quart de largeur. Mieux vaut un montant entier un peu plus
      petit qu'un montant imposant qui s'arrête à « 13 621 9… ». */
-  .out-grid-4 .out-cell.is-lead .out-val > b {
-    font-size: var(--fs-lg);
-  }
   .out-head {
     padding-top: 4px;
     padding-bottom: 4px;
@@ -3273,9 +2691,6 @@ table.tbl select.cell-in {
   .confirm-inline { margin-top: var(--sp-4); padding: var(--sp-4); border: 1px solid var(--border-strong); background: var(--surface); }
 
   @media (max-width: 780px) {
-    .home-hero { grid-template-columns: 1fr; padding: var(--sp-4); }
-    .home-hero-mark { min-height: 90px; font-size: 62px; }
-    .sys-grid { grid-template-columns: 1fr; }
     .settings-input { width: min(100%, 320px); }
   }
 .report-asset-preview { display: block; width: auto; max-width: 220px; max-height: 72px; margin: 0 0 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; object-fit: contain; }
@@ -3294,12 +2709,6 @@ table.tbl select.cell-in {
 .annual-load-view { margin: var(--sp-5) 0; }
 .metric-inline { font-size: .85rem; color: var(--text-muted); }
 .metric-inline b { color: var(--text); margin-left: 6px; }
-.annual-bars { height: 132px; display: flex; align-items: end; gap: 1px; padding: 12px 4px 0; border-bottom: 1px solid var(--border); overflow: hidden; background: linear-gradient(to top, transparent 24%, var(--border) 25%, transparent 26%, transparent 49%, var(--border) 50%, transparent 51%, transparent 74%, var(--border) 75%, transparent 76%); }
-.annual-bar { flex: 1 1 0; min-width: 2px; height: 100%; padding: 0; border: 0; display: flex; align-items: end; background: transparent; cursor: pointer; }
-.annual-bar i { display: block; width: 100%; min-height: 2px; background: var(--accent); opacity: .72; border-radius: 2px 2px 0 0; }
-.annual-bar:hover i, .annual-bar:focus-visible i { opacity: 1; background: var(--accent-strong, var(--accent)); }
-.annual-chart-caption { display: flex; justify-content: space-between; gap: var(--sp-2); padding-top: 6px; color: var(--text-muted); font-size: .76rem; }
-.daily-detail { margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid var(--border); }
 .annual-chart-controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 .annual-chart-controls label { display: grid; gap: 4px; color: var(--text-muted); font-size: var(--fs-xs); }
 .annual-chart-controls select, .annual-chart-controls input { min-width: 120px; height: 34px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--text); }
@@ -3468,40 +2877,12 @@ table.tbl select.cell-in {
     grid-template-columns: 1fr;
   }
 }
-.opt-scopes {
-  display: grid;
-  gap: var(--sp-5);
-}
-.opt-scope {
-  display: grid;
-  gap: var(--sp-3);
-  padding-top: var(--sp-3);
-  border-top: 1px solid var(--border);
-}
-.opt-scope:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-.opt-scope > header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-2);
-}
-.opt-scope > header h3 {
-  margin: 0;
-  color: var(--text);
-  font-size: var(--fs-md);
-}
-.opt-objective,
 .opt-limits {
   display: grid;
   gap: var(--sp-2);
   padding-top: var(--sp-3);
   border-top: 1px solid var(--border);
 }
-.opt-objective h3,
 .opt-limits h3 {
   margin: 0;
   color: var(--text);
@@ -3509,76 +2890,6 @@ table.tbl select.cell-in {
 }
 .opt-limit-fields {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.opt-shortlist {
-  display: grid;
-  gap: 2px;
-  max-height: 220px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-2);
-}
-.opt-shortlist-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: 4px 6px;
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-}
-.opt-shortlist-row:hover {
-  background: var(--surface-2);
-}
-.opt-results {
-  display: grid;
-  gap: var(--sp-4);
-}
-.opt-results-summary {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-.opt-candidates {
-  display: grid;
-  gap: var(--sp-3);
-}
-.opt-candidate {
-  display: grid;
-  gap: var(--sp-2);
-  padding: var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-}
-.opt-candidate.is-best {
-  border-color: var(--accent);
-}
-.opt-candidate-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-2);
-}
-.opt-candidate-refs {
-  display: grid;
-  gap: 2px;
-  font-size: var(--fs-sm);
-}
-.opt-candidate-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--sp-2);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-.opt-candidate-metrics b {
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-.opt-candidate-justification {
-  color: var(--text-faint);
-  font-size: var(--fs-xs);
 }
 @media (max-width: 680px) {
   .opt-limit-fields {
@@ -3651,72 +2962,12 @@ table.tbl select.cell-in {
    ornemental. Les chiffres sont ceux des études de l'utilisateur ; ils
    n'apparaissent qu'une fois qu'il y a quelque chose à compter.
 --------------------------------------------------------------------------- */
-
-.home-hero {
-  grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.9fr);
-  gap: var(--sp-5);
-  padding: var(--sp-5);
-  align-items: stretch;
-}
-
-.home-hero-copy { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-
-.home-eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: var(--accent-ink);
-  margin-bottom: 6px;
-}
-
-.home-hero-title {
-  margin: 0 0 6px;
-  font-family: var(--font-display);
-  font-size: clamp(22px, 2.4vw, 31px);
-  line-height: 1.12;
-  text-wrap: balance;
-}
-
-.home-hero .page-lead { margin: 0; max-width: 46ch; font-size: 13px; }
-
-.home-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2) var(--sp-5);
-  margin: var(--sp-4) 0 0;
-}
-.home-figures div { display: grid; gap: 1px; }
-.home-figures dt { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
-.home-figures dd {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 19px;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.home-figures dd span { margin-left: 3px; font-family: inherit; font-size: 10px; color: var(--text-muted); }
-
-.home-resume {
-  display: grid;
-  align-content: center;
-  gap: 4px;
-  text-align: left;
-  padding: var(--sp-4);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  min-width: 0;
-}
-.home-resume:not(.is-empty):hover { border-color: var(--accent); background: var(--accent-soft); }
-.home-resume.is-empty { cursor: default; justify-items: start; gap: 6px; }
 .home-resume-tag {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent-ink);
 }
-.home-resume b { font-size: 15px; overflow-wrap: anywhere; }
-.home-resume small { color: var(--text-muted); font-size: 11.5px; overflow-wrap: anywhere; }
 .home-resume-foot {
   display: flex;
   justify-content: space-between;
@@ -3724,7 +2975,6 @@ table.tbl select.cell-in {
   font-size: 11px;
   color: var(--text-muted);
 }
-.home-next { color: var(--accent-ink); }
 
 .home-meter {
   display: block;
@@ -3740,29 +2990,15 @@ table.tbl select.cell-in {
   transition: width 220ms ease-out;
 }
 
-.row-progress { display: grid; gap: 0; min-width: 84px; }
-.row-progress small { color: var(--text-muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
-
 @media (prefers-reduced-motion: reduce) {
   .home-meter i { transition: none; }
 }
 
-@media (max-width: 900px) {
-  .home-hero { grid-template-columns: minmax(0, 1fr); }
-}
-
 /* Cartes de système compactes : le schéma sert à reconnaître une architecture
    d'un coup d'œil, pas à occuper la page. */
-.sys-schema { aspect-ratio: 16 / 5; padding: 4px 0; }
-.sys-card { padding: var(--sp-3); gap: 3px; }
-.sys-card b { font-size: 13.5px; }
-.sys-card .sys-desc { font-size: 11.5px; line-height: 1.4; }
-.sys-card .sys-state { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; }
-.upcoming-title { margin-top: var(--sp-5); }
 
 /* Le bandeau et les types de système forment une seule séquence de lecture :
    l'espace qui les séparait cassait ce lien. */
-.page-home .home-hero { margin-bottom: var(--sp-5); }
 .page-home section + section { margin-top: var(--sp-6); }
 
 /* En `table-layout: fixed`, un intitulé plus long que sa colonne est rogné
@@ -3770,15 +3006,12 @@ table.tbl select.cell-in {
    en-têtes se replient sur deux lignes plutôt que de mentir sur leur contenu. */
 .t-prot th,
 .t-cables th {
-  white-space: normal;
   overflow-wrap: break-word;
-  line-height: 1.25;
 }
 .t-prot th:nth-child(5), .t-prot td:nth-child(5) { width: 78px; }
 
 /* Un sélecteur en cellule ne doit pas rogner son option : « Non enterré »
    devenait « Non e… ». */
-.t-cables select.cell-in { text-overflow: ellipsis; }
 
 /* L'aide d'un réglage est une seconde ligne, pas la suite du libellé :
    « Fichier logo de rapportPNG, JPEG… » collait les deux. */
@@ -3880,18 +3113,6 @@ table.tbl select.cell-in {
 /* --- Série annuelle importée ---
    8 760 champs ne se saisissent pas : le panneau dit ce que la série contient
    et laisse une porte de sortie, il ne mime pas une grille de saisie. */
-.annual-series-panel {
-  display: grid;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface-2);
-  justify-items: start;
-}
-.annual-series-panel .out-grid {
-  width: 100%;
-}
 
 /* --- Visuels dans le dialogue de génération ---
    L'utilisateur doit voir ce qui sera imprimé avant de l'imprimer : le cadre
@@ -3974,8 +3195,6 @@ table.tbl select.cell-in {
 /* Accueil : invitation à renseigner l'entreprise émettrice des documents. */
 .home-identity { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin: var(--sp-4) 0; }
 /* Architectures à venir : une ligne de libellés, pas une grille de cartes inactives. */
-.upcoming-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); }
-.upcoming-item { padding: 2px 10px; border: 1px dashed var(--border-strong); border-radius: 999px; font-size: var(--fs-xs); color: var(--text-muted); }
 /* Information utile, ni erreur ni arbitrage. */
 .alert.info { border-color: color-mix(in srgb, var(--ok) 26%, var(--border)); border-left-color: color-mix(in srgb, var(--ok) 26%, var(--border)); background: color-mix(in srgb, var(--ok-soft) 50%, var(--surface)); }
 .issue-list { margin: 0 0 var(--sp-3); padding-left: 18px; font-size: var(--fs-sm); color: var(--text-muted); }
@@ -4148,7 +3367,7 @@ table.tbl.t-cables { table-layout: auto; }
 
 /* Journée type. */
 .dayprofile { display: grid; gap: var(--sp-2); }
-.dayprofile-plot { width: 100%; height: 170px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); cursor: ns-resize; touch-action: none; user-select: none; }
+.dayprofile-plot { width: 100%; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); cursor: ns-resize; touch-action: none; user-select: none; }
 .dp-grid { stroke: var(--border); stroke-width: 1; }
 .dp-tick { font-size: 9px; fill: var(--text-faint); font-family: var(--font-mono); text-anchor: end; }
 .dp-tick.t-hour { text-anchor: middle; }
@@ -4156,11 +3375,11 @@ table.tbl.t-cables { table-layout: auto; }
 .dp-mean.is-hover { fill: var(--ok-strong); }
 .dp-peak { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 0.6; stroke-dasharray: 2 2; }
 .dayprofile-hint { margin: 0; }
-table.tbl.t-dayprofile { table-layout: fixed; min-width: 900px; }
+table.tbl.t-dayprofile { table-layout: fixed; }
 .t-dayprofile th, .t-dayprofile td { padding: 2px; text-align: center; }
 .t-dayprofile th:first-child { width: 150px; text-align: left; white-space: nowrap; }
 .t-dayprofile th.is-hover { color: var(--accent); }
-.t-dayprofile .cell-in { width: 100%; min-width: 0; padding: 2px; text-align: center; font-size: var(--fs-xs); }
+.t-dayprofile .cell-in { width: 100%; min-width: 0; text-align: center; font-size: var(--fs-xs); }
 .t-dayprofile .cell-in::placeholder { color: var(--text-faint); }
 
 /* Année importée et carte de chaleur. */
@@ -4254,7 +3473,6 @@ table.tbl.t-dayprofile { min-width: 1150px; }
 .home-start-card .btn { justify-self: start; }
 .home-start-rank { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); font-size: 11px; font-weight: 700; }
 .home-import { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
-.home-architectures { margin: 0; font-size: 12px; color: var(--text-muted); }
 .home-resume-card { display: grid; gap: 4px; justify-items: start; padding: var(--sp-4); margin: var(--sp-3) 0 0; border: 1px solid var(--border); background: var(--surface); }
 .home-resume-card h2 { margin: 0; font-size: 16px; }
 .home-resume-card small { color: var(--text-muted); }
@@ -4273,3 +3491,19 @@ table.tbl.t-dayprofile { min-width: 1150px; }
 /* Site sans météo : la source météo passe en tête (FR-034). */
 .weather-first { padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); border: 1px solid var(--accent); background: var(--accent-soft); }
 .weather-first-lead { margin: var(--sp-1) 0 0; }.ro-note.field-hint { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+
+/* Architectures (FR-006) : le système disponible avec son schéma ; les autres au survol. */
+.home-systems { display: grid; gap: var(--sp-3); margin-top: var(--sp-5); }
+.home-system-main { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: var(--sp-4); align-items: center; padding: var(--sp-4); border: 1px solid var(--accent); background: var(--surface); }
+.home-system-schema { width: 100%; height: auto; display: block; }
+.home-system-copy { display: grid; gap: var(--sp-1); justify-items: start; }
+.home-system-copy b { font-size: 15px; }
+.home-system-copy p { margin: 0; color: var(--text-muted); }
+.home-upcoming { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.upcoming-chip { position: relative; padding: 2px 10px; border: 1px dashed var(--border-strong); border-radius: 999px; font-size: var(--fs-xs); color: var(--text-muted); cursor: default; }
+.upcoming-chip:hover, .upcoming-chip:focus-visible { border-color: var(--accent); color: var(--text); outline: none; }
+.upcoming-preview { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 20; display: grid; gap: var(--sp-2); width: 280px; padding: var(--sp-3); border: 1px solid var(--border-strong); background: var(--surface); box-shadow: 0 8px 24px rgb(15 35 55 / 0.16); color: var(--text-muted); font-size: 12px; white-space: normal; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 120ms ease; }
+.upcoming-preview img { width: 100%; height: auto; display: block; }
+.upcoming-chip:nth-last-child(-n+2) .upcoming-preview { left: auto; right: 0; }
+.upcoming-chip:hover .upcoming-preview, .upcoming-chip:focus-visible .upcoming-preview { opacity: 1; visibility: visible; }
+@media (max-width: 900px) { .home-system-main { grid-template-columns: minmax(0, 1fr); } }

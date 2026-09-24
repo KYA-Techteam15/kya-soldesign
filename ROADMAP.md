@@ -25,6 +25,7 @@ The product is decomposed into bounded vertical slices. IDs are immutable once r
 | PUMP-001 | Solar pumping | Implement hydraulic demand, pump, array, and storage sizing | No street-lighting model | DATA-001 | planned | — |
 | LIGHT-001 | Solar street lighting | Implement lighting demand, autonomy, and component sizing | No hydraulic model | DATA-001 | planned | — |
 | REL-001 | Release readiness | Correct calculation safety, persistence, synchronisation, documents, i18n and ship the Tauri installer | No new topology | UI-AIO-001, DESK-001 | done | `specs/010-release-readiness/` |
+| UX-001 | End-to-end UX overhaul | Useful-or-removed screens, single appliance table and hour painting, load sources with per-source data, optimisation over "my references" with simulated proposals, file issue/revision lifecycle, first-run home and dashboard, example project | No new topology or sizing formula | REL-001 | done | `specs/011-ux-refonte/` |
 
 ## Ordering rule
 

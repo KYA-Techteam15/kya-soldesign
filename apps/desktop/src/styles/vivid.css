@@ -137,17 +137,6 @@
 [data-vibe='vivid'] .is-bad .verdict-val {
   text-shadow: 0 0 22px color-mix(in srgb, var(--danger) 32%, transparent);
 }
-[data-vibe='vivid'] .gauge {
-  height: 10px;
-  border-radius: 5px;
-}
-[data-vibe='vivid'] .gauge .fill {
-  background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 60%, var(--energy)));
-  border-radius: 5px 0 0 5px;
-}
-[data-vibe='vivid'] .is-bad .gauge .fill {
-  background: linear-gradient(90deg, var(--accent), var(--danger));
-}
 
 /* Les en-têtes de groupe du panneau prennent la couleur de leur sujet */
 [data-vibe='vivid'] .kpi-head {
@@ -161,16 +150,9 @@
 /* ---------------------------------------------------------------- Blocs et tableaux
    Chaque bloc porte une arête colorée : on identifie sa nature avant de lire. */
 
-[data-vibe='vivid'] .tbl-wrap,
-[data-vibe='vivid'] .eq {
+[data-vibe='vivid'] .tbl-wrap {
   box-shadow: var(--shadow-card);
   border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--border));
-}
-[data-vibe='vivid'] .eq:nth-of-type(2) {
-  border-top-color: color-mix(in srgb, var(--ok) 65%, var(--border));
-}
-[data-vibe='vivid'] .eq:nth-of-type(3) {
-  border-top-color: color-mix(in srgb, var(--energy) 70%, var(--border));
 }
 [data-vibe='vivid'] table.tbl th {
   background: linear-gradient(180deg, var(--surface-2), var(--surface-3));
@@ -226,16 +208,6 @@
 }
 
 /* ---------------------------------------------------------------- Accueil */
-
-[data-vibe='vivid'] .sys-card {
-  box-shadow: var(--shadow-card);
-  border-top: 2px solid transparent;
-}
-[data-vibe='vivid'] .sys-card:not(:disabled):hover {
-  border-top-color: var(--accent);
-  background: linear-gradient(180deg, var(--accent-soft), var(--surface) 70%);
-  transform: translateY(-1px);
-}
 [data-vibe='vivid'] .page-title {
   background: var(--brand-sweep);
   -webkit-background-clip: text;
@@ -256,23 +228,11 @@
   border-top: 0;
   color: #b0b0b0;
 }
-[data-vibe='vivid'] .simbanner {
-  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-  color: #1a1a1a;
-  border: 0;
-}
-[data-vibe='vivid'] .simbanner::before {
-  background: #1a1a1a;
-}
-[data-vibe='vivid'] .statusbar .live::before {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 30%, transparent);
-}
 
 /* ---------------------------------------------------------------- Mouvement
    Discret, et coupé si l'utilisateur ne le veut pas. */
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-vibe='vivid'] .sys-card,
   [data-vibe='vivid'] .nav-item {
     transition:
       background 140ms ease,

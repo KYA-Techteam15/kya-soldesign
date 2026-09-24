@@ -1,5 +1,60 @@
 # Journal des modifications
 
+## 1.1.0 — 2026-09-24
+
+Refonte de l'expérience de bout en bout (spécification `specs/011-ux-refonte`, `UX-001`).
+Principe : toute information affichée aide l'utilisateur, sinon elle est supprimée.
+
+### Besoins
+
+- **Un seul tableau d'appareils** : coefficient de démarrage (1 par défaut) puis case
+  « Inductif » ; ligne « Pointe au démarrage » sous le total.
+- **Simultanéité supprimée** partout ; les anciens projets concernés sont signalés une fois.
+- **Horaires** : survol pour voir les heures, clic pour les peindre (00–23, modèles
+  « 08–16 », « 18–24 »…), planning de tous les appareils ; aucun libellé de moment de la
+  journée, qui dépend du pays.
+- **Sources de consommation** : « De quoi disposez-vous ? » à la première saisie, puis
+  appareils, journée type, année composée, année importée ou facture ; chaque source garde
+  ses données, seule la source active alimente les calculs.
+- Vue annuelle en carte de chaleur, par mois ou en journée moyenne.
+
+### Dimensionnement
+
+- **Mes références** : étoiles dans le catalogue, plafonds par famille dans les réglages.
+- **Optimiser…** : combinaisons de vos références, estimation de durée, objectifs expliqués,
+  progression et annulation ; les meilleures propositions sont **simulées sur l'année**
+  (SRI, LPSP) et rien n'est retenu sans « Retenir ».
+
+### Dossier
+
+- **Émettre le dossier vN** : version figée, datée et numérotée, lecture seule sur toutes les
+  étapes, « Créer une révision » ; les versions émises restent réimprimables à l'identique et
+  les documents portent la référence et la version.
+- Bouton « Préparer les documents client » à l'étape 8.
+
+### Accueil et site
+
+- Premier lancement en trois cartes (société, projet exemple, nouveau projet), puis tableau
+  de bord : reprendre là où le dossier attend, états (brouillon, en cours, prêt, émis,
+  révision, périmé), filtres et recherche.
+- Architectures : le système disponible est présenté avec son schéma ; chaque architecture à
+  venir montre le sien au survol.
+- **Projet exemple** : centre de santé à Bombouaka, calculé à l'ouverture par le moteur courant.
+- Site : la météo passe en tête tant qu'elle manque ; « Mois critique » expliqué.
+- Panneau de droite replié tant qu'aucun prédimensionnement n'existe, et plus étroit.
+
+### Corrections
+
+- Sections de câble calculées sur le calibre suggéré ; calibre suggéré retenu par défaut.
+- Vue annuelle refusée dès que deux appareils tournaient à la même heure.
+- Tableaux larges défilant horizontalement sans replier le panneau de droite.
+
+### Qualité
+
+- Contrôle des traductions étendu (clés inutilisées, jetons identiques en français et en
+  anglais) ; 238 textes morts retirés ; feuilles de style allégées de 25 Ko sans changement
+  visuel.
+
 ## 1.0.0 — 2026-09-24
 
 Première version distribuée aux clients (spécification `specs/010-release-readiness`).

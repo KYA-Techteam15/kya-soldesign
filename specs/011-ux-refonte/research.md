@@ -70,6 +70,19 @@
   dès que deux appareils tournaient ensemble, la pointe passait sous la puissance moyenne et la
   série était refusée (`PROFILE_PEAK_INVALID`). Elle suit désormais les règles du moteur.
 
+## R8 — Fermeture
+
+- Traductions : le contrôle refuse désormais une clé que plus rien ne demande (littéral ou préfixe
+  construit, dans l'application et les paquets) et des jetons `{n}` différents entre français et
+  anglais ; 238 clés mortes retirées. Les exemptions « écrans hérités » du contrôle des textes en dur
+  sont supprimées : tous les écrans y passent.
+- Feuilles de style : sélecteurs visant une classe que rien n'emploie retirés (85 classes), puis
+  déclarations masquées par la même règle redéclarée plus bas dans le même contexte (même
+  spécificité, l'ordre décide : sans effet possible). −25 Ko ; les 14 captures passent sans être
+  régénérées.
+- Schémas des architectures : conservés à la demande de l'utilisateur. Le système disponible est
+  présenté avec son schéma ; chaque architecture à venir montre le sien au survol ou au focus.
+
 ## Baselines modifiées
 
 | Test | Avant | Après | Raison |
@@ -84,4 +97,6 @@
 | Captures `home-*`, `palette-*` | héros, chiffres cumulés, cartes système | premier lancement en trois cartes | FR-004, FR-006, P-1 |
 | Captures `dossier-*` | — | panneau « Émission » en tête | FR-009 |
 | Captures `site-real-*` | — | note « Mois critique » | FR-035 |
+| Toutes les captures | v1.0.0 | v1.1.0 dans la barre d'état | version |
+| Captures `home-*` | — | section Architectures avec schéma | FR-006 |
 | E2E `navigation`, `i18n`, `canonical-project` | titre « Concevez des systèmes… » | « Bienvenue dans KYA-SolDesign », tableau de bord | FR-004, FR-005 |

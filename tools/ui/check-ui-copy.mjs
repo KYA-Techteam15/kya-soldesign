@@ -17,19 +17,10 @@ async function files(directory) {
 }
 
 const failures = [];
-// The workshop routes predate the APP-001 convergence and are retained as a
-// validated legacy surface. APP-001 owns the shell, home, projects, catalog,
-// settings and dossier/report routes; their new copy must remain in i18n.
-const validatedLegacyWorkshop = new Set([
-  'routes\\workshop\\EquipmentPicker.tsx',
-  'routes\\workshop\\SectionChiffrage.tsx',
-  'routes\\workshop\\SectionDossier.tsx',
-  'routes\\workshop\\SectionMateriel.tsx',
-  'routes\\workshop\\SectionProtections.tsx',
-]);
+// Every screen is covered, the workshop included (spec 011, FR-036): the
+// legacy exemptions for the workshop routes have been retired.
 for (const file of await files(root)) {
   if (extname(file) !== '.tsx') continue;
-  if (validatedLegacyWorkshop.has(relative(root, file))) continue;
   const source = await readFile(file, 'utf8');
   for (const match of source.matchAll(/>([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 .…·–—-]*)</g)) {
     const value = match[1]?.trim();

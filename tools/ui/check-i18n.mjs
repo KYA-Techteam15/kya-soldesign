@@ -68,6 +68,32 @@ for (const [key, file] of used) {
   if (!seen.has(key)) failures.push(`« ${key} » est demandée par ${file} mais absente du dictionnaire`);
 }
 
+// Les jetons de gabarit ({n}, {date}…) doivent être les mêmes dans les deux langues : un jeton
+// oublié s'afficherait tel quel, ou une valeur manquerait dans une seule langue.
+const tokens = (text) => [...text.matchAll(/\{[a-zA-Z]+\}/gu)].map((match) => match[0]).sort((left, right) => left.localeCompare(right)).join(',');
+for (const entry of entries) {
+  if (tokens(entry.fr) !== tokens(entry.en)) failures.push(`« ${entry.key} » n'a pas les mêmes jetons en français (${tokens(entry.fr) || '—'}) et en anglais (${tokens(entry.en) || '—'})`);
+}
+
+// Une clé que plus rien ne demande est un texte mort (spec 011, P-1) : elle ment sur ce que
+// l'écran affiche et se traduit pour rien. Une clé compte comme demandée si elle apparaît en
+// littéral dans le code livré (application ou paquets), ou si un préfixe construit la couvre
+// (« t(`home.status.${état}`) »).
+let shipped = '';
+const packageSources = (await readdir(resolve('packages'), { withFileTypes: true }))
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => resolve('packages', entry.name, 'src'));
+for (const directory of [sourceRoot, ...packageSources]) {
+  let found = [];
+  try { found = await filesUnder(directory); } catch { continue; }
+  for (const file of found) if (file !== dictionaryPath) shipped += `${await readFile(file, 'utf8')}\n`;
+}
+const literals = new Set([...shipped.matchAll(/['"`]([a-zA-Z0-9_]+(?:[.-][a-zA-Z0-9_]+)+)['"`]/gu)].map((match) => match[1]));
+const prefixes = [...new Set([...shipped.matchAll(/['"`]([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_-]+)*\.)(?:\$\{|['"`]\s*\+)/gu)].map((match) => match[1]))];
+for (const entry of entries) {
+  if (!literals.has(entry.key) && !prefixes.some((prefix) => entry.key.startsWith(prefix))) failures.push(`« ${entry.key} » n'est plus demandée par aucun écran`);
+}
+
 if (failures.length > 0) {
   console.error(failures.join('\n'));
   process.exitCode = 1;

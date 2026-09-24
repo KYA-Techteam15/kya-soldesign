@@ -14,6 +14,14 @@ export const applicationReleaseInfo: ApplicationReleaseInfo = {
   builtAtIso: env.VITE_BUILD_TIME ?? null,
   changelogEntries: [
     {
+      version: '1.1.0',
+      dateIso: '2026-09-24',
+      message: {
+        fr: 'Refonte de bout en bout : tableau d’appareils unique et horaires peints, sources de consommation, optimisation sur vos références simulée sur l’année, émission et révisions du dossier, nouvel accueil et projet exemple.',
+        en: 'End-to-end overhaul: single appliance table and painted schedules, load sources, optimisation over your references simulated over the year, file issue and revisions, new home and example project.',
+      },
+    },
+    {
       version: '1.0.0',
       dateIso: '2026-09-24',
       message: {

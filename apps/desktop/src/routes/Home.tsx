@@ -9,14 +9,13 @@ import { relativeTime } from '../domain/format';
 import { WORKSHOP_STEPS, projectProgress } from '../app/models/homeMetrics';
 import { useSettings } from '../store/settings';
 import { latestVersion, matchesFilter, nextVersionNumber, projectStatus, type ProjectFilter, type ProjectStatus } from '../app/models/projectLifecycle';
-import type { ProjectViewModel, SystemType } from '../app/models/projectView';
+import type { ProjectViewModel } from '../app/models/projectView';
 import { useStaleProjects, type Staleness } from '../app/calculation/useStaleProjects';
 import { CanonicalCatalog } from '../app/adapters/canonicalCatalog';
 import { createExampleProject } from '../app/services/exampleProject';
 import { ImportProjectButton } from './ImportProjectButton';
+import { SystemsShowcase } from './home/SystemsShowcase';
 
-/** Une seule architecture disponible ; les autres sont annoncées sur une ligne (FR-006). */
-const UPCOMING: readonly SystemType[] = ['standalone_inverter_controller', 'grid_tied', 'pv_diesel', 'solar_street_light', 'solar_water_pumping'];
 const STEP_ORDER: readonly string[] = [...WORKSHOP_STEPS, 'dossier'];
 const FILTERS: readonly ProjectFilter[] = ['all', 'in-progress', 'ready', 'issued', 'stale'];
 const STATUS_TONE: Record<ProjectStatus, string> = { draft: '', 'in-progress': '', revision: 'warn', ready: 'ok', issued: 'ok' };
@@ -71,12 +70,6 @@ export function Home() {
   const exampleButton = (className: string, label: string) => (
     <button className={className} disabled={preparingExample} onClick={() => { void openExample(); }}>{preparingExample ? t('home.examplePreparing') : label}</button>
   );
-  const upcoming = (
-    <p className="home-architectures">
-      <span className="label">{t('home.architectures')} :</span> <b>{t('sys.standalone_all_in_one')}</b>
-      <span className="label"> · {t('home.upcomingSection')} :</span> {UPCOMING.map((type) => t(`sys.${type}`)).join(' · ')}
-    </p>
-  );
 
   if (projects.length === 0) {
     return (
@@ -106,7 +99,7 @@ export function Home() {
             </article>
           </div>
           <p className="home-import">{t('home.importLead')} <ImportProjectButton label={t('home.importCta')} /></p>
-          {upcoming}
+          <SystemsShowcase />
         </div></div>
         <StatusBar />
       </div>
@@ -189,10 +182,9 @@ export function Home() {
           <div className="rowline home-foot">
             <ImportProjectButton />
             {exampleButton('btn', t('home.exampleCta'))}
-            <span className="sep" />
-            {upcoming}
           </div>
         </section>
+        <SystemsShowcase />
       </div></div>
       <StatusBar />
     </div>

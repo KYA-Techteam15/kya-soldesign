@@ -4,8 +4,13 @@ test('first launch offers three ways to start, then the dashboard resumes where 
   await page.goto('/accueil');
   await expect(page.getByRole('heading', { name: 'Bienvenue dans KYA-SolDesign' })).toBeVisible();
   await expect(page.locator('.home-start-card')).toHaveCount(3);
-  // Une seule architecture disponible ; les cinq autres sont annoncées sur une ligne.
-  await expect(page.locator('.home-architectures')).toContainText('Architectures à venir');
+  // Le système disponible est montré avec son schéma ; les cinq autres montrent le leur au survol.
+  await expect(page.getByRole('img', { name: 'Schéma : Autonome · onduleur tout-en-un' })).toBeVisible();
+  await expect(page.locator('.upcoming-chip')).toHaveCount(5);
+  const upcoming = page.locator('.upcoming-chip').first();
+  await expect(upcoming.locator('.upcoming-preview')).toBeHidden();
+  await upcoming.hover();
+  await expect(upcoming.locator('.upcoming-preview img')).toBeVisible();
   await page.getByRole('button', { name: 'Créer un projet →' }).click();
   await expect(page).toHaveURL(/\/projet\/[0-9a-f-]{36}\/atelier\/projet$/);
   await expect(page.locator('.stephead .h-page')).toHaveText('Identification du projet');

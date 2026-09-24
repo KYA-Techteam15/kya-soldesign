@@ -5,8 +5,14 @@ Logiciel de bureau de dimensionnement d'installations solaires photovoltaïques,
 jusqu'au dossier client : prédimensionnement, dimensionnement avec le matériel du
 catalogue, protections et câbles, chiffrage, schéma unifilaire et documents Word.
 
-La version 1.0 couvre le système autonome à onduleur tout-en-un (AIO). Les autres
+La version 1.1 couvre le système autonome à onduleur tout-en-un (AIO). Les autres
 architectures sont annoncées dans l'application et suivies dans `ROADMAP.md`.
+
+Au premier lancement, l'accueil propose de renseigner la société, d'ouvrir le
+**projet exemple** (un centre de santé à Bombouaka, calculé à l'ouverture) ou de
+créer un projet. Un dossier terminé s'**émet** à l'étape 8 : la version est figée,
+datée et numérotée, le dossier passe en lecture seule et ses documents restent
+réimprimables à l'identique ; « Créer une révision » ouvre la version suivante.
 
 ## Pour les utilisateurs
 
@@ -46,7 +52,7 @@ Installateur local : `pnpm --filter @ksd/desktop exec tauri build`
 | `packages/diagram` | schéma unifilaire SVG déterministe |
 | `apps/desktop/src` | interface React ; `app/platform` isole tout ce qui dépend de l'hôte |
 | `apps/desktop/src-tauri` | hôte Tauri 2 (plugins, capacités, installateur) |
-| `specs/` | spécifications ; `specs/010-release-readiness` décrit la version 1.0 |
+| `specs/` | spécifications ; `specs/010-release-readiness` décrit la version 1.0, `specs/011-ux-refonte` la 1.1 |
 | `tools/` | contrôles d'interface, mentions légales, conversion d'images, publication |
 
 Règles non négociables : `AGENTS.md` et `.specify/memory/constitution.md`. Aucun

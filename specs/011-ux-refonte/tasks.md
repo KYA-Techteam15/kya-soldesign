@@ -48,7 +48,7 @@
 
 ## Lot 5 — Fermeture
 
-- [ ] T032 Traductions complètes, contrôle étendu (FR-036)
-- [ ] T033 Nettoyage des feuilles de style sans régression (FR-037)
-- [ ] T034 Captures de référence, CHANGELOG, README, ROADMAP `UX-001`, version 1.1.0 (FR-038)
-- [ ] T035 `pnpm verify` ; installateur
+- [x] T032 Traductions complètes, contrôle étendu (FR-036)
+- [x] T033 Nettoyage des feuilles de style sans régression (FR-037)
+- [x] T034 Captures de référence, CHANGELOG, README, ROADMAP `UX-001`, version 1.1.0 (FR-038)
+- [x] T035 `pnpm verify` ; installateur

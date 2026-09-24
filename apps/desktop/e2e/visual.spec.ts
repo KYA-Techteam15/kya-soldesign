@@ -47,11 +47,7 @@ for (const viewport of viewports) {
     await expect(page.locator('.ro-field').filter({ hasText: 'Irradiation moyenne' })).toContainText('6,15');
     await expect(page).toHaveScreenshot(`site-real-fr-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });
     await loadBombouakaAndNeeds(page);
-    await expect(page).toHaveScreenshot(`needs-real-fr-${viewport.label}.png`, {
-      fullPage: true,
-      animations: 'disabled',
-      mask: [page.locator('.aio-audit summary')],
-    });
+    await expect(page).toHaveScreenshot(`needs-real-fr-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });
   });
 
   for (const locale of locales) {
@@ -68,7 +64,6 @@ for (const viewport of viewports) {
         await expect(page).toHaveScreenshot(`${name}-${locale}-${viewport.label}.png`, {
           fullPage: route !== '/catalogue', animations: 'disabled', timeout: 15_000,
           threshold: 0.1,
-          mask: route === '/accueil' ? [page.locator('.sys-schema')] : [],
         });
       }
     });
@@ -99,7 +94,6 @@ for (const viewport of viewports) {
         fullPage: true,
         animations: 'disabled',
         threshold: 0.1,
-        mask: [page.locator('.sys-schema')],
       });
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: locale === 'fr' ? 'Nouveau projet' : 'New project', exact: true }).click();

@@ -339,16 +339,6 @@ select {
 .statusbar .sep {
   flex: 1;
 }
-.statusbar .live::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ok);
-  margin-right: 6px;
-  vertical-align: 1px;
-}
 
 /* ==========================================================================
    Typographie utilitaire
@@ -641,16 +631,6 @@ tfoot td:first-child {
   color: var(--text-muted);
 }
 
-.row-err td {
-  background: var(--danger-soft) !important;
-}
-.flag {
-  display: inline-block;
-  margin-left: 6px;
-  font-size: var(--fs-xs);
-  color: var(--danger);
-}
-
 /* ==========================================================================
    Panneau verdict (zone droite) — critère A1
    ========================================================================== */
@@ -847,22 +827,6 @@ tfoot td:first-child {
   color: var(--text-faint);
   white-space: nowrap;
 }
-.dayb-read {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  margin-top: 6px;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-.dayb-read > span {
-  white-space: nowrap;
-}
-.dayb-read b {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
 .dayb-none {
   margin: 0;
   font-size: var(--fs-sm);
@@ -920,55 +884,6 @@ tfoot td:first-child {
 }
 
 /* Jauge de seuil : le remplissage donne la valeur, le trait donne le seuil */
-.gauge {
-  position: relative;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-}
-.gauge .fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 3px 0 0 3px;
-  background: var(--ok);
-}
-.is-bad .gauge .fill {
-  background: var(--danger);
-}
-.gauge .thr {
-  position: absolute;
-  top: -4px;
-  bottom: -4px;
-  width: 2px;
-  left: 62.5%;
-  background: var(--text);
-}
-.gauge-scale {
-  position: relative;
-  height: 14px;
-  margin-top: 4px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-faint);
-}
-.gauge-scale .lo {
-  position: absolute;
-  left: 0;
-}
-.gauge-scale .hi {
-  position: absolute;
-  right: 0;
-}
-.gauge-scale .at {
-  position: absolute;
-  left: 62.5%;
-  transform: translateX(-50%);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
 
 /* Liste de KPI : libellé à gauche, nombre aligné à droite */
 .kpis {
@@ -1023,7 +938,6 @@ tfoot td:first-child {
    de la colonne. On défile une fois, on voit tout. */
 .pane-right > .kpis.kpis-all {
   flex: 1 1 auto;
-  min-height: 0;
   margin-bottom: 0;
 }
 /* La liste ne descend jamais sous quatre lignes utiles : en dessous, son
@@ -1067,12 +981,6 @@ tfoot td:first-child {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--sp-2);
-}
-.prov-tag {
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-faint);
 }
 
 /* Point a trancher : remonte a cote du verdict, jamais sous la ligne de flottaison */
@@ -1295,23 +1203,6 @@ tfoot td:first-child {
   flex: none;
   background: var(--ok);
   clip-path: polygon(14% 50%, 38% 74%, 86% 24%, 96% 34%, 38% 92%, 4% 58%);
-}
-.check.fail::before {
-  background: var(--danger);
-  clip-path: polygon(
-    18% 26%,
-    26% 18%,
-    50% 42%,
-    74% 18%,
-    82% 26%,
-    58% 50%,
-    82% 74%,
-    74% 82%,
-    50% 58%,
-    26% 82%,
-    18% 74%,
-    42% 50%
-  );
 }
 
 .sheet {
