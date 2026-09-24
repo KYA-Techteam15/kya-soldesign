@@ -21,10 +21,14 @@ export interface ProtectionSizingResult {
   readonly recommendedType: ProtectionType; readonly selectedType: ProtectionType | null;
   readonly requiredA: number; readonly minimumCurrentA: number; readonly maximumCurrentA: number | null; readonly serviceVoltageV: number; readonly quantity: number;
   readonly options: readonly number[]; readonly compatibleRatingsA: readonly number[];
-  /** Plus petit calibre normalisé qui couvre le courant : proposé, jamais appliqué d'office. */
+  /** Plus petit calibre normalisé qui couvre le courant : retenu par défaut. */
   readonly recommendedRatingA: number | null;
+  /** Calibre retenu : le choix de l'ingénieur, sinon le calibre suggéré. */
   readonly caliberA: number | null; readonly selectedRatingA: number | null; readonly exact: boolean; readonly overridden: boolean;
-  readonly state: 'awaiting-type' | 'awaiting-rating' | 'valid' | 'out-of-range' | 'unavailable'; readonly methodVersion: 'core-v2';
+  /** Vrai quand ni le type ni le calibre n'ont été choisis : la protection suit la suggestion. */
+  readonly followsSuggestion: boolean;
+  /** `awaiting-rating` : le calibre choisi ne couvre plus le courant requis. */
+  readonly state: 'awaiting-rating' | 'valid' | 'out-of-range' | 'unavailable'; readonly methodVersion: 'core-v2';
 }
 export interface CableSizingInput {
   readonly segment: ProtectionSegment; readonly currentA: number; readonly voltageV: number; readonly lengthM: number;

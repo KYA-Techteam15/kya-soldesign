@@ -48,9 +48,11 @@ function requirement(input: ProtectionSizingInput): { readonly requiredA: number
 }
 
 /**
- * Le type puis le calibre sont des choix explicites de l'ingénieur. Le moteur
- * propose le plus petit calibre normalisé qui couvre le courant, sans jamais
- * l'appliquer, et ne propose aucun calibre hors série.
+ * Par défaut, le type recommandé et le plus petit calibre normalisé qui couvre le
+ * courant sont retenus : sans choix de l'ingénieur, la protection suit la
+ * suggestion, y compris quand le dimensionnement change. Un choix explicite
+ * l'emporte ; s'il ne couvre plus le courant, il est signalé (`awaiting-rating`)
+ * et jamais remplacé en silence. Aucun calibre hors série n'est proposé.
  */
 export function sizeProtectionSegment(input: ProtectionSizingInput): ProtectionSizingResult {
   const { requiredA, voltageV, quantity } = requirement(input);
@@ -58,21 +60,22 @@ export function sizeProtectionSegment(input: ProtectionSizingInput): ProtectionS
   const recommendedType = RECOMMENDED_TYPE[input.segment];
   const selectedType = input.selectedType !== undefined && input.selectedType !== null && allowedTypes.includes(input.selectedType) ? input.selectedType : null;
   const sizeable = requiredA > 0;
-  const series = RATINGS[selectedType ?? recommendedType];
-  const options = !sizeable ? [] : series.filter((value) => value >= requiredA && (input.maximumCurrentA == null || value <= input.maximumCurrentA));
+  const kind = selectedType ?? recommendedType;
+  const options = !sizeable ? [] : RATINGS[kind].filter((value) => value >= requiredA && (input.maximumCurrentA == null || value <= input.maximumCurrentA));
   const recommendedRatingA = options[0] ?? null;
   const chosen = input.selectedCaliberA ?? null;
-  const caliberA = selectedType !== null && chosen !== null && options.includes(chosen) ? chosen : null;
+  const chosenInvalid = chosen !== null && !options.includes(chosen);
+  const caliberA = chosen === null ? recommendedRatingA : chosenInvalid ? null : chosen;
   const state: ProtectionSizingResult['state'] = !sizeable ? 'unavailable'
-    : selectedType === null ? 'awaiting-type'
-      : options.length === 0 ? 'out-of-range'
-        : caliberA === null ? 'awaiting-rating'
-          : 'valid';
+    : options.length === 0 ? 'out-of-range'
+      : caliberA === null ? 'awaiting-rating'
+        : 'valid';
   return {
-    segment: input.segment, kind: selectedType ?? recommendedType, allowedTypes, recommendedType, selectedType,
+    segment: input.segment, kind, allowedTypes, recommendedType, selectedType,
     requiredA, minimumCurrentA: requiredA, maximumCurrentA: input.maximumCurrentA ?? null, serviceVoltageV: voltageV, quantity,
-    options: selectedType === null ? [] : options, compatibleRatingsA: options, recommendedRatingA,
-    caliberA, selectedRatingA: caliberA, exact: state === 'valid', overridden: caliberA !== null && caliberA !== recommendedRatingA,
+    options, compatibleRatingsA: options, recommendedRatingA,
+    caliberA, selectedRatingA: caliberA, exact: state === 'valid', overridden: chosen !== null && !chosenInvalid && chosen !== recommendedRatingA,
+    followsSuggestion: selectedType === null && chosen === null,
     state, methodVersion: 'core-v2',
   };
 }

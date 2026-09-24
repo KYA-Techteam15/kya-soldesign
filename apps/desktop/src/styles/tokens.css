@@ -49,7 +49,7 @@
   /* 252 px : « Prédimensionnement » est le plus long libellé du rail et il
      doit tenir en entier — un intitulé tronqué est un intitulé douteux. */
   --pane-left: 252px;
-  --pane-right: 334px;
+  --pane-right: 288px;
   --topbar-h: 46px;
   --statusbar-h: 26px;
 
@@ -564,7 +564,13 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--surface);
-  overflow: hidden;
+  /* Un tableau plus large que la colonne défile chez lui : `hidden` rognait les
+     dernières colonnes (état, sections) sans moyen de les voir. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* La barre reste visible : sans elle, rien ne signalait les colonnes cachées. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 table.tbl {

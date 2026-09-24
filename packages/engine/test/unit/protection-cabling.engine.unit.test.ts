@@ -2,24 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { ampacityA, BATTERY_CUTOFF_VOLTAGE_RATIO, cableDesignCurrent, sizeCableSegment, sizeProtectionSegment, temperatureCorrectionFactor } from '../../src/index.js';
 
 describe('protections (core v2)', () => {
-  it('proposes the smallest standard gPV rating but never applies it', () => {
+  it('retains the smallest standard gPV rating by default, and an explicit choice over it', () => {
     const common = { segment: 'pv_inverter', moduleIscA: 8.8, moduleVocV: 38.1, pvStrings: 3, pvModulesInSeries: 5, inverterPowerW: 2400, dcVoltageV: 48, acVoltageV: 230, selectedType: 'Fusible gPV' } as const;
-    const awaiting = sizeProtectionSegment(common);
-    expect(awaiting.requiredA).toBeCloseTo(13.2);
-    expect(awaiting.recommendedRatingA).toBe(15);
-    expect(awaiting.caliberA).toBeNull();
-    expect(awaiting.state).toBe('awaiting-rating');
-    expect(awaiting.quantity).toBe(3);
-    const chosen = sizeProtectionSegment({ ...common, selectedCaliberA: 15 });
-    expect(chosen.state).toBe('valid');
-    expect(chosen.caliberA).toBe(15);
+    const suggested = sizeProtectionSegment(common);
+    expect(suggested.requiredA).toBeCloseTo(13.2);
+    expect(suggested.recommendedRatingA).toBe(15);
+    expect(suggested).toMatchObject({ caliberA: 15, state: 'valid', overridden: false, followsSuggestion: false, quantity: 3 });
+    const chosen = sizeProtectionSegment({ ...common, selectedCaliberA: 20 });
+    expect(chosen).toMatchObject({ caliberA: 20, state: 'valid', overridden: true });
   });
 
-  it('requires an explicit type', () => {
+  it('follows the recommended type and rating when nothing is chosen', () => {
     const result = sizeProtectionSegment({ segment: 'inverter_load', inverterPowerW: 3000, dcVoltageV: 48, acVoltageV: 230 });
-    expect(result.state).toBe('awaiting-type');
-    expect(result.selectedType).toBeNull();
-    expect(result.options).toEqual([]);
+    expect(result).toMatchObject({ kind: 'Disjoncteur AC', selectedType: null, state: 'valid', followsSuggestion: true });
+    expect(result.caliberA).toBe(result.recommendedRatingA);
+    expect(result.options.length).toBeGreaterThan(0);
+  });
+
+  it('flags an explicit rating that no longer covers the current instead of replacing it', () => {
+    const result = sizeProtectionSegment({ segment: 'inverter_load', inverterPowerW: 3000, dcVoltageV: 48, acVoltageV: 230, selectedType: 'Disjoncteur AC', selectedCaliberA: 10 });
+    expect(result).toMatchObject({ state: 'awaiting-rating', caliberA: null, overridden: false });
   });
 
   it('uses the cold string voltage when the sizing provides it', () => {
@@ -89,8 +91,9 @@ describe('cables (IEC 60364-5-52)', () => {
     expect(aluminium.thermalSection).toBeGreaterThan(copper.thermalSection);
   });
 
-  it('sizes the cable on the suggested rating until the engineer chooses one, and says so', () => {
-    const protection = sizeProtectionSegment({ segment: 'pv_inverter', moduleIscA: 8.8, moduleVocV: 38.1, pvStrings: 3, pvModulesInSeries: 5, inverterPowerW: 2400, dcVoltageV: 48, acVoltageV: 230, selectedType: null });
+  it('sizes the cable on the suggested rating while the chosen one is invalid, and says so', () => {
+    // Calibre choisi devenu insuffisant : le câble est dimensionné sur la suggestion, à titre provisoire.
+    const protection = sizeProtectionSegment({ segment: 'pv_inverter', moduleIscA: 8.8, moduleVocV: 38.1, pvStrings: 3, pvModulesInSeries: 5, inverterPowerW: 2400, dcVoltageV: 48, acVoltageV: 230, selectedType: 'Fusible gPV', selectedCaliberA: 10 });
     const suggested = cableDesignCurrent(protection);
     expect(suggested).toEqual({ currentA: 15, basis: 'suggested-rating' });
     const provisional = sizeCableSegment({ segment: 'pv_inverter', currentA: suggested.currentA, currentBasis: suggested.basis, voltageV: 300, lengthM: 10, material: 'copper', installation: 'not_buried', phase: 'dc' });

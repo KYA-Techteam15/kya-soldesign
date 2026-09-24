@@ -56,16 +56,16 @@ async function buildProject(page: Page) {
     await page.getByLabel(`Longueur · ${segment}`).fill('5');
     await page.keyboard.press('Tab');
   }
-  // Avant tout choix de calibre, les sections sont calculées sur le calibre suggéré et restent provisoires.
-  await expect(page.locator('.t-cables .badge.warn', { hasText: 'Provisoire' })).toHaveCount(3);
-  for (const row of await page.locator('.t-cables tbody tr').all()) await expect(row.locator('td').nth(7)).toHaveText(/^\d+(?:,\d+)?$/u);
-  for (const [segment, type] of segments) {
-    await page.getByLabel(`Type retenu · ${segment}`).selectOption(type);
-    await page.getByLabel(`Calibre retenu · ${segment}`).selectOption({ index: 1 });
-  }
+  // Sans aucun choix, le type recommandé et le calibre suggéré sont retenus : tout est conforme.
   await expect(page.locator('.t-prot .badge.ok')).toHaveCount(3);
   await expect(page.locator('.t-cables .badge.ok')).toHaveCount(3);
-  await expect(page.locator('.t-cables')).not.toContainText('Provisoire');
+  for (const row of await page.locator('.t-cables tbody tr').all()) await expect(row.locator('td').nth(7)).toHaveText(/^\d+(?:,\d+)?$/u);
+  // Un choix explicite remplace la suggestion.
+  const [segment, type] = segments[0];
+  await page.getByLabel(`Type retenu · ${segment}`).selectOption(type);
+  await page.getByLabel(`Calibre retenu · ${segment}`).selectOption({ index: 2 });
+  await expect(page.locator('.t-prot .badge.ok')).toHaveCount(3);
+  await expect(page.locator('.t-cables .badge.ok')).toHaveCount(3);
 }
 
 test('produces a coherent client file from creation to Word', async ({ page }) => {

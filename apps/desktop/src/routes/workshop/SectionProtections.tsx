@@ -19,7 +19,6 @@ const SEGMENT_KEY: Record<CableSegment, string> = {
 
 const PROTECTION_STATE: Record<ProtectionSizingResult['state'], { readonly key: string; readonly tone: 'ok' | 'warn' | 'bad' }> = {
   valid: { key: 'protections.state.valid', tone: 'ok' },
-  'awaiting-type': { key: 'protections.state.awaitingType', tone: 'warn' },
   'awaiting-rating': { key: 'protections.state.awaitingRating', tone: 'warn' },
   'out-of-range': { key: 'protections.state.outOfRange', tone: 'bad' },
   unavailable: { key: 'protections.state.unavailable', tone: 'bad' },
@@ -77,6 +76,7 @@ export function SectionProtections() {
                 <ProtectionRow
                   key={protection.segment}
                   protection={protection}
+                  chosenCaliberA={project.protections.find((item) => item.segment === protection.segment)?.caliberA ?? null}
                   label={t(SEGMENT_KEY[protection.segment])}
                   onTypeChange={(type) => setType(protection.segment, type)}
                   onCaliberChange={(caliber) => setCaliber(protection.segment, caliber)}
@@ -121,8 +121,10 @@ export function SectionProtections() {
   );
 }
 
-function ProtectionRow({ protection, label, onTypeChange, onCaliberChange }: {
+function ProtectionRow({ protection, chosenCaliberA, label, onTypeChange, onCaliberChange }: {
   readonly protection: ProtectionSizingResult;
+  /** Calibre choisi par l'ingénieur ; `null` : le calibre suggéré est retenu. */
+  readonly chosenCaliberA: number | null;
   readonly label: string;
   readonly onTypeChange: (type: ProtectionType | null) => void;
   readonly onCaliberChange: (caliber: number | null) => void;
@@ -134,9 +136,9 @@ function ProtectionRow({ protection, label, onTypeChange, onCaliberChange }: {
       <td>{label}</td>
       <td className="pick">
         <select className="cell-in" value={protection.selectedType ?? ''} aria-label={`${t('protections.col.type')} · ${label}`} onChange={(event) => onTypeChange((event.target.value || null) as ProtectionType | null)}>
-          <option value="">{t('protections.chooseType')}</option>
+          <option value="">{t('protections.suggested')} {t(`protections.type.${protection.recommendedType}`)}</option>
           {protection.allowedTypes.map((type) => (
-            <option key={type} value={type}>{t(`protections.type.${type}`)}{type === protection.recommendedType ? ` · ${t('protections.recommended')}` : ''}</option>
+            <option key={type} value={type}>{t(`protections.type.${type}`)}</option>
           ))}
         </select>
       </td>
@@ -152,7 +154,7 @@ function ProtectionRow({ protection, label, onTypeChange, onCaliberChange }: {
       </td>
       <td className="pick">
         {protection.options.length > 0 ? (
-          <select className="cell-in" value={protection.caliberA ?? ''} aria-label={`${t('protections.col.rating')} · ${label}`} onChange={(event) => onCaliberChange(event.target.value === '' ? null : Number(event.target.value))}>
+          <select className="cell-in" value={chosenCaliberA !== null && protection.options.includes(chosenCaliberA) ? chosenCaliberA : ''} aria-label={`${t('protections.col.rating')} · ${label}`} onChange={(event) => onCaliberChange(event.target.value === '' ? null : Number(event.target.value))}>
             <option value="">{protection.recommendedRatingA === null ? t('protections.chooseRating') : `${t('protections.suggested')} ${fmt(protection.recommendedRatingA)} A`}</option>
             {protection.options.map((option) => <option key={option} value={option}>{fmt(option)}</option>)}
           </select>

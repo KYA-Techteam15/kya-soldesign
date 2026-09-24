@@ -1630,8 +1630,9 @@ table.tbl.t-prot {
 .t-prot th:nth-child(7), .t-prot td:nth-child(7) { width: 122px; }
 /* Le nom du segment tient sur une ligne : trois lignes pour trois mots
    faisaient payer à chaque rangée une hauteur qu'elle n'utilisait pas. */
-.t-prot td:nth-child(1),
-.t-cables td:nth-child(1) {
+/* Sélecteur renforcé : `table.tbl td:first-child` rétablissait le retour à la ligne. */
+table.tbl.t-prot td:nth-child(1),
+table.tbl.t-cables td:nth-child(1) {
   white-space: nowrap;
 }
 
@@ -3989,6 +3990,8 @@ table.tbl select.cell-in {
 /* Les types de protection et leur mention « recommandé » dimensionnent la colonne. */
 table.tbl.t-prot { table-layout: auto; }
 .t-prot select.cell-in { min-width: 150px; }
+/* « Suggéré : Fusible gPV » se lit en entier. */
+.t-prot td:nth-child(2) select.cell-in { min-width: 244px; }
 
 /* Table des câbles : colonnes réglées sur leur contenu. En largeurs fixes, un
    écran large donnait tout le reliquat à « État » et rognait les en-têtes
@@ -3996,8 +3999,8 @@ table.tbl.t-prot { table-layout: auto; }
 table.tbl.t-cables { table-layout: auto; }
 .t-cables th { white-space: nowrap; }
 .t-cables td:nth-child(2) .cell-in { width: 72px; }
-.t-cables td:nth-child(3) select.cell-in { min-width: 110px; }
-.t-cables td:nth-child(4) select.cell-in { min-width: 150px; }
+.t-cables td:nth-child(3) select.cell-in { min-width: 96px; }
+.t-cables td:nth-child(4) select.cell-in { min-width: 128px; }
 .t-cables td:nth-child(5) select.cell-in { min-width: 56px; }
 .t-cables select.cell-in { text-overflow: clip; }
 .t-cables td.derived.provisional { color: var(--text-muted); font-style: italic; }
