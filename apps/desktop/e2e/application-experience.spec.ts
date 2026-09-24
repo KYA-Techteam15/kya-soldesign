@@ -7,7 +7,8 @@ test('exposes the categorized settings and commits a locale-aware manual rate', 
   await expect(page.getByText('Fiabilité et dimensionnement', { exact: true })).toBeVisible();
   await expect(page.getByText('Conditions commerciales', { exact: true })).toBeVisible();
   await expect(page.getByText('À propos et version', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Réinitialiser la catégorie' })).toHaveCount(6);
+  await expect(page.getByText('Dimensionnement et optimisation', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Réinitialiser la catégorie' })).toHaveCount(7);
 
   const rate = page.getByLabel('Taux actuel');
   await rate.fill('1,25');

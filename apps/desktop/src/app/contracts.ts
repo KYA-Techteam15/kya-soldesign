@@ -1,6 +1,6 @@
 import type { Equipment, EquipmentRecordV2, PvgisTmyJson, WeatherFileRecord } from '@ksd/catalog';
 import type { CalculationEnvelope, Locality, NormalizedHourlyProfile, SystemKind, WeatherSource } from '@ksd/domain';
-import type { CompatibleInverterCandidate, PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress } from '@ksd/engine';
+import type { CompatibleInverterCandidate, PresizingEnvelopeV1, PresizingProgress, RetainedSystemSimulationV1, SizingEnvelopeV1, SizingProgress } from '@ksd/engine';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import type { LicenseState } from './models/license.js';
 import type { ApplicationReleaseInfo } from './models/releaseInfo.js';
@@ -103,6 +103,7 @@ export interface CalculationCapabilityPort {
   runSizing?(projectId: string, onProgress: (progress: SizingProgress) => void): Promise<SizingEnvelopeV1>;
   /** Onduleurs recevables avec la configuration que le moteur retiendrait. */
   compatibleInverters?(projectId: string): Promise<readonly CompatibleInverterCandidate[]>;
+  simulateSystems?(projectId: string, systems: readonly { readonly pvPeakKw: number; readonly storageKwh: number; readonly inverterKw: number }[]): Promise<readonly RetainedSystemSimulationV1[] | null>;
 }
 
 export interface ApplicationServices {

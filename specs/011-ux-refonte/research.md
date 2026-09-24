@@ -37,6 +37,17 @@
 - Le profil annuel perd ses réglages de plage et de fréquence (peu utilisés) au profit de trois
   lectures : carte de chaleur, par mois, journée moyenne ; l'axe porte les mois, sans années.
 
+## R6 — Optimisation
+
+- Les références vivent dans les réglages de l'application (`sizing.favorites`), pas dans le
+  projet : elles décrivent l'offre de l'installateur, commune à tous ses dossiers.
+- Le tri analytique reste le filtre (quelques ms pour des centaines de combinaisons) ; seules les
+  N meilleures sont simulées sur l'année (`simulateRetainedSystem`), environ 60 ms chacune. Le SRI
+  et le LPSP affichés sont donc simulés, jamais estimés.
+- L'annulation passe par un `AbortSignal` vérifié à chaque cession de la boucle.
+- Le sélecteur manuel place l'actuel puis les références en tête ; le reste garde l'ordre du
+  catalogue (pas de tri par adéquation, qui supposerait une simulation par ligne).
+
 ## Baselines modifiées
 
 | Test | Avant | Après | Raison |
@@ -45,3 +56,6 @@
 | `domain load.unit` / `aio.unit` | 400 Wh / 200 Wh | 800 Wh / 400 Wh | idem |
 | `page1-aio.integration` | 4 lampes × 0,5 | 2 lampes × 1 | mêmes 160 Wh / 40 W, sans simultanéité |
 | Captures `needs-*`, `site-real-*` | deux tableaux, panneau ouvert | tableau unique, bilan dans la page, panneau replié | FR-002, FR-019 |
+| Captures `catalog-*` | sans colonne étoile | colonne ★ et filtre Mes références | FR-027 |
+| Captures `equipment-*` | faux bouton « Sélectionnez un onduleur » | texte d'état | FR-033 |
+| E2E réglages | 6 catégories | 7 (Dimensionnement et optimisation) | FR-028 |

@@ -7,7 +7,7 @@ test('loads every canonical catalog family, accepted counts, columns, provenance
   await expect(page.getByRole('button', { name: 'Batteries (366)' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Onduleurs (81)' })).toBeVisible();
   await expect(page.locator('.tbl tbody tr')).toHaveCount(60);
-  await expect(page.locator('.tbl tbody tr').first()).toHaveAttribute('title', /Source :/);
+  await expect(page.locator('.tbl tbody tr').first().locator('details summary')).toHaveText('Source');
   await page.getByRole('button', { name: 'Batteries (366)' }).click();
   await expect(page.locator('.tbl thead')).toContainText('Capacité');
   await page.locator('.hdr-search').fill('no-match-ksd');

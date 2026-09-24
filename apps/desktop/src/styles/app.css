@@ -4201,3 +4201,30 @@ table.tbl.t-dayprofile { table-layout: fixed; min-width: 900px; }
 .dayprofile-plot { height: auto; }
 table.tbl.t-dayprofile { min-width: 1150px; }
 .t-dayprofile .cell-in { padding: 2px 0; font-family: var(--font-mono); text-overflow: clip; }
+
+/* ============================================================== Optimisation et Mes références (spec 011) */
+
+.opt-dialog { display: grid; gap: var(--sp-4); }
+.opt-block { display: grid; gap: var(--sp-2); }
+.opt-block h3 { margin: 0; font-size: var(--fs-md); }
+.opt-source { display: grid; grid-template-columns: 90px repeat(3, auto); align-items: center; gap: var(--sp-3); justify-content: start; }
+.opt-source label { display: inline-flex; align-items: center; gap: 6px; }
+.opt-source label.is-disabled { color: var(--text-faint); }
+.opt-source select.cell-in { max-width: 320px; }
+.opt-objective-choice { display: flex; align-items: baseline; gap: 6px; }
+.opt-limits summary { cursor: pointer; color: var(--text-muted); }
+.opt-block progress { width: 100%; height: 8px; accent-color: var(--ok); }
+.opt-table td { vertical-align: top; }
+.opt-table tr.is-best td:first-child { color: var(--ok); font-weight: 700; }
+.fav { width: 32px; text-align: center; }
+.fav-toggle { border: 0; background: transparent; color: var(--text-faint); font-size: 16px; cursor: pointer; line-height: 1; }
+.fav-toggle.on, .fav-mark { color: var(--accent-fill); }
+.fav-filter.on { border-color: var(--accent); color: var(--accent); }
+.runbar-status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted); }
+.runbar-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+.runbar-status.is-ok { color: var(--ok); }
+.runbar-status.is-ok::before { background: var(--ok); }
+.runbar-status.is-busy::before { background: var(--accent-fill); }
+
+/* Catalogue : la colonne étoile ne décale pas l'alignement des colonnes de texte. */
+.catalog-table th:nth-child(2), .catalog-table td:nth-child(2), .catalog-table th:nth-child(3), .catalog-table td:nth-child(3), .catalog-table td.txt { text-align: left; }

@@ -11,6 +11,7 @@ import { Dialog } from '../../ui/Dialog';
 import type { ProjectViewModel } from '../../app/models/projectView';
 import { catalogOptions, emptyCatalogFilters, filterEquipment, type CatalogFilterState } from '../../app/models/catalogFilters';
 import { fill, tr, useT } from '../../i18n';
+import { useSettings } from '../../store/settings';
 
 export type Kind = 'module' | 'battery' | 'inverter';
 
@@ -96,6 +97,7 @@ export function EquipmentPicker({
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<CatalogFilterState>(emptyCatalogFilters);
   const { equipment: catalogEquipment } = useCatalog();
+  const favorites = useSettings((state) => state.sizing.favorites[kind]);
   const equipment = availableEquipment ?? catalogEquipment;
   const current = kind === 'module'
     ? project.selection.moduleId
@@ -106,11 +108,11 @@ export function EquipmentPicker({
     && (kind !== 'inverter' || compatibleIds === undefined || compatibleIds.includes(item.id))), [compatibleIds, equipment, kind]);
   const options = useMemo(() => catalogOptions(familyEquipment, query, filters), [familyEquipment, filters, query]);
   const rows = useMemo(() => {
+    // La sélection en cours, puis « Mes références », puis le reste du catalogue.
     const matching = filterEquipment(familyEquipment, query, filters);
-    const currentIndex = matching.findIndex((item) => item.id === current);
-    if (currentIndex <= 0) return matching.slice(0, 24);
-    return [matching[currentIndex]!, ...matching.filter((_, index) => index !== currentIndex).slice(0, 23)];
-  }, [current, familyEquipment, filters, query]);
+    const rank = (item: Equipment) => item.id === current ? 0 : favorites.includes(item.id) ? 1 : 2;
+    return matching.map((item, index) => ({ item, index })).sort((left, right) => rank(left.item) - rank(right.item) || left.index - right.index).map(({ item }) => item).slice(0, 24);
+  }, [current, familyEquipment, favorites, filters, query]);
   const setFilter = (key: keyof CatalogFilterState, value: string) => setFilters((before) => ({ ...before, [key]: value }));
   const resetFilters = () => { setQuery(''); setFilters(emptyCatalogFilters); };
 
@@ -161,7 +163,7 @@ export function EquipmentPicker({
               title={`Source : ${item.provenance.sourceId}`}
             >
               <span className="pick-id">
-                <b>{item.model}</b>
+                <b>{favorites.includes(item.id) && <span className="fav-mark" title={t('catalog.myReferences')}>★ </span>}{item.model}</b>
                 <small>{item.manufacturer} · {itemDetails.technology}</small>
               </span>
               <span className="pick-spec">

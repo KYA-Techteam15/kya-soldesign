@@ -8,6 +8,8 @@ import { useCatalog } from '../app/CatalogProvider';
 import { catalogOptions, emptyCatalogFilters, filterEquipment, type CatalogFilterState } from '../app/models/catalogFilters';
 import { EquipmentEditor } from './catalog/EquipmentEditor';
 import { useUi } from '../store/ui';
+import { useSettings } from '../store/settings';
+import type { EquipmentFamily } from '../app/models/applicationSettings';
 
 type Tab = 'modules' | 'batteries' | 'inverters';
 type PvModule = Extract<Equipment, { readonly kind: 'pv-module' }>;
@@ -17,6 +19,10 @@ type Inverter = Extract<Equipment, { readonly kind: 'inverter' }>;
 export function CatalogRoute() {
   const t = useT();
   const ask = useUi((state) => state.ask);
+  const notify = useUi((state) => state.notify);
+  const sizing = useSettings((state) => state.sizing);
+  const updateCategory = useSettings((state) => state.updateCategory);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
   const { equipment, status, errorCode, retry, summary, createUserEquipment, duplicateUserEquipment, updateUserEquipment, archiveUserEquipment } = useCatalog();
   const [tab, setTab] = useState<Tab>('modules');
   const [q, setQ] = useState('');
@@ -38,7 +44,20 @@ export function CatalogRoute() {
     [equipment],
   );
   const current = tab === 'modules' ? modules : tab === 'batteries' ? batteries : inverters;
-  const filtered = useMemo(() => filterEquipment(current, q, filters), [current, filters, q]);
+  const family: EquipmentFamily = tab === 'modules' ? 'module' : tab === 'batteries' ? 'battery' : 'inverter';
+  const favorites = sizing.favorites[family];
+  const cap = sizing.caps[family];
+  const filtered = useMemo(() => {
+    const rows = filterEquipment(current, q, filters);
+    return onlyFavorites ? rows.filter((item) => favorites.includes(item.id)) : rows;
+  }, [current, favorites, filters, onlyFavorites, q]);
+  /** « Mes références » : l'optimisation les combine ; le plafond borne le nombre de combinaisons. */
+  const toggleFavorite = (id: string) => {
+    if (favorites.includes(id)) { updateCategory('sizing', { favorites: { ...sizing.favorites, [family]: favorites.filter((item) => item !== id) } }); return; }
+    if (cap !== null && favorites.length >= cap) { notify({ kind: 'warning', title: fill(t('catalog.favoritesCapReached'), { cap }), detail: t('catalog.favoritesCapHelp') }); return; }
+    updateCategory('sizing', { favorites: { ...sizing.favorites, [family]: [...favorites, id] } });
+  };
+  const star = (id: string, model: string) => <td className="fav"><button type="button" className={`fav-toggle ${favorites.includes(id) ? 'on' : ''}`} aria-pressed={favorites.includes(id)} aria-label={fill(t('catalog.favoriteToggle'), { model })} onClick={() => toggleFavorite(id)}>{favorites.includes(id) ? '★' : '☆'}</button></td>;
   const options = useMemo(() => catalogOptions(current, q, filters), [current, filters, q]);
   const setFilter = (key: keyof CatalogFilterState, value: string) => { setPage(1); setFilters((before) => ({ ...before, [key]: value })); };
   const resetFilters = () => { setQ(''); setFilters(emptyCatalogFilters); setPage(1); };
@@ -99,6 +118,7 @@ export function CatalogRoute() {
             <input inputMode="decimal" placeholder={t('catalog.filter.minVoltage')} aria-label={t('catalog.filter.minVoltage')} value={filters.minVoltage} onChange={(e) => setFilter('minVoltage', e.target.value)} />
             <input inputMode="decimal" placeholder={t('catalog.filter.maxVoltage')} aria-label={t('catalog.filter.maxVoltage')} value={filters.maxVoltage} onChange={(e) => setFilter('maxVoltage', e.target.value)} />
             <button className="btn" onClick={resetFilters}>{t('catalog.filter.reset')}</button>
+            <button type="button" className={`btn fav-filter ${onlyFavorites ? 'on' : ''}`} aria-pressed={onlyFavorites} onClick={() => { setPage(1); setOnlyFavorites((value) => !value); }}>★ {t('catalog.myReferences')} ({favorites.length}{cap === null ? '' : `/${cap}`})</button>
           </div>}
 
           {status === 'ready' && activeFilters.length > 0 && <div className="catalog-active" aria-label={t('catalog.activeFilters')}><span className="label">{t('catalog.activeFilters')}</span>{activeFilters.map(([key, value]) => <button className="filter-chip" key={key} onClick={() => setFilter(key as keyof CatalogFilterState, '')}>{value} ×<span className="sr-only"> {t('catalog.removeFilter')}</span></button>)}</div>}
@@ -116,9 +136,10 @@ export function CatalogRoute() {
               </div>
             )}
             {status === 'ready' && tab === 'modules' && (
-              <table className="tbl">
+              <table className="tbl catalog-table">
                 <thead>
                   <tr>
+                    <th aria-label={t('catalog.myReferences')} title={t('catalog.myReferences')}>★</th>
                     <th>{t('catalog.reference')}</th>
                     <th>{t('catalog.manufacturer')}</th>
                     <th>{t('catalog.primaryPower')}<span className="unit">Wc</span></th>
@@ -142,7 +163,8 @@ export function CatalogRoute() {
                   {filtered.filter((item): item is PvModule => item.kind === 'pv-module')
                     .filter((item) => visible.includes(item))
                     .map((m) => (
-                      <tr key={m.id} title={`Source : ${m.provenance.sourceId}`}>
+                      <tr key={m.id}>
+                        {star(m.id, m.model)}
                         <td>{m.model}</td>
                         <td>{m.manufacturer}</td>
                         <td className="num">{fmt(m.nominalPowerW)}</td>
@@ -159,9 +181,10 @@ export function CatalogRoute() {
             )}
 
             {status === 'ready' && tab === 'batteries' && (
-              <table className="tbl">
+              <table className="tbl catalog-table">
                 <thead>
                   <tr>
+                    <th aria-label={t('catalog.myReferences')} title={t('catalog.myReferences')}>★</th>
                     <th>{t('catalog.reference')}</th>
                     <th>{t('catalog.manufacturer')}</th>
                     <th>{t('catalog.technology')}</th>
@@ -185,10 +208,11 @@ export function CatalogRoute() {
                   {filtered.filter((item): item is Battery => item.kind === 'battery')
                     .filter((item) => visible.includes(item))
                     .map((b) => (
-                      <tr key={b.id} title={`Source : ${b.provenance.sourceId}`}>
+                      <tr key={b.id}>
+                        {star(b.id, b.model)}
                         <td>{b.model}</td>
                         <td>{b.manufacturer}</td>
-                        <td>{b.technology ?? '—'}</td>
+                        <td className="txt">{b.technology ?? '—'}</td>
                         <td className="num">{fmt(b.nominalCapacityAh)}</td>
                         <td className="num">{fmt(b.nominalVoltageV)}</td>
                         <td className="num">{b.usableDepthOfDischargeRatio === null ? '—' : fmt(b.usableDepthOfDischargeRatio * 100)}</td>
@@ -202,9 +226,10 @@ export function CatalogRoute() {
             )}
 
             {status === 'ready' && tab === 'inverters' && (
-              <table className="tbl">
+              <table className="tbl catalog-table">
                 <thead>
                   <tr>
+                    <th aria-label={t('catalog.myReferences')} title={t('catalog.myReferences')}>★</th>
                     <th>{t('catalog.reference')}</th>
                     <th>{t('catalog.manufacturer')}</th>
                     <th>{t('catalog.type')}</th>
@@ -228,10 +253,11 @@ export function CatalogRoute() {
                   {filtered.filter((item): item is Inverter => item.kind === 'inverter')
                     .filter((item) => visible.includes(item))
                     .map((i) => (
-                      <tr key={i.id} title={`Source : ${i.provenance.sourceId}`}>
+                      <tr key={i.id}>
+                        {star(i.id, i.model)}
                         <td>{i.model}</td>
                         <td>{i.manufacturer}</td>
-                        <td>{i.inverterType ?? '—'}</td>
+                        <td className="txt">{i.inverterType ?? '—'}</td>
                         <td className="num">{fmt(i.nominalAcPowerW)}</td>
                         <td className="num">{fmt(i.nominalDcVoltageV)}</td>
                         <td className="num">{i.efficiencyRatio === null ? '—' : fmt(i.efficiencyRatio * 100)}</td>

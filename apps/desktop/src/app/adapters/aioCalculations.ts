@@ -1,5 +1,5 @@
-import type { CompatibleInverterCandidate, AioSizingEnvelopeV1, AioSizingOutputV1, PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
-import { AioSizingEngine, FinanceEngine, PresizingEngine, SizingEngine, compatibleInverters, hashInput } from '@ksd/engine';
+import type { CompatibleInverterCandidate, RetainedSystemSimulationV1, AioSizingEnvelopeV1, AioSizingOutputV1, PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
+import { AioSizingEngine, FinanceEngine, PresizingEngine, SizingEngine, compatibleInverters, hashInput, simulateRetainedSystem } from '@ksd/engine';
 import { memoize } from '../calculation/memo.js';
 import type { Equipment } from '@ksd/catalog';
 import type { Locality, NormalizedHourlyProfile, WeatherSource } from '@ksd/domain';
@@ -140,6 +140,22 @@ export class AioCalculations implements CalculationCapabilityPort {
     const inverters = this.references.equipment.filter((item) => item.kind === 'inverter');
     const snapshots = inverters.map((item) => ({ id: item.id, acPowerW: item.nominalAcPowerW, dcVoltageV: item.nominalDcVoltageV, surgePowerW: item.surgePowerW, mpptMinV: item.mpptMinVoltageV, mpptMaxV: item.mpptMaxVoltageV, pvMaxPowerW: item.pvArrayMaxPowerW, vocMaxV: item.pvOpenCircuitMaxVoltageV, maxChargingCurrentA: item.maxChargingCurrentA, maxParallelUnits: item.maxParallelUnits, canBeInParallel: item.canBeInParallel }));
     return compatibleInverters(base.input, snapshots);
+  }
+
+  /**
+   * Simule sur l'année des systèmes candidats, avec la charge, la météo et les rendements du projet :
+   * les propositions de l'optimisation affichent un SRI et une LPSP simulés, pas ceux du
+   * prédimensionnement. 
+ull si le projet ne permet pas encore de simuler.
+   */
+  public async simulateSystems(projectId: string, systems: readonly { readonly pvPeakKw: number; readonly storageKwh: number; readonly inverterKw: number }[]): Promise<readonly RetainedSystemSimulationV1[] | null> {
+    const project = this.getProject(projectId);
+    if (project === null) return null;
+    const adapted = await projectToPresizingInput(project, this.references);
+    if (adapted.status !== 'ready') return null;
+    const p = adapted.input;
+    const hourlyLoadKwh = p.hourlyLoadWh.map((value) => value / 1000);
+    return systems.map((system) => simulateRetainedSystem({ ...system, hourlyLoadKwh, hourlyPoaWm2: p.hourlyPoaWm2, systemPerformanceRatio: p.systemPr, inverterEfficiencyRatio: p.inverterEfficiency, batteryEfficiencyRatio: p.batteryEfficiency }));
   }
 }
 

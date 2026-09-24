@@ -1,4 +1,19 @@
-export type SettingsCategory = 'company' | 'reports' | 'defaults' | 'projects' | 'currency';
+export type SettingsCategory = 'company' | 'reports' | 'defaults' | 'projects' | 'currency' | 'sizing';
+
+/** Familles de matériel que l'optimisation combine. */
+export type EquipmentFamily = 'module' | 'battery' | 'inverter';
+
+/**
+ * « Mes références » : les références que l'utilisateur tient en stock ou pose d'habitude. L'optimisation
+ * les combine ; un plafond par famille borne le nombre de combinaisons (spec 011, FR-027, FR-028).
+ * Onduleurs : plafond facultatif (
+ull), la liste complète des compatibles reste possible.
+ */
+export interface SizingSettings {
+  readonly favorites: { readonly module: readonly string[]; readonly battery: readonly string[]; readonly inverter: readonly string[] };
+  readonly caps: { readonly module: number; readonly battery: number; readonly inverter: number | null };
+  readonly proposals: number;
+}
 
 export interface ApplicationSettingsV2 {
   readonly version: 2;
@@ -12,6 +27,7 @@ export interface ApplicationSettingsV2 {
   };
   readonly projects: { readonly recentProjectLimit: number; readonly autosaveStrategy: 'immediate' | 'debounced'; readonly autosaveDebounceMs: number; readonly exportDestinationMode: 'ask-each-time' | 'platform-handle' };
   readonly currency: { readonly inputCurrencyCode: string; readonly outputCurrencyCode: string; readonly rate: ExchangeRateRecord | null };
+  readonly sizing: SizingSettings;
   readonly updatedAtIso: string;
 }
 
@@ -29,6 +45,7 @@ export const defaultApplicationSettings: ApplicationSettingsV2 = {
   },
   projects: { recentProjectLimit: 4, autosaveStrategy: 'immediate', autosaveDebounceMs: 500, exportDestinationMode: 'ask-each-time' },
   currency: { inputCurrencyCode: 'XOF', outputCurrencyCode: 'XOF', rate: null },
+  sizing: { favorites: { module: [], battery: [], inverter: [] }, caps: { module: 10, battery: 10, inverter: null }, proposals: 5 },
   updatedAtIso: '',
 };
 
@@ -43,6 +60,7 @@ export function mergeSettings(base: ApplicationSettingsV2, patch: unknown): Appl
     company: { ...base.company, ...nested(p.company) }, reports: { ...base.reports, ...nested(p.reports) },
     defaults: { ...base.defaults, ...nested(p.defaults), reliability: { ...base.defaults.reliability, ...nested(p.defaults?.reliability) }, conversion: { ...base.defaults.conversion, ...nested(p.defaults?.conversion) }, equipmentCosts: { ...base.defaults.equipmentCosts, ...nested(p.defaults?.equipmentCosts) }, commercial: { ...base.defaults.commercial, ...nested(p.defaults?.commercial) } },
     projects: { ...base.projects, ...nested(p.projects) }, currency: { ...base.currency, ...nested(p.currency) },
+    sizing: { ...base.sizing, ...nested(p.sizing), favorites: { ...base.sizing.favorites, ...nested(p.sizing?.favorites) }, caps: { ...base.sizing.caps, ...nested(p.sizing?.caps) } },
   };
 }
 
@@ -55,6 +73,8 @@ export function validateApplicationSettings(value: unknown): ApplicationSettings
   range(merged.defaults.commercial.vatPercent, 0, 100, 'vatPercent'); integer(merged.defaults.commercial.offerValidityDays, 0, 3650, 'offerValidityDays'); integer(merged.defaults.commercial.warrantyMonths, 0, 240, 'warrantyMonths'); integer(merged.defaults.commercial.deliveryDays, 0, 3650, 'deliveryDays'); range(merged.defaults.commercial.discountPercent, 0, 100, 'discountPercent'); range(merged.defaults.commercial.downPaymentPercent, 0, 100, 'downPaymentPercent'); integer(merged.projects.recentProjectLimit, 1, 12, 'recentProjectLimit'); integer(merged.projects.autosaveDebounceMs, 0, 60000, 'autosaveDebounceMs');
   if (!isValidCurrencyCode(merged.defaults.equipmentCosts.currencyCode) || !isValidCurrencyCode(merged.currency.inputCurrencyCode) || !isValidCurrencyCode(merged.currency.outputCurrencyCode)) throw new Error('SETTINGS_INVALID_CURRENCY');
   if (merged.currency.rate !== null) validateRate(merged.currency.rate);
+  integer(merged.sizing.caps.module, 1, 50, 'capModule'); integer(merged.sizing.caps.battery, 1, 50, 'capBattery'); if (merged.sizing.caps.inverter !== null) integer(merged.sizing.caps.inverter, 1, 200, 'capInverter'); integer(merged.sizing.proposals, 1, 10, 'proposals');
+  for (const family of ['module', 'battery', 'inverter'] as const) if (!Array.isArray(merged.sizing.favorites[family]) || merged.sizing.favorites[family].some((id) => typeof id !== 'string')) throw new Error('SETTINGS_INVALID_favorites');
   return merged;
 }
 

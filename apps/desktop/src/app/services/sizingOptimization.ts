@@ -4,7 +4,7 @@ import type { ProjectViewModel } from '../models/projectView.js';
 
 export interface OptimizationRequirements { readonly pvKw: number; readonly storageKwh: number; readonly inverterKw: number; }
 
-export async function runSizingOptimization(input: { readonly project: ProjectViewModel; readonly requirements: OptimizationRequirements; readonly equipment: readonly Equipment[]; readonly request: OptimizationRequest; readonly coldTemperatureC: number; readonly onProgress?: (progress: { readonly completed: number; readonly total: number }) => void }): Promise<OptimizationResult> {
+export async function runSizingOptimization(input: { readonly project: ProjectViewModel; readonly requirements: OptimizationRequirements; readonly equipment: readonly Equipment[]; readonly request: OptimizationRequest; readonly coldTemperatureC: number; readonly onProgress?: (progress: { readonly completed: number; readonly total: number }) => void; readonly signal?: AbortSignal }): Promise<OptimizationResult> {
   const eligible = input.equipment.filter((item) => item.archivedAt == null && item.calculationEligibility?.state !== 'ineligible');
   const modules = eligible.filter((item): item is Extract<Equipment, { kind: 'pv-module' }> => item.kind === 'pv-module').map(moduleSnapshot);
   const batteries = eligible.filter((item): item is Extract<Equipment, { kind: 'battery' }> => item.kind === 'battery').map(batterySnapshot);
@@ -15,8 +15,8 @@ export async function runSizingOptimization(input: { readonly project: ProjectVi
     request: input.request, modules, batteries, inverters,
     costs: { pvSpecificCostMinorPerKw: afterMargin(a.pvSpecificCost, a.pvMargin), storageSpecificCostMinorPerKwh: afterMargin(a.batterySpecificCost, a.batteryMargin), inverterSpecificCostMinorPerKw: afterMargin(a.inverterSpecificCost, a.inverterMargin) },
     onProgress: input.onProgress,
-    // Rendre la main toutes les 50 combinaisons : l'interface reste réactive pendant le balayage.
-    yieldControl: () => new Promise((resolve) => setTimeout(resolve, 0)),
+    // Rendre la main toutes les 50 combinaisons : l'interface reste réactive, et « Annuler » agit.
+    yieldControl: () => new Promise((resolve, reject) => setTimeout(() => input.signal?.aborted ? reject(new DOMException('Aborted', 'AbortError')) : resolve(), 0)),
   });
 }
 

@@ -30,12 +30,12 @@
 
 ## Lot 3 — Optimisation
 
-- [ ] T020 Réglages : Mes références, plafonds, nombre de propositions (FR-027, FR-028)
-- [ ] T021 Catalogue : étoile et compteurs (FR-027)
-- [ ] T022 Fenêtre Optimiser : sources, combinaisons, objectifs, limites repliées (FR-029, FR-030)
-- [ ] T023 Simulation horaire des N meilleurs, progression, annulation, Retenir (FR-031)
-- [ ] T024 Sélecteurs manuels triés ; texte d'état à la place du faux bouton (FR-032, FR-033)
-- [ ] T025 Tests ; `pnpm verify:phase`
+- [x] T020 Réglages : Mes références, plafonds, nombre de propositions (FR-027, FR-028)
+- [x] T021 Catalogue : étoile et compteurs (FR-027)
+- [x] T022 Fenêtre Optimiser : sources, combinaisons, objectifs, limites repliées (FR-029, FR-030)
+- [x] T023 Simulation horaire des N meilleurs, progression, annulation, Retenir (FR-031)
+- [x] T024 Sélecteurs manuels triés ; texte d'état à la place du faux bouton (FR-032, FR-033)
+- [x] T025 Tests ; `pnpm verify:phase`
 
 ## Lot 4 — Accueil, cycle de vie, site
 
