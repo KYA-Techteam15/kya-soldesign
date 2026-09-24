@@ -1,4 +1,4 @@
-import { weatherGatewayUrl } from './weatherGateway.js';
+import { gatewayFetch, weatherGatewayUrl } from './weatherGateway.js';
 
 export interface GeocodedSite {
   readonly name: string;
@@ -25,7 +25,7 @@ export class GeocodingError extends Error {
 
 export class GeocodingClient {
   public constructor(
-    private readonly fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
+    private readonly fetcher: typeof fetch = gatewayFetch,
     private readonly timeoutMs = 15_000,
   ) {}
 

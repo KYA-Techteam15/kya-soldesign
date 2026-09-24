@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { operatingFractionsForSelectedHours } from '@ksd/engine';
 import { Dialog } from '../../ui/Dialog.js';
-import { useT } from '../../i18n/index.js';
+import { fill, useT } from '../../i18n';
+import { fmt } from '../../domain/format';
 
 export interface OperatingHoursItem {
   readonly id: string;
@@ -48,24 +49,24 @@ export function OperatingHoursDialog({ items, onApply, onClose }: {
   };
 
   return <Dialog
-    title="Ajuster les heures de fonctionnement"
-    lead={`${item.name || 'Appareil sans nom'} · ${index + 1}/${items.length}`}
+    title={t('hours2.ajusterLesHeuresDe')}
+    lead={`${item.name || t('hours2.unnamed')} · ${index + 1}/${items.length}`}
     wide
     onClose={onClose}
     footer={<>
       <button className="btn btn-ghost" onClick={onClose}>{t('g.cancel')}</button>
-      <button className="btn" disabled={index === 0} onClick={() => setIndex((value) => value - 1)}>← Précédent</button>
-      <button className="btn" disabled={index === items.length - 1} onClick={() => setIndex((value) => value + 1)}>Suivant →</button>
+      <button className="btn" disabled={index === 0} onClick={() => setIndex((value) => value - 1)}>{t('hours2.precedent')}</button>
+      <button className="btn" disabled={index === items.length - 1} onClick={() => setIndex((value) => value + 1)}>{t('hours2.suivant')}</button>
       <span className="sep" />
       <button className="btn btn-ok" disabled={fractionsById === null} onClick={() => { if (fractionsById) onApply(fractionsById); }}>{t('g.confirm')}</button>
     </>}
   >
     <p className="label">
-      Positionnez les {item.durationHours.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} h saisies dans le tableau. Le nombre d’heures reste inchangé.
+      {fill(t('hours.placeEnteredHours'), { hours: fmt(item.durationHours, Number.isInteger(item.durationHours) ? 0 : 2) })}
     </p>
     <div className="operating-periods" style={{ marginTop: 'var(--sp-3)' }}>
       <HourPeriod
-        title="Journée"
+        title={t('hours2.journee')}
         hours={Array.from({ length: 12 }, (_, hour) => hour + 6)}
         selected={selected}
         required={required}
@@ -73,7 +74,7 @@ export function OperatingHoursDialog({ items, onApply, onClose }: {
         onToggle={toggle}
       />
       <HourPeriod
-        title="Nuit"
+        title={t('hours2.nuit')}
         hours={[...Array.from({ length: 6 }, (_, hour) => hour + 18), ...Array.from({ length: 6 }, (_, hour) => hour)]}
         selected={selected}
         required={required}
@@ -84,8 +85,8 @@ export function OperatingHoursDialog({ items, onApply, onClose }: {
     <div className={`alert ${selected.length === required ? 'ok' : 'warn'}`} style={{ marginTop: 'var(--sp-3)' }} role="status">
       <b>{selected.length}/{required} positions</b>
       {selected.length === required
-        ? 'La durée saisie est entièrement positionnée.'
-        : `Sélectionnez encore ${required - selected.length} position(s).`}
+        ? t('hours2.laDureeSaisieEst')
+        : fill(t('hours2.selectMore'), { count: required - selected.length })}
       {item.durationHours % 1 !== 0 && selected.length === required && (
         <> La dernière position chronologique porte la fraction {item.durationHours % 1}.</>
       )}

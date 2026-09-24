@@ -10,14 +10,14 @@ import { fmt } from '../../domain/format';
 import { Dialog } from '../../ui/Dialog';
 import type { ProjectViewModel } from '../../app/models/projectView';
 import { catalogOptions, emptyCatalogFilters, filterEquipment, type CatalogFilterState } from '../../app/models/catalogFilters';
-import { useT } from '../../i18n';
+import { fill, tr, useT } from '../../i18n';
 
 export type Kind = 'module' | 'battery' | 'inverter';
 
 const TITLE: Record<Kind, string> = {
-  module: 'Choisir un module',
-  battery: 'Choisir une batterie',
-  inverter: 'Choisir un onduleur',
+  module: 'picker.choisirUnModule',
+  battery: 'picker.choisirUneBatterie',
+  inverter: 'picker.choisirUnOnduleur',
 };
 
 const canonicalKind: Readonly<Record<Kind, Equipment['kind']>> = {
@@ -35,14 +35,14 @@ interface EquipmentDetails {
 function details(item: Equipment): EquipmentDetails {
   if (item.kind === 'pv-module') {
     return {
-      technology: item.technology ?? 'Technologie non renseignée',
+      technology: item.technology ?? tr('picker.technologieNonRenseignee'),
       specs: `${fmt(item.nominalPowerW)} Wc · ${fmt(item.openCircuitVoltageV, 1)} V`,
       characteristics: [
         { label: 'Vmp', value: `${fmt(item.voltageAtMaximumPowerV, 1)} V` },
         { label: 'Imp', value: `${fmt(item.currentAtMaximumPowerA, 2)} A` },
         { label: 'Isc', value: `${fmt(item.shortCircuitCurrentA, 2)} A` },
-        { label: 'Coeff. Pmax', value: `${fmt(item.temperatureCoefficientPmaxPerC ?? 0, 3)} /°C` },
-        { label: 'Coeff. Voc', value: `${fmt(item.temperatureCoefficientVocPerC ?? 0, 3)} /°C` },
+        { label: tr('picker.coeffPmax'), value: `${fmt(item.temperatureCoefficientPmaxPerC ?? 0, 3)} /°C` },
+        { label: tr('picker.coeffVoc'), value: `${fmt(item.temperatureCoefficientVocPerC ?? 0, 3)} /°C` },
         { label: 'NOCT', value: `${fmt(item.nominalOperatingCellTemperatureC ?? 0, 1)} °C` },
         { label: 'Surface', value: `${fmt(item.areaM2 ?? 0, 2)} m²` },
       ],
@@ -50,29 +50,29 @@ function details(item: Equipment): EquipmentDetails {
   }
   if (item.kind === 'battery') {
     return {
-      technology: item.technology ?? 'Technologie non renseignée',
+      technology: item.technology ?? tr('picker.technologieNonRenseignee'),
       specs: `${fmt(item.nominalCapacityAh ?? 0)} Ah · ${fmt(item.nominalVoltageV ?? 0)} V`,
       characteristics: [
-        { label: 'Énergie', value: `${fmt(item.nominalEnergyWh / 1000, 2)} kWh` },
-        { label: 'DoD utile', value: `${fmt((item.usableDepthOfDischargeRatio ?? 0) * 100, 0)} %` },
+        { label: tr('equipment.fact.energy'), value: `${fmt(item.nominalEnergyWh / 1000, 2)} kWh` },
+        { label: tr('picker.dodUtile'), value: `${fmt((item.usableDepthOfDischargeRatio ?? 0) * 100, 0)} %` },
         { label: 'Rendement', value: `${fmt((item.roundTripEfficiencyRatio ?? 0) * 100, 0)} %` },
-        { label: 'Durée de vie', value: `${fmt(item.cycleLife ?? 0, 0)} cycles` },
+        { label: tr('equipmentEditor.dureeDeVie'), value: `${fmt(item.cycleLife ?? 0, 0)} cycles` },
       ],
     };
   }
   return {
-    technology: item.inverterType ?? 'Type non renseigné',
+    technology: item.inverterType ?? tr('picker.typeNonRenseigne'),
     specs: `${fmt(item.nominalAcPowerW / 1000, 1)} kW · ${fmt(item.nominalDcVoltageV)} Vdc`,
     characteristics: [
       { label: 'Surcharge', value: `${fmt((item.surgePowerW ?? 0) / 1000, 1)} kW` },
       { label: 'Sortie', value: `${fmt(item.nominalAcVoltageV ?? 0, 0)} Vac` },
       { label: 'Rendement', value: `${fmt((item.efficiencyRatio ?? 0) * 100, 1)} %` },
-      { label: 'Champ PV max', value: `${fmt((item.pvArrayMaxPowerW ?? 0) / 1000, 1)} kWc` },
-      { label: 'Plage MPPT', value: `${fmt(item.mpptMinVoltageV ?? 0, 0)}–${fmt(item.mpptMaxVoltageV ?? 0, 0)} V` },
-      { label: 'Voc PV max', value: `${fmt(item.pvOpenCircuitMaxVoltageV ?? 0, 0)} V` },
-      { label: 'Entrées PV', value: fmt(item.pvInputsNumber ?? 0, 0) },
-      { label: 'Courant de charge', value: `${fmt(item.maxChargingCurrentA ?? 0, 0)} A` },
-      { label: 'Mise en parallèle', value: item.canBeInParallel ? `jusqu’à ${fmt(item.maxParallelUnits ?? 0, 0)}` : 'non' },
+      { label: tr('picker.champPvMax'), value: `${fmt((item.pvArrayMaxPowerW ?? 0) / 1000, 1)} kWc` },
+      { label: tr('picker.plageMppt'), value: `${fmt(item.mpptMinVoltageV ?? 0, 0)}–${fmt(item.mpptMaxVoltageV ?? 0, 0)} V` },
+      { label: tr('picker.vocPvMax'), value: `${fmt(item.pvOpenCircuitMaxVoltageV ?? 0, 0)} V` },
+      { label: tr('picker.entreesPv'), value: fmt(item.pvInputsNumber ?? 0, 0) },
+      { label: tr('picker.courantDeCharge'), value: `${fmt(item.maxChargingCurrentA ?? 0, 0)} A` },
+      { label: tr('picker.miseEnParallele'), value: item.canBeInParallel ? fill(tr('picker.upTo'), { count: fmt(item.maxParallelUnits ?? 0, 0) }) : tr('picker.no') },
     ],
   };
 }
@@ -116,13 +116,13 @@ export function EquipmentPicker({
 
   return (
     <Dialog
-      title={TITLE[kind]}
-      lead={kind === 'inverter' ? `${rows.length} références compatibles avec le module et la batterie retenus` : 'caractéristiques catalogue complètes et effet immédiat sur le dimensionnement'}
+      title={t(TITLE[kind])}
+      lead={kind === 'inverter' ? fill(t('picker.compatibleLead'), { count: rows.length }) : t('picker.caracteristiquesCatalogueCompletesEt')}
       wide
       onClose={onClose}
       footer={
         <>
-          <span className="label">La sélection recalcule immédiatement la configuration retenue.</span>
+          <span className="label">{t('picker.laSelectionRecalculeImmediatement')}</span>
           <button className="btn btn-ghost" onClick={onClose}>{t('g.close')}</button>
         </>
       }
@@ -130,7 +130,7 @@ export function EquipmentPicker({
       <input
         className="dlg-search"
         autoFocus
-        placeholder="Filtrer par code, fabricant ou technologie…"
+        placeholder={t('picker.filtrerParCodeFabricant')}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
@@ -145,9 +145,9 @@ export function EquipmentPicker({
         <button type="button" className="btn" onClick={resetFilters}>{t('catalog.filter.reset')}</button>
       </div>
       <div className="pick-columns" aria-hidden="true">
-        <span>Référence catalogue</span>
-        <span>Caractéristiques</span>
-        <span>État</span>
+        <span>{t('picker.referenceCatalogue')}</span>
+        <span>{t('picker.caracteristiques')}</span>
+        <span>{t('picker.etat')}</span>
       </div>
       <div className="pick-list pick-list-catalog">
         {rows.length === 0 && <div className="empty"><b>{t('equipment.noneFound')}</b></div>}
@@ -177,10 +177,10 @@ export function EquipmentPicker({
               </span>
               <span className="pick-state">
                 {item.id === current
-                  ? <span className="badge ok">Retenu</span>
+                  ? <span className="badge ok">{t('picker.retenu')}</span>
                   : kind === 'inverter'
-                    ? <span className="badge ok">Compatible</span>
-                    : <span className="pick-action">Choisir</span>}
+                    ? <span className="badge ok">{t('picker.compatible')}</span>
+                    : <span className="pick-action">{t('picker.choisir')}</span>}
               </span>
             </button>
           );

@@ -1,6 +1,7 @@
-import { buildAnnualLoadSeries, calculateAnnualYEn, type AnnualLoadSeries, type AnnualYEnResult } from '@ksd/engine';
+import { buildAnnualLoadSeries, computeLocalHours, calculateAnnualYEn, type AnnualLoadSeries, type AnnualYEnResult } from '@ksd/engine';
 import type { SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import type { ProjectViewModel } from './projectView.js';
+import { localHoursCache } from '../adapters/projectToAio.js';
 
 export interface AnnualLoadPresentation {
   readonly series: AnnualLoadSeries;
@@ -59,11 +60,15 @@ export function buildAnnualLoadPresentationResult(project: ProjectViewModel, sol
       return { id: profile.id, hourlyEnergyWh, hourlyPeakPowerW };
     });
   if (annualProfiles.length === 0) return unavailable('loads.annualNeedsProfile');
+  // Sans fuseau, aucune heure locale n'est fiable : on ne suppose pas UTC.
+  const timezone = project.site.timezoneIana;
+  if (timezone === null) return unavailable('loads.annualNeedsWeather');
   const timestamps = resource.hourlyIrradiance.map((point) => point.timestampUtcIso);
   const weather = timestamps.map((timestamp, index) => ({ timestampUtcIso: timestamp, poaWm2: solar.hourlyPoaWm2[index]! }));
   try {
+    const localHours = localHoursCache(`${resource.sourceSha256 ?? ''}|${timezone}`, () => computeLocalHours(timestamps, timezone));
     const series = buildAnnualLoadSeries({
-      timezoneIana: project.site.timezoneIana ?? 'UTC', weather, calendar: project.load.activeMode === 'composed' && project.load.composition !== null ? project.load.composition.calendar : project.load.calendar,
+      timezoneIana: timezone, weather, localHours, calendar: project.load.activeMode === 'composed' && project.load.composition !== null ? project.load.composition.calendar : project.load.calendar,
       profiles: annualProfiles,
     });
     const poaByTimestamp = new Map(weather.map((point) => [point.timestampUtcIso, point.poaWm2]));

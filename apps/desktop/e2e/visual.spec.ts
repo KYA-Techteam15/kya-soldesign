@@ -10,7 +10,7 @@ const viewports: readonly Viewport[] = [
 const locales: readonly Locale[] = ['fr', 'en'];
 
 async function setLocale(page: Page, locale: Locale) {
-  if (locale === 'en') await page.locator('.topbar button[title="Langue"]').click();
+  if (locale === 'en') await page.locator('.topbar .lang-toggle').click();
 }
 
 async function openDraft(page: Page, locale: Locale) {
@@ -82,7 +82,8 @@ for (const viewport of viewports) {
       ] as const;
       for (const [stepIndex, name] of surfaces) {
         await page.locator('.nav-item').nth(stepIndex).click();
-        await expect(page.locator('.sheet')).toBeVisible();
+        // Attendre l'étape demandée : l'écran précédent reste affiché pendant le chargement.
+        await expect(page.locator('.stephead')).toContainText(`${stepIndex + 1} / 8`);
         await expect(page).toHaveScreenshot(`${name}-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled', maxDiffPixels: 250 });
       }
     });
@@ -103,7 +104,7 @@ for (const viewport of viewports) {
       await page.getByRole('button', { name: locale === 'fr' ? 'Nouveau projet' : 'New project', exact: true }).click();
       await page.locator('.wordmark').click();
       await page.getByRole('button', { name: locale === 'fr' ? 'Tous les projets →' : 'All projects →', exact: true }).click();
-      await page.locator('.proj-row > .btn').click();
+      await page.locator('.proj-row').getByRole('button', { name: locale === 'fr' ? 'Supprimer' : 'Delete', exact: true }).click();
       await expect(page.locator('.modal')).toBeVisible();
       await expect(page).toHaveScreenshot(`dialog-${locale}-${viewport.label}.png`, { fullPage: true, animations: 'disabled' });
     });

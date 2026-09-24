@@ -146,11 +146,31 @@ export function resolveAnnualAssignment(calendar: AnnualLoadCalendar, localDateI
   return dayGroup ? { periodId: period.id, dayGroupId: dayGroup.id } : null;
 }
 
+/** Date et heure locales d'un instant de la série météo. */
+export interface LocalHour { readonly dateIso: string; readonly hour: number }
+
+/**
+ * Heures locales de chaque pas météo. Ne dépend que des horodatages et du
+ * fuseau : un appelant peut le calculer une fois par série météo et le passer
+ * à `buildAnnualLoadSeries`, au lieu de refaire 8 760 conversions de fuseau à
+ * chaque modification de la charge.
+ */
+export function computeLocalHours(timestampsUtcIso: readonly string[], timezoneIana: string): readonly LocalHour[] {
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: timezoneIana, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
+  return timestampsUtcIso.map((timestamp, index) => {
+    const instant = new Date(timestamp);
+    if (!Number.isFinite(instant.getTime())) throw new RangeError(`WEATHER_TIMESTAMP_INVALID:${index}`);
+    return localParts(instant, formatter);
+  });
+}
+
 export function buildAnnualLoadSeries(input: {
   readonly timezoneIana: string;
   readonly weather: readonly AnnualWeatherPoint[];
   readonly calendar: AnnualLoadCalendar;
   readonly profiles: readonly AnnualHourlyProfile[];
+  /** Heures locales précalculées pour cette météo et ce fuseau (même longueur). */
+  readonly localHours?: readonly LocalHour[];
 }): AnnualLoadSeries {
   const issues = validateAnnualCalendar(input.calendar);
   if (issues.length > 0) throw new RangeError(issues.map((item) => `${item.code}:${item.path}`).join(','));
@@ -158,14 +178,17 @@ export function buildAnnualLoadSeries(input: {
   const profiles = new Map(input.profiles.map((profile) => [profile.id, profile]));
   for (const profile of profiles.values()) validateHourlyProfile(profile);
   const assignmentMap = new Map(input.calendar.assignments.map((assignment) => [`${assignment.periodId}:${assignment.dayGroupId}`, assignment.profileId]));
-  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: input.timezoneIana, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
+  const localHours = input.localHours !== undefined && input.localHours.length === input.weather.length
+    ? input.localHours
+    : computeLocalHours(input.weather.map((point) => point.timestampUtcIso), input.timezoneIana);
+  // L'affectation ne dépend que de la date : une résolution par jour suffit.
+  const assignments = new Map<string, ReturnType<typeof resolveAnnualAssignment>>();
   const points: AnnualLoadPoint[] = [];
   for (const [index, weather] of input.weather.entries()) {
     if (!Number.isFinite(weather.poaWm2) || weather.poaWm2 < 0) throw new RangeError(`WEATHER_POA_INVALID:${index}`);
-    const instant = new Date(weather.timestampUtcIso);
-    if (!Number.isFinite(instant.getTime())) throw new RangeError(`WEATHER_TIMESTAMP_INVALID:${index}`);
-    const local = localParts(instant, formatter);
-    const assignment = resolveAnnualAssignment(input.calendar, local.dateIso);
+    const local = localHours[index]!;
+    if (!assignments.has(local.dateIso)) assignments.set(local.dateIso, resolveAnnualAssignment(input.calendar, local.dateIso));
+    const assignment = assignments.get(local.dateIso);
     if (!assignment) throw new RangeError(`CALENDAR_UNRESOLVED:${local.dateIso}`);
     const profileId = assignmentMap.get(`${assignment.periodId}:${assignment.dayGroupId}`);
     const profile = profileId === undefined ? undefined : profiles.get(profileId);

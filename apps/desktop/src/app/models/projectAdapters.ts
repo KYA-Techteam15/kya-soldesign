@@ -25,11 +25,6 @@ const ratio = (percent: number): number => percent / 100;
 const percent = (value: number | null): number => value === null ? 0 : value * 100;
 const valueOrZero = (value: number | null): number => value ?? 0;
 const SEGMENTS = ['pv-inverter', 'inverter-battery', 'inverter-load'] as const;
-const DEFAULT_PROTECTION_TYPE: Record<ProjectViewModel['protections'][number]['segment'], ProjectViewModel['protections'][number]['type']> = {
-  pv_inverter: 'Fusible gPV',
-  inverter_battery: 'Fusible gG',
-  inverter_load: 'Disjoncteur AC',
-};
 
 const DEFAULT_LOAD_CALENDAR: LoadCalendarView = {
   version: 2,
@@ -259,6 +254,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       weatherSourceId: input.site.weatherSourceId,
       timezoneIana: input.site.timezoneIana,
       designMonth: input.site.designMonth,
+      designColdTemperatureC: input.site.designColdTemperatureC ?? null,
       irradiationBasis: input.site.solarResource === null ? null : { tilt: input.site.solarResource.arrayTiltDeg, azimuth: input.site.solarResource.arrayAzimuthDeg },
       downloadedSource: input.site.solarResource === null ? null : {
         name: input.site.solarResource.datasetOrDocument,
@@ -271,6 +267,8 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
         ...(input.site.solarResource.sourceSha256 === undefined ? {} : { sourceSha256: input.site.solarResource.sourceSha256 }),
         ...(input.site.solarResource.timezoneOffsetMinutes === undefined ? {} : { timezoneOffsetMinutes: input.site.solarResource.timezoneOffsetMinutes }),
         ...(input.site.solarResource.albedo === undefined ? {} : { albedo: input.site.solarResource.albedo }),
+        ...(input.site.solarResource.ambientTemperatureMinC === undefined ? {} : { ambientTemperatureMinC: input.site.solarResource.ambientTemperatureMinC }),
+        ...(input.site.solarResource.ambientTemperatureMaxC === undefined ? {} : { ambientTemperatureMaxC: input.site.solarResource.ambientTemperatureMaxC }),
         ...(input.site.solarResource.hourlyIrradiance === undefined ? {} : { hourlyIrradiance: input.site.solarResource.hourlyIrradiance }),
       },
     },
@@ -331,7 +329,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     protections: SEGMENTS.map((segment) => {
       const choice = input.protectionChoices.find((item) => item.segment === segment);
       const canonicalSegment = segment.replaceAll('-', '_') as ProjectViewModel['protections'][number]['segment'];
-      return { segment: canonicalSegment, caliberA: choice?.ratingA ?? null, type: choice ? (choice.selectedType ?? null) : DEFAULT_PROTECTION_TYPE[canonicalSegment] };
+      return { segment: canonicalSegment, caliberA: choice?.ratingA ?? null, type: choice?.selectedType ?? null };
     }),
     costing: {
       useGlobalCost: input.costing.useGlobalCost,
@@ -393,6 +391,7 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
       weatherSourceId: view.site.weatherSourceId,
       timezoneIana: view.site.timezoneIana,
       designMonth: view.site.designMonth,
+      designColdTemperatureC: view.site.designColdTemperatureC,
       solarResource: view.site.weatherSourceId === null || view.site.downloadedSource === null ? null : {
         weatherSourceId: view.site.weatherSourceId,
         provider: view.site.downloadedSource.provider,
@@ -410,6 +409,8 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
         ...(view.site.downloadedSource.sourceSha256 === undefined ? {} : { sourceSha256: view.site.downloadedSource.sourceSha256 }),
         ...(view.site.downloadedSource.timezoneOffsetMinutes === undefined ? {} : { timezoneOffsetMinutes: view.site.downloadedSource.timezoneOffsetMinutes }),
         ...(view.site.downloadedSource.albedo === undefined ? {} : { albedo: view.site.downloadedSource.albedo }),
+        ...(view.site.downloadedSource.ambientTemperatureMinC === undefined ? {} : { ambientTemperatureMinC: view.site.downloadedSource.ambientTemperatureMinC }),
+        ...(view.site.downloadedSource.ambientTemperatureMaxC === undefined ? {} : { ambientTemperatureMaxC: view.site.downloadedSource.ambientTemperatureMaxC }),
         ...(view.site.downloadedSource.hourlyIrradiance === undefined ? {} : { hourlyIrradiance: view.site.downloadedSource.hourlyIrradiance }),
       },
     },

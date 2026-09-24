@@ -1,0 +1,37 @@
+# Publier une version
+
+## 1. Préparer
+
+1. Mettre à jour la version dans `apps/desktop/package.json` (l'hôte Tauri la lit).
+2. Compléter `CHANGELOG.md` et `apps/desktop/src/app/models/releaseInfo.ts`.
+3. `pnpm verify` doit être vert.
+4. Revue humaine de `specs/010-release-readiness/checklists/requirements.md`.
+
+## 2. Publier
+
+Pousser une étiquette `vX.Y.Z`. Le workflow `release` construit l'installateur
+NSIS sous Windows et crée une publication GitHub **en brouillon**, à relire avant
+de la rendre visible.
+
+## 3. Capacités activées par secrets
+
+Aucune de ces décisions n'est figée dans le code. Sans le secret correspondant,
+la version est construite sans la capacité, et l'application l'indique.
+
+| Capacité | Secrets / variables du dépôt | Effet |
+|---|---|---|
+| Signature Authenticode | `WINDOWS_CERTIFICATE` (PFX en base64), `WINDOWS_CERTIFICATE_PASSWORD` | exécutable et installateur signés ; plus d'alerte SmartScreen « éditeur inconnu » |
+| Mises à jour automatiques | variables `TAURI_UPDATER_ENDPOINT`, `TAURI_UPDATER_PUBKEY` ; secrets `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | module de mise à jour compilé, `latest.json` publié |
+| Géocodage commercial | secret `OPEN_METEO_API_KEY` | appels Open-Meteo sur le domaine commercial (usage commercial soumis à abonnement) |
+| Support | variable `SUPPORT_EMAIL` | « Signaler un problème » prépare un courriel ; sinon le rapport est copié |
+
+Clés de mise à jour : `pnpm --filter @ksd/desktop exec tauri signer generate`. La clé
+privée ne quitte jamais le coffre de secrets ; perdue, elle empêche toute mise à
+jour des postes déjà installés.
+
+## 4. Décisions encore ouvertes
+
+- fournisseur de licence et d'activation (le port `LicensePort` est prêt) ;
+- type de certificat (OV, EV ou Azure Trusted Signing) ;
+- hébergement du flux de mises à jour ;
+- contrat de géocodage commercial.

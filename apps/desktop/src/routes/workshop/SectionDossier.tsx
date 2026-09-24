@@ -1,41 +1,140 @@
 import { useSearchParams } from 'react-router-dom';
+import type { SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { StepHead } from '../../ui/Flow';
 import { useCalculationState } from '../../app/CalculationProvider';
-import type { FinanceOutputV1, PresizingOutputV1, SizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
-import { sectionStates } from '../../domain/completion';
-import { fmt } from '../../domain/format';
+import { useCalculationFacts } from '../../app/calculation/useCalculationFacts';
+import { sectionStates, type Level } from '../../domain/completion';
+import { currencyLabel, fmt } from '../../domain/format';
 import { useCatalog } from '../../app/CatalogProvider';
 import { DossierDocuments } from '../dossier/DossierDocuments';
 import { SynopticView } from '../dossier/SynopticView';
+import { useT } from '../../i18n';
+import { useUi } from '../../store/ui';
 
 type Tab = 'synthese' | 'synoptique' | 'documents';
 const TABS: readonly { readonly key: Tab; readonly label: string }[] = [
-  { key: 'synthese', label: 'Vérifier le dossier' },
-  { key: 'synoptique', label: 'Schéma de l’installation' },
-  { key: 'documents', label: 'Imprimer les documents' },
+  { key: 'synthese', label: 'dossier.tab.review' },
+  { key: 'synoptique', label: 'dossier.tab.diagram' },
+  { key: 'documents', label: 'dossier.tab.documents' },
 ];
 
+const STEPS = [
+  ['dossier.step.project', 'projet'], ['dossier.step.site', 'site'], ['dossier.step.loads', 'besoins'],
+  ['dossier.step.presizing', 'hypotheses'], ['dossier.step.sizing', 'materiel'], ['dossier.step.protections', 'protections'],
+  ['dossier.step.costing', 'chiffrage'],
+] as const;
+
+const LEVEL: Record<Level, { readonly tone: string; readonly key: string }> = {
+  done: { tone: 'ok', key: 'dossier.level.done' },
+  partial: { tone: 'warn', key: 'dossier.level.partial' },
+  empty: { tone: 'bad', key: 'dossier.level.empty' },
+};
+
 export function SectionDossier() {
+  const t = useT();
+  const lang = useUi((state) => state.lang);
   const project = useProject();
   const { equipment } = useCatalog();
   const [params, setParams] = useSearchParams();
   const asked = params.get('vue');
   const tab: Tab = TABS.some((item) => item.key === asked) ? asked as Tab : 'synthese';
-  const sizing = useCalculationState<SizingOutputV1>(project.id, 'sizing', project.updatedAt);
-  const finance = useCalculationState<FinanceOutputV1>(project.id, 'finance', project.updatedAt);
-  const solar = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
-  const presizing = useCalculationState<PresizingOutputV1>(project.id, 'presizing', project.updatedAt);
-  const sizingOutput = sizing.status === 'ready' ? sizing.envelope.output : null;
-  const financeOutput = finance.status === 'ready' ? finance.envelope.output : null;
-  const solarOutput = solar.status === 'ready' ? solar.envelope.output : null;
-  const presizingOutput = presizing.status === 'ready' ? presizing.envelope.output : null;
-  const states = sectionStates(project);
-  const sections = [['Projet', 'projet'], ['Site et météo', 'site'], ['Besoins', 'besoins'], ['Prédimensionnement', 'hypotheses'], ['Dimensionnement', 'materiel'], ['Protections et câbles', 'protections'], ['Évaluation financière', 'chiffrage']] as const;
-  const shown = (n: number | undefined, unit = '') => n === undefined ? '—' : fmt(n, unit === '%' ? 1 : 2) + (unit ? ' ' + unit : '');
-  const stateClass = (key: string) => states[key]?.level === 'done' ? 'ok' : states[key]?.level === 'partial' ? 'warn' : 'bad';
-  const stateLabel = (key: string) => states[key]?.level === 'done' ? 'VALIDÉ' : states[key]?.level === 'partial' ? 'À COMPLÉTER' : 'NON CONFIGURÉ';
-  return <div className={'sheet ' + (tab === 'documents' ? 'prints-paper' : '')}><StepHead slug="dossier" aside={<div className="seg" role="tablist" aria-label="Vue du dossier">{TABS.map((item) => <button key={item.key} role="tab" aria-selected={tab === item.key} onClick={() => setParams(item.key === 'synthese' ? {} : { vue: item.key }, { replace: true })}>{item.label}</button>)}</div>} />
-    {tab === 'synthese' ? <><section className="out"><div className="out-head"><span className="out-tag">RÉSUMÉ</span><h2 className="h-sec">Dossier projet</h2><span className="sep" /><span className="label">{project.details.projectNumber || 'Référence non définie'}</span></div><div className="out-grid"><div className="out-cell"><span className="out-lbl">Projet</span><span className="out-val"><b>{project.name}</b></span></div><div className="out-cell"><span className="out-lbl">Client</span><span className="out-val"><b>{project.details.clientName || '—'}</b></span></div><div className="out-cell"><span className="out-lbl">Localisation</span><span className="out-val"><b>{project.details.projectLocation || project.site.region || '—'}</b></span></div></div></section><section><div className="tbl-title"><h2 className="h-sec">État du dossier</h2><span className="sep" /><span className="label">{sections.filter(([, key]) => states[key]?.level === 'done').length}/{sections.length} étapes validées</span></div><div className="kpis">{sections.map(([label, key]) => <div className="kpi" key={key}><span>{label}</span><span className={'badge ' + stateClass(key)}>{stateLabel(key)}</span></div>)}</div></section><section><div className="tbl-title"><h2 className="h-sec">Système retenu</h2><span className="sep" /><span className="label">résultats du dimensionnement</span></div><div className="out-grid">{[['Champ PV', sizingOutput ? shown(sizingOutput.pv.obtainedPowerKwc, 'kWc') : '—', sizingOutput ? sizingOutput.pv.totalModules + ' modules · ' + sizingOutput.pv.modulesInSeries + 'S × ' + sizingOutput.pv.stringsInParallel + 'P' : 'Dimensionnement requis'], ['Parc batteries', sizingOutput ? shown(sizingOutput.battery.usefulEnergyKwh, 'kWh') : '—', sizingOutput ? sizingOutput.battery.totalUnits + ' unités · ' + sizingOutput.battery.unitsInSeries + 'S × ' + sizingOutput.battery.stringsInParallel + 'P' : 'Dimensionnement requis'], ['Onduleurs', sizingOutput ? shown(sizingOutput.inverter.obtainedPowerKw, 'kW') : '—', sizingOutput ? sizingOutput.inverter.count + ' unité(s)' : 'Dimensionnement requis']].map(([label, value, note]) => <div className={'out-cell ' + (sizingOutput ? '' : 'is-pending')} key={label}><span className="out-lbl">{label}</span><span className="out-val"><b>{value}</b></span><span className="out-note">{note}</span></div>)}</div></section><section><div className="tbl-title"><h2 className="h-sec">Indicateurs clés</h2><span className="sep" /><span className="label">système retenu</span></div><div className="out-grid finance-summary">{[['Production annuelle', financeOutput?.simulation.annualProductionKwh, 'kWh/an'], ['LPSP', financeOutput ? financeOutput.simulation.lpsp * 100 : undefined, '%'], ['LOLP', financeOutput ? financeOutput.simulation.lolp * 100 : undefined, '%'], ['SRI', financeOutput?.simulation.sri, ''], ['SVI', financeOutput?.lifecycle.svi, ''], ['LCOE actualisé', financeOutput?.lifecycle.lcoeActualized, 'FCFA/kWh'], ['Vente HT', financeOutput?.totalSaleHt, 'FCFA'], ['Marge bénéficiaire', financeOutput ? financeOutput.averageMarginRatio * 100 : undefined, '%']].map(([label, n, unit]) => <div className={'out-cell ' + (n === undefined ? 'is-pending' : '')} key={label as string}><span className="out-lbl">{label as string}</span><span className="out-val"><b>{shown(n as number | undefined, unit as string)}</b></span></div>)}</div></section></> : tab === 'synoptique' ? <SynopticView project={project} sizing={sizingOutput} pending={sizing.status === 'loading'} catalog={equipment} /> : <DossierDocuments project={project} sizing={sizingOutput} finance={financeOutput} solar={solarOutput} presizing={presizingOutput} catalog={equipment} />}
-  </div>;
+  const { facts, sizing, finance, presizing } = useCalculationFacts(project);
+  const solarState = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
+  const solar = solarState.status === 'ready' ? solarState.envelope.output : null;
+  const states = sectionStates(project, lang, facts);
+  const money = currencyLabel(project.currency, lang);
+  const done = STEPS.filter(([, key]) => states[key]?.level === 'done').length;
+
+  return (
+    <div className={`sheet ${tab === 'documents' ? 'prints-paper' : ''}`}>
+      <StepHead slug="dossier" aside={
+        <div className="seg" role="tablist" aria-label={t('dossier.tabs')}>
+          {TABS.map((item) => (
+            <button key={item.key} role="tab" aria-selected={tab === item.key} onClick={() => setParams(item.key === 'synthese' ? {} : { vue: item.key }, { replace: true })}>{t(item.label)}</button>
+          ))}
+        </div>
+      } />
+      {tab === 'synoptique' ? <SynopticView project={project} sizing={sizing} pending={false} catalog={equipment} />
+        : tab === 'documents' ? <DossierDocuments project={project} sizing={sizing} finance={finance} solar={solar} presizing={presizing} catalog={equipment} facts={facts} />
+          : (
+            <>
+              <section className="out">
+                <div className="out-head">
+                  <span className="out-tag">{t('dossier.summaryTag')}</span>
+                  <h2 className="h-sec">{t('dossier.summary')}</h2>
+                  <span className="sep" />
+                  <span className="label">{project.details.projectNumber || t('dossier.noReference')}</span>
+                </div>
+                <div className="out-grid">
+                  <Cell label={t('dossier.project')} value={project.name} text />
+                  <Cell label={t('dossier.client')} value={project.details.clientName || '—'} text />
+                  <Cell label={t('dossier.location')} value={project.details.projectLocation || project.site.region || '—'} text />
+                </div>
+              </section>
+
+              <section>
+                <div className="tbl-title">
+                  <h2 className="h-sec">{t('dossier.status')}</h2>
+                  <span className="sep" />
+                  <span className="label">{done}/{STEPS.length} {t('dossier.stepsValidated')}</span>
+                </div>
+                <div className="kpis">
+                  {STEPS.map(([label, key]) => {
+                    const state = states[key]!;
+                    const level = LEVEL[state.level];
+                    return (
+                      <div className="kpi" key={key}>
+                        <span>{t(label)}{state.missing.length > 0 && <small className="label dossier-missing">{state.missing.join(' · ')}</small>}</span>
+                        <span className={`badge ${level.tone}`}>{t(level.key)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section>
+                <div className="tbl-title">
+                  <h2 className="h-sec">{t('dossier.retained')}</h2>
+                  <span className="sep" />
+                  <span className="label">{facts.sizing === 'stale' ? t('completion.stale') : t('dossier.retainedLead')}</span>
+                </div>
+                <div className="out-grid">
+                  <Cell label={t('dossier.pvField')} value={sizing ? `${fmt(sizing.pv.obtainedPowerKwc, 2)} kWc` : '—'} note={sizing ? `${sizing.pv.totalModules} ${t('dossier.modules')} · ${sizing.pv.modulesInSeries}S × ${sizing.pv.stringsInParallel}P` : t('dossier.sizingRequired')} />
+                  <Cell label={t('dossier.batteryBank')} value={sizing ? `${fmt(sizing.battery.usefulEnergyKwh, 1)} kWh` : '—'} note={sizing ? `${sizing.battery.totalUnits} ${t('dossier.units')} · ${sizing.battery.unitsInSeries}S × ${sizing.battery.stringsInParallel}P` : t('dossier.sizingRequired')} />
+                  <Cell label={t('dossier.inverters')} value={sizing ? `${fmt(sizing.inverter.obtainedPowerKw, 1)} kW` : '—'} note={sizing ? `${sizing.inverter.count} ${t('dossier.units')}` : t('dossier.sizingRequired')} />
+                </div>
+              </section>
+
+              <section>
+                <div className="tbl-title">
+                  <h2 className="h-sec">{t('dossier.indicators')}</h2>
+                  <span className="sep" />
+                  <span className="label">{facts.finance === 'stale' ? t('completion.stale') : t('dossier.retainedSystem')}</span>
+                </div>
+                <div className="out-grid finance-summary">
+                  <Cell label={t('dossier.annualProduction')} value={finance ? `${fmt(finance.simulation.annualProductionKwh, 0)} kWh/${t('unit.year')}` : '—'} />
+                  <Cell label="LPSP" value={finance ? `${fmt(finance.simulation.lpsp * 100, 1)} %` : '—'} />
+                  <Cell label="LOLP" value={finance ? `${fmt(finance.simulation.lolp * 100, 1)} %` : '—'} />
+                  <Cell label="SRI" value={finance ? fmt(finance.simulation.sri, 3) : '—'} />
+                  <Cell label="SVI" value={finance ? fmt(finance.lifecycle.svi, 2) : '—'} />
+                  <Cell label={t('dossier.lcoe')} value={finance ? `${fmt(finance.lifecycle.lcoeActualized, 1)} ${money}/kWh` : '—'} />
+                  <Cell label={t('dossier.saleHt')} value={finance ? `${fmt(finance.totalSaleHt, 0)} ${money}` : '—'} />
+                  <Cell label={t('dossier.margin')} value={finance ? `${fmt(finance.averageMarginRatio * 100, 1)} %` : '—'} />
+                </div>
+              </section>
+            </>
+          )}
+    </div>
+  );
+}
+
+function Cell({ label, value, note, text = false }: { readonly label: string; readonly value: string; readonly note?: string; readonly text?: boolean }) {
+  return (
+    <div className={`out-cell ${value === '—' ? 'is-pending' : ''}`}>
+      <span className="out-lbl">{label}</span>
+      <span className={`out-val ${text ? 'out-val-text' : ''}`}><b>{value}</b></span>
+      {note && <span className="out-note">{note}</span>}
+    </div>
+  );
 }

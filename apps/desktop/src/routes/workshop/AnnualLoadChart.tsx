@@ -1,3 +1,4 @@
+import { saveFile } from '../../app/platform/files';
 import { useMemo, useState } from 'react';
 import { queryAnnualChart, reduceAnnualChartPoints, type AnnualChartFrequency, type AnnualChartRange } from '@ksd/engine';
 import type { AnnualLoadPresentationResult } from '../../app/models/annualLoadPresentation';
@@ -34,13 +35,13 @@ export function AnnualLoadChart({ result }: { readonly result: AnnualLoadPresent
   const exportChart = () => {
     if (chart === null) return;
     const rows = [['bucket', 'start_date', 'end_date', 'energy_Wh', 'average_power_W', 'peak_power_W', 'mean_poa_Wm2'], ...chart.points.map((point) => [point.bucket, point.startDateIso, point.endDateIso, point.energyWh.toFixed(3), point.averagePowerW.toFixed(3), point.peakPowerW.toFixed(3), point.meanPoaWm2?.toFixed(3) ?? ''])];
-    const blob = new Blob([rows.map((row) => row.join(';')).join('\n')], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `profil-annuel-${chart.frequency}.csv`; link.click(); URL.revokeObjectURL(link.href);
+    // BOM UTF-8 : Excel ouvre alors les accents correctement.
+    void saveFile({ suggestedName: `profil-annuel-${chart.frequency}.csv`, data: `\uFEFF${rows.map((row) => row.join(';')).join('\n')}`, mimeType: 'text/csv;charset=utf-8', filter: { name: 'CSV', extensions: ['csv'] } });
   };
   const canNavigate = chart !== null && chart.points.length > displayLimit;
   return <section className="annual-load-view">
     <div className="tbl-title"><h2 className="h-sec">{t('loads.calendarAnnualTitle')}</h2><span className="label">{t('loads.calendarWeightedYen')}</span><span className="sep" /><span className="metric-inline">{t('loads.yenLabel')} <b>{result.yEn.status === 'available' ? `${(result.yEn.annualGammaRatio * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %` : '—'}</b></span></div>
-    <div className="annual-chart-controls" aria-label="Options du tracé annuel">
+    <div className="annual-chart-controls" aria-label={t('annualChart.optionsDuTraceAnnuel')}>
       <label><span>{t('loads.chartView')}</span><select value={range} onChange={(event) => setRange(event.target.value as AnnualChartRange)}><option value="year">{t('loads.chartYear')}</option><option value="period">{t('loads.chartPeriod')}</option><option value="month">{t('loads.chartMonth')}</option><option value="week">{t('loads.chartWeek')}</option><option value="day">{t('loads.chartDay')}</option><option value="custom-range">{t('loads.chartCustom')}</option></select></label>
       {range === 'period' && <label><span>{t('loads.chartPeriod')}</span><select value={periodId} onChange={(event) => setPeriodId(event.target.value)}><option value="">{t('loads.chartAllPeriods')}</option>{result.periods.map((period) => <option key={period.id} value={period.id}>{period.name}</option>)}</select></label>}
       {range === 'month' && <label><span>{t('loads.chartMonth')}</span><select value={month} onChange={(event) => setMonth(Number(event.target.value))}>{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select></label>}

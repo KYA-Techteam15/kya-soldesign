@@ -3970,3 +3970,56 @@ table.tbl select.cell-in {
   gap: 6px;
 }
 .visual-slot .error { grid-area: error; }
+
+/* Note sous un champ de conception : d'où vient la valeur, ou ce qui manque. */
+.field-note { display: block; margin-top: 4px; font-size: 11px; line-height: 1.35; color: var(--text-muted); }
+.field-note.error { color: var(--danger); }
+.table-foot { margin-top: 6px; }
+
+/* Notification : texte, puis action réversible et fermeture alignées à droite. */
+.toast.error { border-color: var(--danger); }
+.toast-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-2); margin-top: 4px; }
+.toast-actions .toast-action { padding: 3px 10px; font-size: var(--fs-xs); }
+.toast-close { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 2px 4px; border-radius: var(--r-sm); }
+.toast-close:hover { color: var(--text); background: var(--surface-2); }
+.toast-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Écran de reprise après plantage ou échec de démarrage. */
+.crash { min-height: 100vh; display: grid; place-items: center; padding: var(--sp-6); background: var(--bg); color: var(--text); }
+.crash-card { max-width: 640px; display: grid; gap: var(--sp-3); padding: var(--sp-6); border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-pop); }
+.crash-detail { margin: 0; padding: var(--sp-3); max-height: 160px; overflow: auto; white-space: pre-wrap; font-family: var(--font-mono); font-size: var(--fs-xs); background: var(--surface-2); border-radius: var(--r-sm); }
+.boot { min-height: 100vh; display: grid; place-items: center; font: 500 14px/1.4 system-ui, sans-serif; color: #5b6770; }
+
+/* Barre d'état : l'échec d'enregistrement se voit et se reprend sur place. */
+.save-state { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.save-state.save-error { color: var(--danger); }
+.save-state.save-saving { color: var(--text-muted); }
+.statusbar .offline { color: var(--danger); }
+
+/* Accueil : invitation à renseigner l'entreprise émettrice des documents. */
+.home-identity { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin: var(--sp-4) 0; }
+/* Architectures à venir : une ligne de libellés, pas une grille de cartes inactives. */
+.upcoming-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); }
+.upcoming-item { padding: 2px 10px; border: 1px dashed var(--border-strong); border-radius: 999px; font-size: var(--fs-xs); color: var(--text-muted); }
+/* Information utile, ni erreur ni arbitrage. */
+.alert.info { border-color: color-mix(in srgb, var(--ok) 26%, var(--border)); border-left-color: color-mix(in srgb, var(--ok) 26%, var(--border)); background: color-mix(in srgb, var(--ok-soft) 50%, var(--surface)); }
+.issue-list { margin: 0 0 var(--sp-3); padding-left: 18px; font-size: var(--fs-sm); color: var(--text-muted); }
+.issue-list .is-error { color: var(--danger); }
+.dossier-missing { display: block; margin-top: 2px; }
+.out-val-text b { font-family: var(--font-sans); }
+.kpis-flush { margin-bottom: 0; }
+
+/* En-têtes lisibles en entier, dans les deux langues : ils passent à la ligne
+   plutôt que d'être rognés (« Tension de servic… »). */
+.t-prot th, .t-cables th { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; vertical-align: bottom; }
+/* Les types de protection et leur mention « recommandé » dimensionnent la colonne. */
+table.tbl.t-prot { table-layout: auto; }
+.t-prot select.cell-in { min-width: 150px; }
+
+/* Attente du chargement d'un écran : un espace neutre, sans texte clignotant. */
+.screen-loading { min-height: 240px; }
+
+
+/* Textes légaux affichés dans « À propos ». */
+.legal-text { margin: 0; max-height: 60vh; overflow: auto; white-space: pre-wrap; font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; }
+

@@ -19,7 +19,7 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
   await page.getByRole('button', { name: 'Télécharger', exact: true }).click();
   await expect(page.getByText(/SHA-256 05dffc44112a/)).toBeVisible();
   await expect(page.getByText(/8 760 heures et leur preuve/)).toBeVisible();
-  await page.getByRole('button', { name: 'Annuler' }).click();
+  await page.getByRole('button', { name: 'Annuler', exact: true }).click();
 
   await page.getByRole('button', { name: /Télécharger les données d’irradiance/ }).click();
   await page.getByRole('button', { name: 'Par coordonnées' }).click();
@@ -45,7 +45,7 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
   await page.getByLabel('Fuseau horaire IANA').fill('Africa/Lome');
   await page.locator('.modal input[type="file"]').setInputFiles(WEATHER_FILE);
   await expect(page.getByText(/SHA-256 05dffc44112a/)).toBeVisible();
-  await page.getByRole('button', { name: 'Annuler' }).click();
+  await page.getByRole('button', { name: 'Annuler', exact: true }).click();
 
   await page.locator('.nav-item').nth(2).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();

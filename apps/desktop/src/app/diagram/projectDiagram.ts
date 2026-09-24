@@ -37,36 +37,41 @@ export interface ProjectDiagramInput {
   readonly options?: Partial<DiagramOptions>;
 }
 
-/** Recalcule protections et câbles pour un projet, tels que le plan les porte. */
+/**
+ * Protections et câbles d'un projet : seule fonction appelée par la page
+ * « Protections et câblerie », le schéma et les documents. Sans dimensionnement,
+ * les courants restent inconnus et chaque tronçon est « indisponible ».
+ */
 export function projectProtections(
   project: ProjectViewModel,
-  sizing: SizingOutputV1,
+  sizing: SizingOutputV1 | null,
   catalog: readonly Equipment[],
 ): { protections: ProtectionSizingResult[]; cables: CableSizingResult[] } {
   const module = pick(catalog, project.selection.moduleId);
-  const battery = pick(catalog, project.selection.batteryId);
   const inverter = pick(catalog, project.selection.inverterId);
   const pv = module?.kind === 'pv-module' ? module : undefined;
-  const bat = battery?.kind === 'battery' ? battery : undefined;
   const inv = inverter?.kind === 'inverter' ? inverter : undefined;
 
-  const inverterPowerW = sizing.inverter.obtainedPowerKw * 1000 || inv?.nominalAcPowerW || 0;
-  const dcVoltageV = sizing.battery.bankVoltageV || bat?.nominalVoltageV || inv?.nominalDcVoltageV || 0;
+  const inverterPowerW = sizing === null ? 0 : sizing.inverter.obtainedPowerKw * 1000;
+  const dcVoltageV = sizing === null ? 0 : sizing.battery.bankVoltageV;
 
-  const protections = SEGMENTS.map((segment) =>
-    sizeProtectionSegment({
+  const protections = SEGMENTS.map((segment) => {
+    const choice = project.protections.find((item) => item.segment === segment);
+    return sizeProtectionSegment({
       segment,
       moduleIscA: pv?.shortCircuitCurrentA,
       moduleVocV: pv?.openCircuitVoltageV,
-      pvStrings: sizing.pv.stringsInParallel || 1,
-      pvModulesInSeries: sizing.pv.modulesInSeries || 1,
+      pvStrings: sizing?.pv.stringsInParallel || 1,
+      pvModulesInSeries: sizing?.pv.modulesInSeries || 1,
+      ...(sizing && sizing.pv.vocColdV > 0 ? { stringVocColdV: sizing.pv.vocColdV } : {}),
       inverterPowerW,
       dcVoltageV,
       acVoltageV: inv?.nominalAcVoltageV ?? 230,
-      selectedCaliberA: project.protections.find((item) => item.segment === segment)?.caliberA,
-      selectedType: project.protections.find((item) => item.segment === segment)?.type,
-    }),
-  );
+      inverterEfficiencyRatio: project.assumptions.inverterYield / 100,
+      selectedCaliberA: choice?.caliberA ?? null,
+      selectedType: choice?.type ?? null,
+    });
+  });
 
   const cables = project.cables.map((cable) => {
     const protection = protections.find((item) => item.segment === cable.segment);
@@ -79,6 +84,7 @@ export function projectProtections(
       installation: cable.installation,
       phase: cable.segment === 'inverter_load' ? 'single_phase' : 'dc',
       maxDropPercent: cable.maxVoltageDropPercent,
+      ambientTemperatureC: project.site.downloadedSource?.ambientTemperatureMaxC ?? null,
     });
   });
 

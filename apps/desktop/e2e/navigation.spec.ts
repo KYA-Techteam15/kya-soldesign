@@ -3,8 +3,10 @@ import { expect, test } from '@playwright/test';
 test('restores the validated home with six systems and an empty production session', async ({ page }) => {
   await page.goto('/accueil');
   await expect(page.getByRole('heading', { name: 'Concevez des systèmes solaires fiables' })).toBeVisible();
-  await expect(page.locator('.sys-card')).toHaveCount(6);
-  await expect(page.locator('.sys-card:disabled')).toHaveCount(5);
+  // Un seul parcours est disponible ; les cinq autres architectures sont annoncées, pas proposées.
+  await expect(page.locator('.sys-card')).toHaveCount(1);
+  await expect(page.locator('.sys-card')).toContainText('Disponible');
+  await expect(page.getByText('Architectures à venir :')).toBeVisible();
   await expect(page.locator('.home-resume.is-empty')).toContainText('Aucun projet');
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
   await expect(page).toHaveURL(/\/projet\/[0-9a-f-]{36}\/atelier\/projet$/);

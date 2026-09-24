@@ -1,9 +1,17 @@
-import type { AioSizingRequestV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { adjustHourlyFractionsToGamma, analyzeSolarResource, buildAnnualLoadSeries, calculateAnnualYEn, designDayStartIndex, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import type { AioSizingRequestV1, SolarResourceAnalysisInputV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
+import { DEFAULT_VOC_TEMPERATURE_COEFFICIENT_PER_C, computeLocalHours, type LocalHour, adjustHourlyFractionsToGamma, analyzeSolarGeometry, analyzeSolarResource, type SolarGeometryV1, buildAnnualLoadSeries, calculateAnnualYEn, designDayStartIndex, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
 import { PRESIZING_DEFAULTS } from '../models/projectAdapters.js';
+import { memoize } from '../calculation/memo.js';
+import { effectiveMainLines } from '../models/costingModel.js';
+
+const solarAnalysisCache = memoize<SolarResourceAnalysisEnvelopeV1>(8);
+const solarGeometryCache = memoize<SolarGeometryV1>(4);
+/** Heures locales d'une série météo dans un fuseau : 8 760 conversions faites une fois. */
+export const localHoursCache = memoize<readonly LocalHour[]>(4);
+const annualGammaCache = memoize<ReturnType<typeof annualGammaForProject>>(8);
 
 interface Page1References {
   readonly localities: readonly Locality[];
@@ -23,7 +31,7 @@ export async function projectToAioInput(project: ProjectFileV1, references: Page
   const normalized = normalizeActiveLoad(input, references, resourceOnly?.output.meanHourlyPoaWm2 ?? null);
   if (normalized.status === 'blocked') return normalized;
 
-  const projectProvenance = await declaredProvenance('project-page1-input', project.id, input);
+  const projectProvenance = await projectInputProvenance(project.id, input);
   const locality = references.localities.find((candidate) => candidate.id === input.site.localityId);
   const weatherSource = references.weatherSources.find((candidate) => candidate.id === input.site.weatherSourceId);
   const resource = input.site.solarResource;
@@ -131,8 +139,20 @@ export async function projectToPresizingInput(project: ProjectFileV1, references
   } };
 }
 
+/**
+ * Température ambiante minimale de conception (Voc à froid, IEC 62548) : la valeur
+ * saisie par l'ingénieur, sinon le minimum horaire de T2m de l'année type arrondi à
+ * l'entier inférieur. Sans l'une ni l'autre, rien n'est supposé.
+ */
+export function resolveDesignColdTemperatureC(overrideC: number | null | undefined, ambientMinC: number | undefined): number | null {
+  if (overrideC !== null && overrideC !== undefined) return overrideC;
+  return ambientMinC === undefined ? null : Math.floor(ambientMinC);
+}
+
 export function projectToSizingInput(project: ProjectFileV1, equipment: readonly Equipment[]): { readonly status: 'ready'; readonly input: SizingInputV1 } | { readonly status: 'blocked'; readonly issues: readonly LoadInputIssue[] } {
-  const assumptions = parseProjectInputsV1(project.inputs).assumptions;
+  const parsedInputs = parseProjectInputsV1(project.inputs);
+  const assumptions = parsedInputs.assumptions;
+  const coldTemperatureC = resolveDesignColdTemperatureC(parsedInputs.site.designColdTemperatureC, parsedInputs.site.solarResource?.ambientTemperatureMinC);
   const module = equipment.filter((item): item is Extract<Equipment, { kind: 'pv-module' }> => item.kind === 'pv-module').find((item) => item.id === project.selectedEquipmentIds[0]);
   const battery = equipment.filter((item): item is Extract<Equipment, { kind: 'battery' }> => item.kind === 'battery').find((item) => item.id === project.selectedEquipmentIds[1]);
   const inverter = equipment.filter((item): item is Extract<Equipment, { kind: 'inverter' }> => item.kind === 'inverter').find((item) => item.id === project.selectedEquipmentIds[2]);
@@ -140,7 +160,8 @@ export function projectToSizingInput(project: ProjectFileV1, equipment: readonly
   if (module === undefined || battery === undefined || inverter === undefined) return { status: 'blocked', issues: [{ code: 'EQUIPMENT_SELECTION_INCOMPLETE', path: 'selectedEquipmentIds', message: 'A module, battery and inverter must be selected' }] };
   const presizing = project.lastCalculation.output as { selected?: { pvPeakKw?: number; storageKwh?: number; inverterKw?: number } };
   if (presizing.selected?.pvPeakKw === undefined || presizing.selected.storageKwh === undefined || presizing.selected.inverterKw === undefined) return { status: 'blocked', issues: [{ code: 'PRESIZING_OUTPUT_INVALID', path: 'lastCalculation.output', message: 'The pre-sizing result has no usable requirements' }] };
-  return { status: 'ready', input: { requiredPvPowerKw: presizing.selected.pvPeakKw, requiredStorageKwh: presizing.selected.storageKwh, requiredInverterPowerKw: presizing.selected.inverterKw, coldTemperatureC: 0, referenceTemperatureC: 25, temperatureCoefficientDefaultPerC: 0.003, estimatedCosts: { pvSpecificCostMinorPerKw: withMargin(assumptions.pvSpecificCostMinorPerKw, assumptions.pvMarginRatio), storageSpecificCostMinorPerKwh: withMargin(assumptions.batterySpecificCostMinorPerKwh, assumptions.batteryMarginRatio), inverterSpecificCostMinorPerKw: withMargin(assumptions.inverterSpecificCostMinorPerKw, assumptions.inverterMarginRatio) }, selectedEquipment: { module: { id: module.id, powerW: module.nominalPowerW, vmpV: module.voltageAtMaximumPowerV, vocV: module.openCircuitVoltageV, iscA: module.shortCircuitCurrentA, vocTemperatureCoefficientPerC: module.temperatureCoefficientVocPerC }, battery: { id: battery.id, voltageV: battery.nominalVoltageV, capacityAh: battery.nominalCapacityAh, energyWh: battery.nominalEnergyWh, usableDodRatio: battery.usableDepthOfDischargeRatio }, inverter: { id: inverter.id, acPowerW: inverter.nominalAcPowerW, dcVoltageV: inverter.nominalDcVoltageV, surgePowerW: inverter.surgePowerW, mpptMinV: inverter.mpptMinVoltageV, mpptMaxV: inverter.mpptMaxVoltageV, pvMaxPowerW: inverter.pvArrayMaxPowerW, vocMaxV: inverter.pvOpenCircuitMaxVoltageV, maxChargingCurrentA: inverter.maxChargingCurrentA, maxParallelUnits: inverter.maxParallelUnits, canBeInParallel: inverter.canBeInParallel } } } };
+  if (coldTemperatureC === null) return { status: 'blocked', issues: [{ code: 'COLD_TEMPERATURE_MISSING', path: 'site.designColdTemperatureC', message: 'A design minimum ambient temperature is required to check the cold open-circuit voltage' }] };
+  return { status: 'ready', input: { requiredPvPowerKw: presizing.selected.pvPeakKw, requiredStorageKwh: presizing.selected.storageKwh, requiredInverterPowerKw: presizing.selected.inverterKw, coldTemperatureC, referenceTemperatureC: 25, temperatureCoefficientDefaultPerC: DEFAULT_VOC_TEMPERATURE_COEFFICIENT_PER_C, estimatedCosts: { pvSpecificCostMinorPerKw: withMargin(assumptions.pvSpecificCostMinorPerKw, assumptions.pvMarginRatio), storageSpecificCostMinorPerKwh: withMargin(assumptions.batterySpecificCostMinorPerKwh, assumptions.batteryMarginRatio), inverterSpecificCostMinorPerKw: withMargin(assumptions.inverterSpecificCostMinorPerKw, assumptions.inverterMarginRatio) }, selectedEquipment: { module: { id: module.id, powerW: module.nominalPowerW, vmpV: module.voltageAtMaximumPowerV, vocV: module.openCircuitVoltageV, iscA: module.shortCircuitCurrentA, vocTemperatureCoefficientPerC: module.temperatureCoefficientVocPerC }, battery: { id: battery.id, voltageV: battery.nominalVoltageV, capacityAh: battery.nominalCapacityAh, energyWh: battery.nominalEnergyWh, usableDodRatio: battery.usableDepthOfDischargeRatio }, inverter: { id: inverter.id, acPowerW: inverter.nominalAcPowerW, dcVoltageV: inverter.nominalDcVoltageV, surgePowerW: inverter.surgePowerW, mpptMinV: inverter.mpptMinVoltageV, mpptMaxV: inverter.mpptMaxVoltageV, pvMaxPowerW: inverter.pvArrayMaxPowerW, vocMaxV: inverter.pvOpenCircuitMaxVoltageV, maxChargingCurrentA: inverter.maxChargingCurrentA, maxParallelUnits: inverter.maxParallelUnits, canBeInParallel: inverter.canBeInParallel } } } };
 }
 
 function withMargin(cost: number | null | undefined, margin: number | null | undefined): number | null { return cost === null || cost === undefined ? null : Math.round(cost * (1 + (margin ?? 0))); }
@@ -153,14 +174,15 @@ export async function projectToFinanceInput(project: ProjectFileV1, references: 
   const stored = parseProjectInputsV1(project.inputs);
   const c = stored.costing;
   const assumptions = stored.assumptions;
-  const costingNotInitialized = c.moduleUnitPriceMinor === 0 && c.batteryUnitPriceMinor === 0 && c.inverterUnitPriceMinor === 0;
-  const moduleUnitCost = c.moduleUnitPriceMinor > 0 ? c.moduleUnitPriceMinor : sizing.pv.obtainedPowerKwc / Math.max(sizing.pv.totalModules, 1) * (assumptions.pvSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.pvSpecificCostMinorPerKw);
-  const batteryUnitCost = c.batteryUnitPriceMinor > 0 ? c.batteryUnitPriceMinor : sizing.battery.obtainedEnergyKwh / Math.max(sizing.battery.totalUnits, 1) * (assumptions.batterySpecificCostMinorPerKwh ?? PRESIZING_DEFAULTS.batterySpecificCostMinorPerKwh);
-  const inverterUnitCost = c.inverterUnitPriceMinor > 0 ? c.inverterUnitPriceMinor : sizing.inverter.obtainedPowerKw / Math.max(sizing.inverter.count, 1) * (assumptions.inverterSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.inverterSpecificCostMinorPerKw);
+  const effective = effectiveMainLines({
+    modules: { unitPrice: c.moduleUnitPriceMinor, marginRatio: c.moduleMarginRatio, specificCost: assumptions.pvSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.pvSpecificCostMinorPerKw, assumptionMarginRatio: assumptions.pvMarginRatio ?? PRESIZING_DEFAULTS.pvMarginRatio ?? 0, unitSize: sizing.pv.obtainedPowerKwc / Math.max(sizing.pv.totalModules, 1) },
+    batteries: { unitPrice: c.batteryUnitPriceMinor, marginRatio: c.batteryMarginRatio, specificCost: assumptions.batterySpecificCostMinorPerKwh ?? PRESIZING_DEFAULTS.batterySpecificCostMinorPerKwh, assumptionMarginRatio: assumptions.batteryMarginRatio ?? PRESIZING_DEFAULTS.batteryMarginRatio ?? 0, unitSize: sizing.battery.obtainedEnergyKwh / Math.max(sizing.battery.totalUnits, 1) },
+    inverters: { unitPrice: c.inverterUnitPriceMinor, marginRatio: c.inverterMarginRatio, specificCost: assumptions.inverterSpecificCostMinorPerKw ?? PRESIZING_DEFAULTS.inverterSpecificCostMinorPerKw, assumptionMarginRatio: assumptions.inverterMarginRatio ?? PRESIZING_DEFAULTS.inverterMarginRatio ?? 0, unitSize: sizing.inverter.obtainedPowerKw / Math.max(sizing.inverter.count, 1) },
+  });
   const main = [
-    { key: 'modules', label: 'Modules', quantity: sizing.pv.totalModules, unitCost: moduleUnitCost, marginRatio: costingNotInitialized ? (assumptions.pvMarginRatio ?? PRESIZING_DEFAULTS.pvMarginRatio ?? 0) : c.moduleMarginRatio },
-    { key: 'batteries', label: 'Batteries', quantity: sizing.battery.totalUnits, unitCost: batteryUnitCost, marginRatio: costingNotInitialized ? (assumptions.batteryMarginRatio ?? PRESIZING_DEFAULTS.batteryMarginRatio ?? 0) : c.batteryMarginRatio },
-    { key: 'inverters', label: 'Onduleurs', quantity: sizing.inverter.count, unitCost: inverterUnitCost, marginRatio: costingNotInitialized ? (assumptions.inverterMarginRatio ?? PRESIZING_DEFAULTS.inverterMarginRatio ?? 0) : c.inverterMarginRatio },
+    { key: 'modules', label: 'Modules', quantity: sizing.pv.totalModules, unitCost: effective.modules.unitPrice, marginRatio: effective.modules.marginRatio },
+    { key: 'batteries', label: 'Batteries', quantity: sizing.battery.totalUnits, unitCost: effective.batteries.unitPrice, marginRatio: effective.batteries.marginRatio },
+    { key: 'inverters', label: 'Onduleurs', quantity: sizing.inverter.count, unitCost: effective.inverters.unitPrice, marginRatio: effective.inverters.marginRatio },
   ];
   const mainCost = main.reduce((total, line) => total + line.quantity * line.unitCost, 0);
   const ancillary = (key: string, label: string, value: typeof c.cabling, marginRatio: number) => ({ key, label, quantity: 1, unitCost: value.mode === 'absolute' ? value.amountMinor : mainCost * value.ratio, marginRatio });
@@ -267,18 +289,24 @@ function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNor
   const provenance: Provenance = { sourceId: resource.weatherFileId, sourceRecordId: resource.locator, sourceSha256: resource.sourceSha256, transformationVersion: '1.1.0' };
   const load = normalization?.status === 'ready' ? normalization.load : null;
   const peak = load === null ? null : deriveProjectPeakPower(input, load.hourlyEnergyWh, load.startupEvents);
-  const analysis = analyzeSolarResource({
-    latitudeDeg: input.site.latitudeDeg, longitudeDeg: input.site.longitudeDeg,
-    surfaceTiltDeg: input.site.arrayTiltDeg, surfaceAzimuthDeg: input.site.arrayAzimuthDeg,
-    albedo: resource.albedo, intervalMinutes: 60, timestampConvention: 'interval-center', timezoneOffsetMinutes: resource.timezoneOffsetMinutes,
-    observations: resource.hourlyIrradiance,
+  const geometryKey = [resource.sourceSha256, input.site.latitudeDeg, input.site.longitudeDeg, input.site.arrayTiltDeg, input.site.arrayAzimuthDeg, resource.albedo, resource.timezoneOffsetMinutes].join('|');
+  const solarKey = [geometryKey, input.load.minimumOperatingIrradianceWPerM2 ?? 10, load === null ? '' : load.hourlyEnergyWh.join(','), peak === null ? '' : peak.join(',')].join('|');
+  const analysisInput: SolarResourceAnalysisInputV1 = {
+    latitudeDeg: input.site.latitudeDeg!, longitudeDeg: input.site.longitudeDeg!,
+    surfaceTiltDeg: input.site.arrayTiltDeg!, surfaceAzimuthDeg: input.site.arrayAzimuthDeg!,
+    albedo: resource.albedo!, intervalMinutes: 60, timestampConvention: 'interval-center', timezoneOffsetMinutes: resource.timezoneOffsetMinutes!,
+    observations: resource.hourlyIrradiance!,
     ...(load === null ? {} : { loadHourlyEnergyWh: load.hourlyEnergyWh }),
     ...(peak === null ? {} : { loadHourlyPeakPowerW: peak }),
     minimumOperationalIrradianceWm2: input.load.minimumOperatingIrradianceWPerM2 ?? 10,
     provenance,
-  });
+  };
+  // La transposition des 8 760 heures ne dépend pas de la charge : elle est
+  // calculée une fois par météo et orientation, puis réutilisée à chaque frappe.
+  const geometry = solarGeometryCache(geometryKey, () => analyzeSolarGeometry(analysisInput));
+  const analysis = solarAnalysisCache(solarKey, () => analyzeSolarResource(analysisInput, geometry));
   if (references === undefined) return analysis;
-  const annualGamma = annualGammaForProject(input, references, analysis.output.hourlyPoaWm2);
+  const annualGamma = annualGammaCache(`${solarKey}#${JSON.stringify(input.load)}`, () => annualGammaForProject(input, references, analysis.output.hourlyPoaWm2));
   return { ...analysis, output: { ...analysis.output, ...(annualGamma === null ? {} : { annualGamma }) } };
 }
 
@@ -319,7 +347,9 @@ function annualGammaForProject(input: ProjectInputsV1, references: Page1Referenc
   if (profiles.length === 0) return null;
   try {
     const weather = resource.hourlyIrradiance.map((point, index) => ({ timestampUtcIso: point.timestampUtcIso, poaWm2: hourlyPoaWm2[index]! }));
-    const series = buildAnnualLoadSeries({ timezoneIana: input.site.timezoneIana, weather, calendar, profiles });
+    const timezone = input.site.timezoneIana;
+    const localHours = localHoursCache(`${resource.sourceSha256 ?? ''}|${timezone}`, () => computeLocalHours(weather.map((point) => point.timestampUtcIso), timezone));
+    const series = buildAnnualLoadSeries({ timezoneIana: timezone, weather, calendar, profiles, localHours });
     return calculateAnnualYEn({ series, poaByTimestamp: new Map(weather.map((point) => [point.timestampUtcIso, point.poaWm2])), thresholdWm2: input.load.minimumOperatingIrradianceWPerM2 ?? 10 });
   } catch (error) {
     // Sans ce mot, le repli sur le y_En d'une journée type passe inaperçu et
@@ -344,6 +374,25 @@ function deriveProjectPeakPower(input: ProjectInputsV1, hourlyMeanPowerW: readon
   const start = designDayStartIndex(profile.hourlyPoints.map((point) => point.activePowerW));
   const peaks = profile.hourlyPoints.slice(start, start + 24).map((point) => point.peakPowerW);
   return deriveHourlyPeakPower(profile.source, peaks, hourlyMeanPowerW, startupEvents);
+}
+
+const provenanceCache = new WeakMap<object, Promise<Provenance>>();
+
+/**
+ * Empreinte des entrées du projet. La série météo y figure par son propre
+ * SHA-256 (celui du fichier source) plutôt que par ses 8 760 points : l'empreinte
+ * reste exacte et n'est calculée qu'une fois par version du projet.
+ */
+function projectInputProvenance(projectId: string, input: ProjectInputsV1): Promise<Provenance> {
+  const cached = provenanceCache.get(input);
+  if (cached) return cached;
+  const resource = input.site.solarResource;
+  const hashed = resource === null || resource.hourlyIrradiance === undefined
+    ? input
+    : { ...input, site: { ...input.site, solarResource: { ...resource, hourlyIrradiance: `sha256:${resource.sourceSha256 ?? 'unknown'}` } } };
+  const provenance = declaredProvenance('project-page1-input', projectId, hashed);
+  provenanceCache.set(input, provenance);
+  return provenance;
 }
 
 async function declaredProvenance(sourceId: string, sourceRecordId: string, value: unknown): Promise<Provenance> {

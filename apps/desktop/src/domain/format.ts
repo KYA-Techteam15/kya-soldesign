@@ -39,13 +39,36 @@ export const dateFr = (iso: string): string => {
   });
 };
 
-export const relativeFr = (iso: string): string => {
+
+type Lang = 'fr' | 'en';
+const LOCALE: Record<Lang, string> = { fr: 'fr-FR', en: 'en-GB' };
+
+/**
+ * Libellé unique d'une devise, dérivé de son code ISO : « F CFA » pour XOF en
+ * français, « €» pour EUR. Tous les écrans et documents l'utilisent.
+ */
+export const currencyLabel = (code: string, lang: Lang = 'fr'): string => {
+  try {
+    const part = new Intl.NumberFormat(LOCALE[lang], { style: 'currency', currency: code, currencyDisplay: 'symbol' })
+      .formatToParts(0).find((item) => item.type === 'currency');
+    return part?.value ?? code;
+  } catch { return code; }
+};
+
+/** Date longue localisée (« 23 septembre 2026 » / « 23 September 2026 »). */
+export const dateLong = (iso: string | null | undefined, lang: Lang = 'fr'): string => {
+  if (!iso) return '—';
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(LOCALE[lang], { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+/** Ancienneté relative localisée. */
+export const relativeTime = (iso: string, lang: Lang = 'fr'): string => {
   const d = new Date(iso).getTime();
   if (Number.isNaN(d)) return '—';
-  const days = Math.floor((Date.now() - d) / 86400000);
-  if (days <= 0) return "aujourd'hui";
-  if (days === 1) return 'hier';
-  if (days < 30) return `il y a ${days} jours`;
-  const months = Math.floor(days / 30);
-  return months === 1 ? 'il y a 1 mois' : `il y a ${months} mois`;
+  const format = new Intl.RelativeTimeFormat(LOCALE[lang], { numeric: 'auto' });
+  const days = Math.floor((Date.now() - d) / 86_400_000);
+  if (days < 30) return format.format(-days, 'day');
+  return format.format(-Math.floor(days / 30), 'month');
 };

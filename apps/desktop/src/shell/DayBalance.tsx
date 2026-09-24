@@ -3,7 +3,7 @@ import type { AioSizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engi
 import type { ProjectViewModel } from '../app/models/projectView';
 import { useCalculationState } from '../app/CalculationProvider';
 import { fmt } from '../domain/format';
-import { useT } from '../i18n';
+import { fill, useT } from '../i18n';
 
 const W = 320;
 const H = 132;
@@ -65,8 +65,8 @@ export function DayBalance({ project, defaultOpen = false, pinned = false }: {
 
   if (!model.hasLoad && !model.hasWeather) {
     return <div className="dayb is-empty">
-      <div className="dayb-head"><span className="h-sec">Profil de charge &amp; irradiance</span></div>
-      <p className="dayb-none">Ajoutez des appareils à l’étape Besoins et chargez une série météo à l’étape Site.</p>
+      <div className="dayb-head"><span className="h-sec">{t('dayBalance.profilDeChargeAmp')}</span></div>
+      <p className="dayb-none">{t('dayBalance.ajoutezDesAppareilsA')}</p>
     </div>;
   }
 
@@ -84,11 +84,11 @@ export function DayBalance({ project, defaultOpen = false, pinned = false }: {
 
   return <div className={`dayb ${open ? '' : 'is-shut'}`}>
     <div className="dayb-head">
-      <span className="h-sec">Charge &amp; irradiance</span><span className="sep" />
-      {!pinned && <button className="toggle" onClick={() => setCollapsed((value) => !value)} aria-expanded={open} title={open ? 'Replier le graphe' : 'Afficher le graphe'}>{open ? '▾' : '▸'}</button>}
+      <span className="h-sec">{t('dayBalance.chargeAmpIrradiance')}</span><span className="sep" />
+      {!pinned && <button className="toggle" onClick={() => setCollapsed((value) => !value)} aria-expanded={open} title={open ? t('dayBalance.replierLeGraphe') : t('dayBalance.afficherLeGraphe')}>{open ? '▾' : '▸'}</button>}
     </div>
     {open && <>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="dayb-plot" role="img" aria-label={`Profil de charge horaire jusqu'à ${fmt(model.kw.top, 1)} kW et irradiance jusqu'à ${fmt(model.wm2.top, 0)} W/m²`}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="dayb-plot" role="img" aria-label={fill(t('dayBalance.chartLabel'), { kw: fmt(model.kw.top, 1), wm2: fmt(model.wm2.top, 0) })}>
         {model.kw.steps.map((value) => <line key={`grid-${value}`} x1={PAD_L} y1={yKw(value)} x2={W - PAD_R} y2={yKw(value)} className="dayb-grid" />)}
         {model.kw.steps.map((value) => <text key={`kw-${value}`} x={PAD_L - 4} y={yKw(value) + 3} className="dayb-tick t-left">{fmt(value, tickDecimals(model.kw.steps[1] ?? model.kw.top))}</text>)}
         {model.hasWeather && model.wm2.steps.map((value) => <text key={`irr-${value}`} x={W - PAD_R + 4} y={yIrradiance(value) + 3} className="dayb-tick t-right">{fmt(value, 0)}</text>)}
@@ -100,14 +100,14 @@ export function DayBalance({ project, defaultOpen = false, pinned = false }: {
         {model.hasWeather && <line x1={W - PAD_R} y1={PAD_T} x2={W - PAD_R} y2={base} className="dayb-axis is-irr" />}
         {[0, 6, 12, 18, 23].map((hour) => <text key={`hour-${hour}`} x={xLine(hour)} y={H - 6} className="dayb-tick t-hour">{hour}</text>)}
       </svg>
-      <div className="dayb-units"><span className="u-left">kW</span><span className="dayb-key"><i className="k-load" /> charge</span><span className="dayb-key"><i className="k-peak" /> démarrage</span>{model.hasWeather && <span className="dayb-key"><i className="k-irr" /> irradiance</span>}{model.hasWeather && <span className="u-right">W/m²</span>}</div>
+      <div className="dayb-units"><span className="u-left">kW</span><span className="dayb-key"><i className="k-load" /> {t('dayBalance.charge')}</span><span className="dayb-key"><i className="k-peak" /> {t('dayBalance.demarrage')}</span>{model.hasWeather && <span className="dayb-key"><i className="k-irr" /> {t('dayBalance.irradiance')}</span>}{model.hasWeather && <span className="u-right">W/m²</span>}</div>
     </>}
-    <div className="dayb-stats" aria-label="Bilan énergétique de la Page 1">
+    <div className="dayb-stats" aria-label={t('dayBalance.bilanEnergetiqueDeLa')}>
       <span><b>{model.hasLoad ? fmt(model.dailyEnergyKWh, 2) : '—'}</b><i>kWh/j</i></span>
       <span><b>{model.hasLoad ? fmt(model.peakLoadKw, 2) : '—'}</b><i>{t('loads.calledKw')}</i></span>
       <span><b>{model.hasLoad ? fmt(model.peakStartupKw, 2) : '—'}</b><i>{t('loads.peakKw')}</i></span>
       <span><b>{model.gamma === null ? '—' : fmt(model.gamma, 2)}</b><i>γ</i></span>
     </div>
-    {!sizingReady && model.hasLoad && <p className="dayb-none">Le profil est calculé; le bilan AIO complet reste en attente des autres entrées.</p>}
+    {!sizingReady && model.hasLoad && <p className="dayb-none">{t('dayBalance.leProfilEstCalcule')}</p>}
   </div>;
 }

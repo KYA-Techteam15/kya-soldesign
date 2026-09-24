@@ -653,8 +653,10 @@ table.a4-tbl {
 }
 .cover-band b { display: block; font-size: 12pt; margin-top: 1mm; }
 .cover-lbl { font-size: 7pt; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7684; }
-.cover-seal { text-align: right; }
-.cover-seal b { font-family: var(--font-display); font-size: 24pt; color: var(--orange); line-height: 1; margin: 0; }
+/* Le sceau garde sa largeur : c'est le libellé du système qui passe à la ligne. */
+.cover-band > div:first-child { min-width: 0; }
+.cover-seal { flex: 0 0 auto; text-align: right; white-space: nowrap; }
+.cover-seal b { display: block; font-family: var(--font-display); font-size: 24pt; color: var(--orange); line-height: 1; margin: 0; }
 
 .cover-grid { text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 6mm 10mm; margin: 10mm 0 0; }
 .cover-grid dt { font-size: 7pt; letter-spacing: 0.09em; text-transform: uppercase; color: #6b7684; }

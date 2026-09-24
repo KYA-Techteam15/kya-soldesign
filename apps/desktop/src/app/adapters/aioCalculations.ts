@@ -1,5 +1,6 @@
-import type { AioSizingEnvelopeV1, AioSizingOutputV1, PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
-import { AioSizingEngine, FinanceEngine, PresizingEngine, SizingEngine, compatibleInverters } from '@ksd/engine';
+import type { CompatibleInverterCandidate, AioSizingEnvelopeV1, AioSizingOutputV1, PresizingEnvelopeV1, PresizingProgress, SizingEnvelopeV1, SizingProgress, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
+import { AioSizingEngine, FinanceEngine, PresizingEngine, SizingEngine, compatibleInverters, hashInput } from '@ksd/engine';
+import { memoize } from '../calculation/memo.js';
 import type { Equipment } from '@ksd/catalog';
 import type { Locality, NormalizedHourlyProfile, WeatherSource } from '@ksd/domain';
 import type { ProjectFileV1 } from '@ksd/project-format';
@@ -45,9 +46,15 @@ export class AioCalculations implements CalculationCapabilityPort {
         : { status: 'ready', runId: `${project.id}:${envelope.inputHash}`, createdAt: project.updatedAt, envelope: envelope as never };
     }
     if (capability === 'finance') {
+      // Le chiffrage décrit le système retenu : il n'existe pas sans un
+      // dimensionnement valide calculé sur les entrées et la sélection actuelles.
+      const sizing = await this.sizingFreshness(project);
+      if (sizing.status === 'stale') return { status: 'stale', previousRunId: `${project.id}:${sizing.previousHash}`, previousInputHash: sizing.previousHash, currentInputHash: sizing.currentHash, reasonKey: 'state.sizingStale' };
+      if (sizing.status !== 'ready') return { status: 'empty', messageKey: sizing.code };
+      const cacheKey = `${project.id}:${project.updatedAt}`;
       const adapted = await projectToFinanceInput(project, this.references);
       if (adapted.status === 'blocked') return { status: 'empty', messageKey: adapted.issues.map((issue) => issue.code).join(',') };
-      const envelope = this.financeEngine.calculate(adapted.input);
+      const envelope = this.financeCache(cacheKey, () => this.financeEngine.calculate(adapted.input));
       return { status: 'ready', runId: `${project.id}:${envelope.inputHash}`, createdAt: project.updatedAt, envelope: envelope as never };
     }
     if (this.references.equipment === undefined) return this.readLegacySizing<Output>(project);
@@ -57,12 +64,37 @@ export class AioCalculations implements CalculationCapabilityPort {
     if (envelope === undefined || envelope === null) return { status: 'empty', messageKey: 'SIZING_NOT_RUN' };
     const currentHash = hash(JSON.stringify(adapted.input));
     if (envelope.inputHash !== currentHash) return { status: 'stale', previousRunId: project.id + ':' + envelope.inputHash, previousInputHash: envelope.inputHash, currentInputHash: currentHash, reasonKey: 'state.calculationStale' };
+    // Le système retenu a été dimensionné pour les besoins du prédimensionnement :
+    // si celui-ci est périmé (charge, météo, hypothèses modifiées), le système l'est aussi.
+    if (await this.presizingIsStale(project)) return { status: 'stale', previousRunId: project.id + ':' + envelope.inputHash, previousInputHash: envelope.inputHash, currentInputHash: currentHash, reasonKey: 'state.presizingStale' };
     return {
       status: 'ready',
       runId: `${project.id}:${envelope.inputHash}`,
       createdAt: project.updatedAt,
       envelope: envelope as never,
     };
+  }
+
+  private readonly financeCache = memoize<ReturnType<FinanceEngine['calculate']>>(16);
+
+  /** Le dimensionnement enregistré correspond-il encore aux entrées et à la sélection ? */
+  /** Le prédimensionnement enregistré correspond-il encore aux entrées ? */
+  private async presizingIsStale(project: ProjectFileV1): Promise<boolean> {
+    const envelope = project.lastCalculation as PresizingEnvelopeV1 | null;
+    if (envelope === null) return false;
+    const adapted = await projectToPresizingInput(project, this.references);
+    return adapted.status === 'ready' && hash(JSON.stringify(adapted.input)) !== envelope.inputHash;
+  }
+
+  private async sizingFreshness(project: ProjectFileV1): Promise<{ readonly status: 'ready' } | { readonly status: 'stale'; readonly previousHash: string; readonly currentHash: string } | { readonly status: 'missing'; readonly code: string }> {
+    const envelope = project.sizingCalculation as SizingEnvelopeV1 | null | undefined;
+    if (envelope === undefined || envelope === null) return { status: 'missing', code: 'SIZING_NOT_RUN' };
+    if (this.references.equipment === undefined) return envelope.output.valid ? { status: 'ready' } : { status: 'missing', code: 'SIZING_INVALID' };
+    const adapted = projectToSizingInput(project, this.references.equipment);
+    if (adapted.status === 'blocked') return { status: 'missing', code: adapted.issues.map((issue) => issue.code).join(',') };
+    const currentHash = hashInput(adapted.input);
+    if (currentHash !== envelope.inputHash || await this.presizingIsStale(project)) return { status: 'stale', previousHash: envelope.inputHash, currentHash };
+    return envelope.output.valid ? { status: 'ready' } : { status: 'missing', code: 'SIZING_INVALID' };
   }
 
   private async readLegacySizing<Output>(project: ProjectFileV1): Promise<CapabilityState<Output>> {
@@ -96,7 +128,7 @@ export class AioCalculations implements CalculationCapabilityPort {
     return envelope;
   }
 
-  public async compatibleInverterIds(projectId: string): Promise<readonly string[]> {
+  public async compatibleInverters(projectId: string): Promise<readonly CompatibleInverterCandidate[]> {
     const project = this.getProject(projectId);
     if (project === null || this.references.equipment === undefined) return [];
     const selected = project.selectedEquipmentIds;
@@ -107,7 +139,7 @@ export class AioCalculations implements CalculationCapabilityPort {
     if (base.status === 'blocked') return [];
     const inverters = this.references.equipment.filter((item) => item.kind === 'inverter');
     const snapshots = inverters.map((item) => ({ id: item.id, acPowerW: item.nominalAcPowerW, dcVoltageV: item.nominalDcVoltageV, surgePowerW: item.surgePowerW, mpptMinV: item.mpptMinVoltageV, mpptMaxV: item.mpptMaxVoltageV, pvMaxPowerW: item.pvArrayMaxPowerW, vocMaxV: item.pvOpenCircuitMaxVoltageV, maxChargingCurrentA: item.maxChargingCurrentA, maxParallelUnits: item.maxParallelUnits, canBeInParallel: item.canBeInParallel }));
-    return compatibleInverters(base.input, snapshots).map((candidate) => candidate.inverterId);
+    return compatibleInverters(base.input, snapshots);
   }
 }
 

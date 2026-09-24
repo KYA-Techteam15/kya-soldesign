@@ -43,5 +43,5 @@ test('keeps downloaded weather locally and lists only localities backed by a fil
   await page.locator('.proj-row').filter({ hasText: 'Accra' }).click();
   await expect(page.locator('.pickfield')).toContainText('Accra');
   await expect(page.getByRole('img', { name: 'Irradiation mensuelle' })).toBeVisible();
-  await expect(page.getByText('Météo conservée localement', { exact: true })).toBeVisible();
+  await expect(page.locator('.nav-item').nth(1)).toContainText('météo liée');
 });

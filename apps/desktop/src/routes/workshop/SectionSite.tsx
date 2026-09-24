@@ -14,17 +14,19 @@ import { StepHead } from '../../ui/Flow';
 import { Dialog } from '../../ui/Dialog';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
 import { WeatherDownload } from './WeatherDownload';
-import { useT } from '../../i18n';
+import { resolveDesignColdTemperatureC } from '../../app/adapters/projectToAio';
+import { DecimalInput } from '../../ui/DecimalInput';
+import { fill, useT } from '../../i18n';
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-const MONTH_NAMES = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
-];
-const MONTH_NAMES_EN = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+/** Noms de mois dans la langue de l'interface, fournis par Intl. */
+function monthNames(lang: 'fr' | 'en'): readonly string[] {
+  const format = new Intl.DateTimeFormat(lang === 'fr' ? 'fr-FR' : 'en-GB', { month: 'long', timeZone: 'UTC' });
+  return Array.from({ length: 12 }, (_, month) => {
+    const name = format.format(new Date(Date.UTC(2021, month, 1)));
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  });
+}
 
 export function SectionSite() {
   const t = useT();
@@ -50,7 +52,7 @@ export function SectionSite() {
   const recommendedMonthIndex = (solar?.designMonth ?? 0) - 1;
   const declaredMonthIndex = (s.designMonth ?? 0) - 1;
   const criticalMonthIndex = declaredMonthIndex >= 0 ? declaredMonthIndex : recommendedMonthIndex;
-  const displayMonthNames = lang === 'fr' ? MONTH_NAMES : MONTH_NAMES_EN;
+  const displayMonthNames = monthNames(lang);
   const sources = weatherSources.filter((w) => w.localityId === s.localityId);
   const active = sources.find((w) => w.id === s.weatherSourceId) ?? null;
   /* Un seul fournisseur, donc une seule série par localité : la première
@@ -111,17 +113,17 @@ export function SectionSite() {
         slug="site"
         aside={
           <span className="label">
-            {localities.length} {localities.length > 1 ? 'localités vérifiées' : 'localité vérifiée'} · {weatherFiles.length} {weatherFiles.length > 1 ? 'fichiers météo' : 'fichier météo'}
+            {localities.length} {localities.length > 1 ? t('site2.localitesVerifiees') : t('site2.localiteVerifiee')} · {weatherFiles.length} {weatherFiles.length > 1 ? t('site2.fichiersMeteo') : t('site2.fichierMeteo')}
           </span>
         }
       />
 
       <div className="form-grid">
-        <Group title="Coordonnées">
+        <Group title={t('site2.coordonnees')}>
           <label>
             <span>{t('site.locality')}</span>
             <button className="pickfield" onClick={() => setPickLocality(true)}>
-              <b>{s.region || 'Choisir une localité…'}</b>
+              <b>{s.region || t('site2.chooseLocality')}</b>
               <small>{s.countryCode ? countryName(s.countryCode, lang) : s.country || '—'}</small>
             </button>
           </label>
@@ -129,46 +131,46 @@ export function SectionSite() {
               présenter en saisie invitait à écrire une valeur que le prochain
               choix de localité écraserait sans prévenir. */}
           <ReadField
-            label="Pays"
+            label={t('site2.pays')}
             value={s.countryCode ? countryName(s.countryCode, lang) : s.country || '—'}
             prov={{
               title: 'Pays',
               rows: [
-                ['Localité', s.region || '—'],
-                ['Code pays', s.countryCode || '—'],
+                [t('site2.localite'), s.region || '—'],
+                [t('site2.countryCode'), s.countryCode || '—'],
               ],
-              source: 'déduit du code pays de la localité',
+              source: t('site2.deduitDuCodePays'),
             }}
           />
           <ReadField
-            label="Latitude"
+            label={t('site2.latitude')}
             value={located ? fmt(s.latitude, 4) : '—'}
             unit={located ? '°' : undefined}
             prov={{
               title: 'Latitude',
-              rows: [['Localité', s.region || '—']],
-              source: 'coordonnées de la localité en base',
+              rows: [[t('site2.localite'), s.region || '—']],
+              source: t('site2.coordonneesDeLaLocalite'),
             }}
           />
           <ReadField
-            label="Longitude"
+            label={t('site2.longitude')}
             value={located ? fmt(s.longitude, 4) : '—'}
             unit={located ? '°' : undefined}
             prov={{
               title: 'Longitude',
-              rows: [['Localité', s.region || '—']],
-              source: 'coordonnées de la localité en base',
+              rows: [[t('site2.localite'), s.region || '—']],
+              source: t('site2.coordonneesDeLaLocalite'),
             }}
           />
         </Group>
 
-        <Group title="Orientation du champ">
+        <Group title={t('site2.orientationDuChamp')}>
           {/* Chaque angle porte son propre calcul d'optimum, comme
               `optimal_tilt_button` et `optimal_azimuth_button`. Une case
               « Valeurs optimales » posée à côté ne disait plus quel angle
               elle allait changer, et en changeait deux. */}
           <NumField
-            label="Inclinaison"
+            label={t('site2.inclinaison')}
             unit="°"
             value={s.tilt}
             onChange={(v) => update((p) => { p.site.tilt = v; })}
@@ -176,22 +178,22 @@ export function SectionSite() {
             action={{
               icon: '✳',
               title: located
-                ? `Inclinaison optimale pour ${fmt(s.latitude, 2)}° — formule β = 0,76 |φ| + 3,1`
-                : 'Choisissez d’abord une localité',
+                ? fill(t('site2.optimalTiltFor'), { lat: fmt(s.latitude, 2) })
+                : t('site2.choisissezDAbordUne'),
               disabled: !located,
               onClick: () => {
-                const t = optimalTiltFor(s.latitude);
-                update((p) => { p.site.tilt = t; });
+                const tilt = optimalTiltFor(s.latitude);
+                update((p) => { p.site.tilt = tilt; });
                 notify({
                   kind: 'success',
-                  title: `Inclinaison optimale : ${fmt(t, 0)}°`,
-                  detail: 'β = 0,76 φ + 3,1, ramenée au pas de 5° du balayage.',
+                  title: `${t('site2.optimalTilt')} ${fmt(tilt, 0)}°`,
+                  detail: t('site2.07631'),
                 });
               },
             }}
           />
           <NumField
-            label="Azimut"
+            label={t('site2.azimut')}
             unit="°"
             value={s.azimuth}
             onChange={(v) => update((p) => { p.site.azimuth = v; })}
@@ -199,19 +201,19 @@ export function SectionSite() {
             action={{
               icon: '✳',
               title: located
-                ? 'Azimut optimal : plein sud au nord de l’équateur, plein nord au sud'
-                : 'Choisissez d’abord une localité',
+                ? t('site2.azimutOptimalPleinSud')
+                : t('site2.choisissezDAbordUne'),
               disabled: !located,
               onClick: () => {
                 const a = optimalAzimuthFor(s.latitude);
                 update((p) => { p.site.azimuth = a; });
                 notify({
                   kind: 'success',
-                  title: `Azimut optimal : ${fmt(a, 0)}°`,
+                  title: `${t('site2.optimalAzimuth')} ${fmt(a, 0)}°`,
                   detail:
                     s.latitude > 0
-                      ? 'Hémisphère nord — le champ regarde plein sud.'
-                      : 'Hémisphère sud — le champ regarde plein nord.',
+                      ? t('site2.hemisphereNordLeChamp')
+                      : t('site2.hemisphereSudLeChamp'),
                 });
               },
             }}
@@ -238,33 +240,47 @@ export function SectionSite() {
               série météo sous l'orientation courante. Sans série, « 0,00 » se
               lisait comme un site sans soleil. */}
           <ReadField
-            label="Irradiation moyenne"
+            label={t('site2.irradiationMoyenne')}
             value={loaded ? fmt(annualKwh, 2) : '—'}
             unit={loaded ? 'kWh/m²/j' : undefined}
             stale={stale}
             note={
               !loaded
-                ? 'aucune série chargée'
+                ? t('site2.aucuneSerieChargee')
                 : stale
-                  ? `calculée sous ${fmt(basis?.tilt ?? 0, 0)}° / ${fmt(basis?.azimuth ?? 0, 0)}°`
+                  ? fill(t('site2.computedUnder'), { tilt: fmt(basis?.tilt ?? 0, 0), azimuth: fmt(basis?.azimuth ?? 0, 0) })
                   : undefined
             }
             prov={{
-              title: 'Irradiation moyenne',
-              formula: 'moyenne des 12 mensuelles en plan des modules',
+              title: t('site2.irradiationMoyenne'),
+              formula: t('site2.moyenneDes12Mensuelles'),
               rows: [
-                ['Série météo', bound ? bound.sourceName : s.downloadedSource?.name ?? 'aucune'],
+                [t('site2.weatherSeries'), bound ? bound.sourceName : s.downloadedSource?.name ?? 'aucune'],
                 ['Inclinaison', `${fmt(basis?.tilt ?? s.tilt, 0)} °`],
                 ['Azimut', `${fmt(basis?.azimuth ?? s.azimuth, 0)} °`],
-                ['Mois recommandé', recommendedMonthIndex >= 0 ? displayMonthNames[recommendedMonthIndex] : '—'],
-                ['Mois déclaré', declaredMonthIndex >= 0 ? displayMonthNames[declaredMonthIndex] : 'à confirmer'],
-                ['Albédo', solar === null ? '—' : fmt(solar.albedo, 2)],
-                ['Période source', s.downloadedSource?.versionOrDate ?? '—'],
+                [t('site2.recommendedMonth'), recommendedMonthIndex >= 0 ? displayMonthNames[recommendedMonthIndex] : '—'],
+                [t('site2.declaredMonth'), declaredMonthIndex >= 0 ? displayMonthNames[declaredMonthIndex] : t('site2.toConfirm')],
+                [t('site2.albedo'), solar === null ? '—' : fmt(solar.albedo, 2)],
+                [t('site2.sourcePeriod'), s.downloadedSource?.versionOrDate ?? '—'],
                 ['Fuseau', s.timezoneIana ?? '—'],
-                ['Empreinte SHA-256', s.downloadedSource?.sourceSha256?.slice(0, 16) ?? '—'],
+                [t('site2.sha256'), s.downloadedSource?.sourceSha256?.slice(0, 16) ?? '—'],
               ],
-              source: 'sommée depuis la série horaire, jamais saisie',
+              source: t('site2.sommeeDepuisLaSerie'),
             }}
+          />
+        </Group>
+
+        <Group title={t('site.designTemperatures')}>
+          <DesignColdTemperatureField
+            overrideC={s.designColdTemperatureC}
+            ambientMinC={s.downloadedSource?.ambientTemperatureMinC}
+            onChange={(value) => update((p) => { p.site.designColdTemperatureC = value; })}
+          />
+          <ReadField
+            label={t('site.ambientMax')}
+            value={s.downloadedSource?.ambientTemperatureMaxC === undefined ? '—' : fmt(s.downloadedSource.ambientTemperatureMaxC, 1)}
+            unit={s.downloadedSource?.ambientTemperatureMaxC === undefined ? undefined : '°C'}
+            note={s.downloadedSource?.ambientTemperatureMaxC === undefined ? t('site.temperatureNeedsWeather') : t('site.ambientMaxNote')}
           />
         </Group>
       </div>
@@ -277,12 +293,12 @@ export function SectionSite() {
               des objets indiscernables. */}
           <span className="label">
             {bound
-              ? `${bound.sourceName} · ${bound.provider} · fichier vérifié chargé avec la localité`
+              ? `${bound.sourceName} · ${bound.provider} · ${t('site2.verifiedWithLocality')}`
               : s.downloadedSource
-                ? `${s.downloadedSource.name} · ${s.downloadedSource.provider} · téléchargée pour ce dossier`
+                ? `${s.downloadedSource.name} · ${s.downloadedSource.provider} · ${t('site2.downloadedForProject')}`
                 : located
-                  ? 'aucune série pour cette localité'
-                  : 'aucune localité choisie'}
+                  ? t('site2.aucuneSeriePourCette')
+                  : t('site2.aucuneLocaliteChoisie')}
           </span>
           <span className="sep" />
           {/* Rang accentué : action dominante de cette rangée, sans lui
@@ -292,7 +308,7 @@ export function SectionSite() {
                 viser n'importe quel site, y compris un autre que celui du
                 dossier. Le dialogue dira lui-même s'il remplace, une fois
                 le lieu connu. */}
-            Télécharger les données d’irradiance d’une localité…
+            {t('weather2.telechargerLesDonneesD')}…
           </button>
         </div>
         {solarState.status !== 'ready' && <CapabilityNotice capability="solar-resource" state={solarState} compact />}
@@ -307,8 +323,8 @@ export function SectionSite() {
               contredisait la mention « à recalculer » deux lignes plus haut. */}
           <span className="label">
             {stale
-              ? 'en plan des modules — à recalculer'
-              : `kWh/m²/jour en plan des modules${criticalMonthIndex >= 0 ? ` · ${declaredMonthIndex >= 0 ? 'mois critique déclaré' : 'recommandation à confirmer'} ${displayMonthNames[criticalMonthIndex]}` : ''}`}
+              ? t('site2.enPlanDesModules')
+              : `${t('site2.kwhPerDayPoa')}${criticalMonthIndex >= 0 ? ` · ${declaredMonthIndex >= 0 ? t('site2.moisCritiqueDeclare') : t('site2.recommandationAConfirmer')} ${displayMonthNames[criticalMonthIndex]}` : ''}`}
           </span>
         </div>
         <div className={`tbl-wrap ${stale ? 'is-stale' : ''}`} style={{ padding: 'var(--sp-3)' }}>
@@ -319,8 +335,8 @@ export function SectionSite() {
             <div className="empty" style={{ margin: 0 }}>
               <b>{t('site.noWeatherForSite')}</b>
               {located
-                ? 'Cette localité n’a pas de fichier météo : téléchargez-en un depuis PVGIS ou importez le JSON original.'
-                : 'Choisissez une localité : sa série et son orientation par défaut se chargent avec elle.'}
+                ? t('site2.cetteLocaliteNA')
+                : t('site2.choisissezUneLocaliteSa')}
             </div>
           ) : (
             <>
@@ -328,7 +344,7 @@ export function SectionSite() {
               second clic ramène à l'année : le lien entre les deux graphes se
               fait par le geste, sans piéger dans une vue mensuelle. */}
           <svg viewBox="0 0 480 96" preserveAspectRatio="none" style={{ width: '100%', height: 96 }}
-            role="img" aria-label="Irradiation mensuelle">
+            role="img" aria-label={t('site2.irradiationMensuelle')}>
             <line x1="0" y1="82" x2="480" y2="82" stroke="var(--border-strong)" />
             {mi.map((v, i) => {
               const h = (v / max) * 72;
@@ -343,7 +359,7 @@ export function SectionSite() {
                         ? 'var(--accent)'
                         : 'var(--text-faint)'
                   }>
-                  <title>{`${MONTH_NAMES[i]} · ${fmt(v, 1)} kWh/m²/j`}</title>
+                  <title>{`${displayMonthNames[i]} · ${fmt(v, 1)} kWh/m²/j`}</title>
                 </rect>
               );
             })}
@@ -354,7 +370,7 @@ export function SectionSite() {
                 <div className="label">{MONTHS[i]}</div>
                 <input
                   className="cell-in"
-                  aria-label={`Irradiation mois ${i + 1}`}
+                  aria-label={fill(t('site2.irradiationMonth'), { month: i + 1 })}
                   style={{ textAlign: 'center' }}
                   readOnly
                   value={fmt(v, 1)}
@@ -373,16 +389,16 @@ export function SectionSite() {
       <section>
         <div className="tbl-title">
           <h2 className="h-sec">{t('site.averageDay')}</h2>
-          <span className="label">W/m² en plan des modules</span>
+          <span className="label">{t('site2.wMEnPlan')}</span>
           <span className="sep" />
           <select
             className="mo-sel"
-            aria-label="Période de la journée moyenne"
+            aria-label={t('site2.periodeDeLaJournee')}
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
           >
             <option value={-1}>{t('site.fullYear')}</option>
-            {MONTH_NAMES.map((m, i) => (
+            {displayMonthNames.map((m, i) => (
               <option key={m} value={i}>
                 {m}
               </option>
@@ -393,8 +409,7 @@ export function SectionSite() {
           {!loaded ? (
             <div className="empty" style={{ margin: 0 }}>
               <b>{t('site.noTypicalDay')}</b>
-              Elle se déduit de la série météo, sous l’inclinaison et l’azimut
-              saisis plus haut.
+              {t('site.noTypicalDayHelp')}
             </div>
           ) : (
             <>
@@ -402,8 +417,8 @@ export function SectionSite() {
                 role="img"
                 aria-label={
                   month < 0
-                    ? 'Irradiance horaire moyenne sur l’année'
-                    : `Irradiance horaire moyenne en ${MONTH_NAMES[month]}`
+                    ? t('site2.irradianceHoraireMoyenneSur')
+                    : fill(t('site2.meanHourlyIn'), { month: displayMonthNames[month]! })
                 }>
                 <line x1="0" y1="82" x2="480" y2="82" stroke="var(--border-strong)" />
                 {/* Sur une vue mensuelle, la moyenne annuelle reste tracée en
@@ -438,21 +453,21 @@ export function SectionSite() {
               </div>
               <div className="daily-note">
                 <span>
-                  Crête <b>{fmt(Math.max(...daily), 0)} W/m²</b> vers{' '}
+                  {t('site.dailyPeak')} <b>{fmt(Math.max(...daily), 0)} W/m²</b> {t('site.dailyAt')}{' '}
                   <b>{String(peakHour).padStart(2, '0')} h</b>
                 </span>
                 <span>
-                  · cumul <b>{fmt(dailyKwh, 2)} kWh/m²/j</b>
+                  · {t('site.dailyTotal')} <b>{fmt(dailyKwh, 2)} {t('site.kwhPerM2Day')}</b>
                 </span>
                 {month >= 0 && (
                   <span className="label">
                     {dailyKwh >= annualKwh ? '+' : '−'}
-                    {fmt(Math.abs(dailyKwh - annualKwh), 2)} vs. année
+                    {fmt(Math.abs(dailyKwh - annualKwh), 2)} {t('site.vsYear')}
                   </span>
                 )}
                 <span className="sep" />
                 <span className="label">
-                  sous {fmt(s.tilt, 0)}° / {fmt(s.azimuth, 0)}°
+                  {fill(t('site.underOrientation'), { tilt: fmt(s.tilt, 0), azimuth: fmt(s.azimuth, 0) })}
                 </span>
               </div>
             </>
@@ -463,15 +478,15 @@ export function SectionSite() {
 
       {pickLocality && (
         <Dialog
-          title="Localité du site"
-          lead="coordonnées et série météo suivent le choix"
+          title={t('site2.localiteDuSite')}
+          lead={t('site2.coordonneesEtSerieMeteo')}
           wide
           onClose={() => setPickLocality(false)}
         >
           <input
             className="dlg-search"
             autoFocus
-            placeholder="Rechercher une ville…"
+            placeholder={t('site2.rechercherUneVille')}
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -530,8 +545,8 @@ export function SectionSite() {
                     kind: src && file ? 'success' : 'info',
                     title: `Site : ${l.name}`,
                     detail: src && file
-                      ? `${src.sourceName} · JSON vérifié chargé · orientation ${fmt(tilt, 0)}° / ${fmt(azimuth, 0)}°`
-                      : 'Aucun fichier pour cette localité — téléchargez-en un.',
+                      ? `${src.sourceName} · ${fill(t('site2.loadedWithOrientation'), { tilt: fmt(tilt, 0), azimuth: fmt(azimuth, 0) })}`
+                      : t('site2.aucunFichierPourCette'),
                   });
                 }}
               >
@@ -542,16 +557,14 @@ export function SectionSite() {
                 <span className="when">{fmt(l.latitudeDeg, 4)}</span>
                 <span className="when">{fmt(l.longitudeDeg, 4)}</span>
                 <span className={`badge ${weatherFiles.some((file) => file.metadata.localityId === l.id) ? 'ok' : ''}`}>
-                  {weatherFiles.some((file) => file.metadata.localityId === l.id) ? 'JSON vérifié' : 'sans fichier'}
+                  {weatherFiles.some((file) => file.metadata.localityId === l.id) ? t('site2.jsonVerifie') : t('site2.sansFichier')}
                 </span>
               </button>
             ))}
             {hits.length === 0 && (
               <div className="empty" style={{ margin: 0 }}>
                 <b>{t('site.noLocality')}</b>
-                Passez par « Télécharger les données d’irradiance d’une localité… » :
-                la localité y est créée
-                depuis son nom ou ses coordonnées.
+                {t('site.noLocalityHelp')}
               </div>
             )}
           </div>
@@ -608,8 +621,8 @@ export function SectionSite() {
             setAskDownload(false);
             notify({
               kind: 'success',
-              title: `${result.sourceName} enregistrée`,
-              detail: `${result.siteName} · 8 760 heures réelles · orientation ${fmt(result.optimalTilt, 0)}° / ${fmt(result.optimalAzimuth, 0)}°.`,
+              title: fill(t('site2.sourceSaved'), { name: result.sourceName }),
+              detail: `${result.siteName} · ${fill(t('site2.realHoursOrientation'), { tilt: fmt(result.optimalTilt, 0), azimuth: fmt(result.optimalAzimuth, 0) })}`,
             });
           }}
         />
@@ -624,4 +637,35 @@ function optimalTiltFor(latitudeDeg: number): number {
 
 function optimalAzimuthFor(latitudeDeg: number): number {
   return latitudeDeg >= 0 ? 180 : 0;
+}
+
+/**
+ * Température minimale de conception pour le Voc à froid. Vide : le minimum de
+ * la série météo s'applique et reste visible ; une saisie le remplace.
+ */
+function DesignColdTemperatureField({ overrideC, ambientMinC, onChange }: { overrideC: number | null; ambientMinC: number | undefined; onChange: (value: number | null) => void }) {
+  const t = useT();
+  const derived = resolveDesignColdTemperatureC(null, ambientMinC);
+  const effective = overrideC ?? derived;
+  return (
+    <label>
+      <span>{t('site.designColdTemperature')}</span>
+      <span className="uf">
+        <DecimalInput
+          aria-label={t('site.designColdTemperature')}
+          placeholder={derived === null ? t('site.temperatureRequired') : String(derived)}
+          value={overrideC}
+          min={-60}
+          max={40}
+          decimals={1}
+          allowEmpty
+          onCommit={onChange}
+        />
+        <span className="uf-unit">°C</span>
+      </span>
+      <small className={effective === null ? 'field-note error' : 'field-note'}>
+        {effective === null ? t('site.temperatureRequiredHelp') : overrideC === null ? t('site.coldFromWeather') : t('site.coldManual')}
+      </small>
+    </label>
+  );
 }

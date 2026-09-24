@@ -1,0 +1,82 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "KYA-SolDesign",
+  "mainBinaryName": "KYA-SolDesign",
+  "version": "../package.json",
+  "identifier": "com.kya-energy.soldesign",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm dev --port 5173 --strictPort",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "KYA-SolDesign",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 700,
+        "center": true,
+        "resizable": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: asset: http://asset.localhost",
+        "font-src": "'self' data:",
+        "connect-src": "'self' ipc: http://ipc.localhost",
+        "worker-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "KYA-Energy Group",
+    "copyright": "© 2026 KYA-Energy Group. Tous droits réservés.",
+    "category": "Productivity",
+    "shortDescription": "Dimensionnement d'installations solaires photovoltaïques",
+    "longDescription": "KYA-SolDesign prépare les études photovoltaïques autonomes : site et météo, besoins, prédimensionnement, dimensionnement, protections, chiffrage et dossier client.",
+    "homepage": "https://kya-energy.com",
+    "license": "Propriétaire",
+    "licenseFile": "../../../LICENSE",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["ksd"],
+        "name": "KYA-SolDesign.Project",
+        "description": "Projet KYA-SolDesign",
+        "role": "Editor",
+        "mimeType": "application/x-kya-soldesign"
+      }
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "offlineInstaller", "silent": true },
+      "nsis": {
+        "installMode": "both",
+        "languages": ["French", "English"],
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "KYA-SolDesign"
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { pvgisTmyJsonSchema, weatherFileRecordSchema, type PvgisTmyJson, type WeatherFileRecord } from '@ksd/catalog';
 import type { CanonicalWeatherFile, WeatherAcquisitionPort } from '../contracts.js';
-import { weatherGatewayUrl } from './weatherGateway.js';
+import { gatewayFetch, weatherGatewayUrl } from './weatherGateway.js';
 
 export class WeatherAcquisitionError extends Error {
   public constructor(public readonly code: 'PVGIS_TIMEOUT' | 'PVGIS_HTTP' | 'PVGIS_INVALID_JSON' | 'PVGIS_ABORTED' | 'PVGIS_UNAVAILABLE', cause?: unknown) {
@@ -11,7 +11,7 @@ export class WeatherAcquisitionError extends Error {
 
 export class PvgisClient implements WeatherAcquisitionPort {
   public constructor(
-    private readonly fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
+    private readonly fetcher: typeof fetch = gatewayFetch,
     private readonly now: () => string = () => new Date().toISOString(),
     private readonly timeoutMs = 30_000,
   ) {}

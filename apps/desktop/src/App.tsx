@@ -1,25 +1,36 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { useUi } from './store/ui';
 import { Splash } from './routes/Splash';
 import { Home } from './routes/Home';
-import { ProjectsRoute } from './routes/Projects';
-import { CatalogRoute } from './routes/Catalog';
-import { SettingsRoute } from './routes/Settings';
 import { WorkshopLayout } from './routes/workshop/WorkshopLayout';
-import { SectionProjet } from './routes/workshop/SectionProjet';
-import { SectionSite } from './routes/workshop/SectionSite';
-import { SectionBesoins } from './routes/workshop/SectionBesoins';
-import { SectionHypotheses } from './routes/workshop/SectionHypotheses';
-import { SectionMateriel } from './routes/workshop/SectionMateriel';
-import { SectionProtections } from './routes/workshop/SectionProtections';
-import { SectionChiffrage } from './routes/workshop/SectionChiffrage';
-import { SectionDossier } from './routes/workshop/SectionDossier';
 import { Toasts } from './shell/Toasts';
 import { ConfirmDialog } from './shell/ConfirmDialog';
 import { CommandPalette } from './shell/CommandPalette';
 import { useProjects } from './store/project';
+import { useOpenedProjectFiles } from './app/useOpenedProjectFiles';
 import { readNavigationSession, writeNavigationSession, writeProjectResumeTarget } from './app/navigationSession';
+
+/*
+ * Les écrans sont chargés à la demande : le démarrage ne paie ni le catalogue
+ * complet, ni les générateurs Word et Excel, ni les écrans de l'atelier qu'on
+ * n'a pas encore ouverts.
+ */
+const ProjectsRoute = lazy(() => import('./routes/Projects').then((module) => ({ default: module.ProjectsRoute })));
+const CatalogRoute = lazy(() => import('./routes/Catalog').then((module) => ({ default: module.CatalogRoute })));
+const SettingsRoute = lazy(() => import('./routes/Settings').then((module) => ({ default: module.SettingsRoute })));
+const SectionProjet = lazy(() => import('./routes/workshop/SectionProjet').then((module) => ({ default: module.SectionProjet })));
+const SectionSite = lazy(() => import('./routes/workshop/SectionSite').then((module) => ({ default: module.SectionSite })));
+const SectionBesoins = lazy(() => import('./routes/workshop/SectionBesoins').then((module) => ({ default: module.SectionBesoins })));
+const SectionHypotheses = lazy(() => import('./routes/workshop/SectionHypotheses').then((module) => ({ default: module.SectionHypotheses })));
+const SectionMateriel = lazy(() => import('./routes/workshop/SectionMateriel').then((module) => ({ default: module.SectionMateriel })));
+const SectionProtections = lazy(() => import('./routes/workshop/SectionProtections').then((module) => ({ default: module.SectionProtections })));
+const SectionChiffrage = lazy(() => import('./routes/workshop/SectionChiffrage').then((module) => ({ default: module.SectionChiffrage })));
+const SectionDossier = lazy(() => import('./routes/workshop/SectionDossier').then((module) => ({ default: module.SectionDossier })));
+
+function Screen({ children }: { readonly children: ReactNode }) {
+  return <Suspense fallback={<div className="screen-loading" role="status" aria-busy="true" />}>{children}</Suspense>;
+}
 
 export function App() {
   const theme = useUi((s) => s.theme);
@@ -61,25 +72,27 @@ export function App() {
     document.documentElement.dataset.vibe = vibe;
   }, [theme, vibe]);
 
+  useOpenedProjectFiles();
+
   return (
     <>
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/accueil" element={<Home />} />
-        <Route path="/accueil/projets" element={<ProjectsRoute />} />
-        <Route path="/catalogue" element={<CatalogRoute />} />
-        <Route path="/reglages" element={<SettingsRoute />} />
+        <Route path="/accueil/projets" element={<Screen><ProjectsRoute /></Screen>} />
+        <Route path="/catalogue" element={<Screen><CatalogRoute /></Screen>} />
+        <Route path="/reglages" element={<Screen><SettingsRoute /></Screen>} />
 
         <Route path="/projet/:id" element={<WorkshopLayout />}>
           <Route index element={<Navigate to="atelier/projet" replace />} />
-          <Route path="atelier/projet" element={<SectionProjet />} />
-          <Route path="atelier/site" element={<SectionSite />} />
-          <Route path="atelier/besoins" element={<SectionBesoins />} />
-          <Route path="atelier/hypotheses" element={<SectionHypotheses />} />
-          <Route path="atelier/materiel" element={<SectionMateriel />} />
-          <Route path="atelier/protections" element={<SectionProtections />} />
-          <Route path="atelier/chiffrage" element={<SectionChiffrage />} />
-          <Route path="atelier/dossier" element={<SectionDossier />} />
+          <Route path="atelier/projet" element={<Screen><SectionProjet /></Screen>} />
+          <Route path="atelier/site" element={<Screen><SectionSite /></Screen>} />
+          <Route path="atelier/besoins" element={<Screen><SectionBesoins /></Screen>} />
+          <Route path="atelier/hypotheses" element={<Screen><SectionHypotheses /></Screen>} />
+          <Route path="atelier/materiel" element={<Screen><SectionMateriel /></Screen>} />
+          <Route path="atelier/protections" element={<Screen><SectionProtections /></Screen>} />
+          <Route path="atelier/chiffrage" element={<Screen><SectionChiffrage /></Screen>} />
+          <Route path="atelier/dossier" element={<Screen><SectionDossier /></Screen>} />
         </Route>
 
         {/* L'ancienne adresse du mode dossier reste valide : les liens déjà

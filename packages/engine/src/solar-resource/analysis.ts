@@ -78,8 +78,34 @@ export function calculateGamma(meanHourlyPoaWm2: readonly number[], loadHourlyEn
   return coincidentLoad / totalLoad;
 }
 
-/** DATA-P1-001 + CALC-P1-008..011 — pure hourly TMY analysis with auditable outputs. */
-export function analyzeSolarResource(rawInput: SolarResourceAnalysisInputV1): SolarResourceAnalysisEnvelopeV1 {
+/**
+ * Partie de l'analyse qui ne dépend que de la série météo, du site et de
+ * l'orientation : position solaire, transposition et agrégats. La charge n'y
+ * entre pas ; un appelant peut donc la réutiliser tant que ces entrées ne
+ * changent pas, au lieu de retransposer 8 760 heures à chaque modification.
+ */
+export interface SolarGeometryV1 {
+  readonly fingerprint: string;
+  readonly observationsHash: string;
+  readonly hourlyPoaWm2: readonly number[];
+  readonly monthlyAverageDailyPoaKWhM2Day: readonly number[];
+  readonly meanHourlyPoaWm2: readonly number[];
+  readonly monthlyMeanHourlyPoaWm2: readonly (readonly number[])[];
+  readonly annualPoaKWhM2: number;
+  readonly designMonth: number | null;
+}
+
+/** Empreinte bon marché des entrées géométriques ; toute différence force un recalcul. */
+export function solarGeometryFingerprint(input: Pick<SolarResourceAnalysisInputV1, 'latitudeDeg' | 'longitudeDeg' | 'surfaceTiltDeg' | 'surfaceAzimuthDeg' | 'albedo' | 'timezoneOffsetMinutes' | 'intervalMinutes' | 'observations'>): string {
+  let ghi = 0; let dni = 0; let dhi = 0;
+  for (const observation of input.observations) { ghi += observation.ghiWm2; dni += observation.dniWm2; dhi += observation.dhiWm2; }
+  const first = input.observations[0]?.timestampUtcIso ?? '';
+  const last = input.observations.at(-1)?.timestampUtcIso ?? '';
+  return [input.latitudeDeg, input.longitudeDeg, input.surfaceTiltDeg, input.surfaceAzimuthDeg, input.albedo, input.timezoneOffsetMinutes, input.intervalMinutes, input.observations.length, first, last, ghi, dni, dhi].join('|');
+}
+
+/** CALC-P1-008..010 — position, transposition Klucher et agrégats d'une année type. */
+export function analyzeSolarGeometry(rawInput: SolarResourceAnalysisInputV1): SolarGeometryV1 {
   const input = solarResourceAnalysisInputV1Schema.parse(rawInput);
   const hourlyPoaWm2 = input.observations.map((observation) => {
     const solar = calculateSolarPositionNoaa(observation.timestampUtcIso, input.latitudeDeg, input.longitudeDeg);
@@ -119,6 +145,28 @@ export function analyzeSolarResource(rawInput: SolarResourceAnalysisInputV1): So
   ));
   const positiveMonths = monthlyAverageDailyPoaKWhM2Day.map((value, index) => ({ value, month: index + 1 })).filter(({ value }) => value > 0);
   const designMonth = positiveMonths.length === 0 ? null : positiveMonths.reduce((minimum, current) => current.value < minimum.value ? current : minimum).month;
+  return {
+    fingerprint: solarGeometryFingerprint(input),
+    observationsHash: hashTechnicalInput(input.observations),
+    hourlyPoaWm2, monthlyAverageDailyPoaKWhM2Day, meanHourlyPoaWm2, monthlyMeanHourlyPoaWm2,
+    annualPoaKWhM2: hourlyPoaWm2.reduce((sum, value) => sum + value * input.intervalMinutes / 60, 0) / 1_000,
+    designMonth,
+  };
+}
+
+const analysisInputWithoutObservations = solarResourceAnalysisInputV1Schema.omit({ observations: true });
+
+/**
+ * DATA-P1-001 + CALC-P1-008..011 — analyse horaire d'une année type. Une
+ * géométrie déjà calculée pour les mêmes entrées (même empreinte) est
+ * réutilisée ; sinon elle est recalculée. Le résultat est identique.
+ */
+export function analyzeSolarResource(rawInput: SolarResourceAnalysisInputV1, precomputed?: SolarGeometryV1): SolarResourceAnalysisEnvelopeV1 {
+  const reusable = precomputed !== undefined && precomputed.fingerprint === solarGeometryFingerprint(rawInput);
+  const geometry = reusable ? precomputed : analyzeSolarGeometry(rawInput);
+  const { observations: _observations, ...rest } = rawInput;
+  const input = { ...analysisInputWithoutObservations.parse(rest), observations: rawInput.observations };
+  const { hourlyPoaWm2, monthlyAverageDailyPoaKWhM2Day, meanHourlyPoaWm2, monthlyMeanHourlyPoaWm2, designMonth } = geometry;
   const totalLoad = input.loadHourlyEnergyWh?.reduce((sum, value) => sum + value, 0);
   const gamma = input.loadHourlyEnergyWh === undefined
     ? { status: 'unavailable' as const, reasonCode: 'LOAD_PROFILE_MISSING' as const }
@@ -135,14 +183,14 @@ export function analyzeSolarResource(rawInput: SolarResourceAnalysisInputV1): So
   return {
     contractVersion: 1,
     engineVersion: '1.1.0',
-    inputHash: hashTechnicalInput(input),
+    inputHash: hashTechnicalInput({ ...rest, observationsHash: geometry.observationsHash }),
     provenance: [input.provenance],
     output: {
       hourlyPoaWm2,
       monthlyAverageDailyPoaKWhM2Day,
       meanHourlyPoaWm2,
       monthlyMeanHourlyPoaWm2,
-      annualPoaKWhM2: hourlyPoaWm2.reduce((sum, value) => sum + value * input.intervalMinutes / 60, 0) / 1_000,
+      annualPoaKWhM2: geometry.annualPoaKWhM2,
       designMonth,
       gamma,
       albedo: input.albedo,

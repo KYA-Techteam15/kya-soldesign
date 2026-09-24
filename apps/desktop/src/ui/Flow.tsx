@@ -9,79 +9,21 @@
  */
 
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useUi } from '../store/ui';
+import { useT } from '../i18n';
 
 export interface Step {
   slug: string;
+  /** Clés du titre et de la question à laquelle l'écran répond. */
   label: string;
-  /** La question à laquelle l'écran répond, affichée sous le titre. */
   question: string;
 }
 
-export const STEPS: Step[] = [
-  {
-    slug: 'projet',
-    label: 'Identification du projet',
-    question: 'Pour qui travaille-t-on, et où se trouve le site ?',
-  },
-  {
-    slug: 'site',
-    label: 'Choix du site',
-    question: 'Quel soleil reçoit ce site, et sous quelle orientation ?',
-  },
-  {
-    slug: 'besoins',
-    label: 'Bilan des consommations',
-    question:
-      "Combien d'énergie faut-il, et à quelles heures ? Toute erreur ici se propage au reste de l'étude.",
-  },
-  {
-    slug: 'hypotheses',
-    label: 'Prédimensionnement',
-    question:
-      'Ce projet est-il faisable, et à quel ordre de prix — avant même de choisir une référence au catalogue ?',
-  },
-  {
-    slug: 'materiel',
-    label: 'Dimensionnement',
-    question: 'Avec quel matériel réel, et les contraintes sont-elles tenues ?',
-  },
-  {
-    slug: 'protections',
-    label: 'Choix des éléments de protection et de la câblerie',
-    question: 'Quels calibres de protection, et quelles sections de câble en découlent ?',
-  },
-  {
-    slug: 'chiffrage',
-    label: 'Évaluation financière',
-    question: 'Quel prix de vente, et que reste-t-il comme marge ?',
-  },
-  {
-    slug: 'dossier',
-    label: 'Vue synoptique et rapports',
-    question: 'Que remet-on au client, et le dossier tient-il debout ?',
-  },
-];
-
-const STEP_LABEL_EN: Record<string, string> = {
-  projet: 'Project identification', site: 'Site selection', besoins: 'Consumption assessment',
-  hypotheses: 'Pre-sizing', materiel: 'Equipment sizing', protections: 'Protection devices and wiring selection',
-  chiffrage: 'Financial assessment', dossier: 'System diagram & reports',
-};
-const STEP_QUESTION_EN: Record<string, string> = {
-  projet: 'Who is the project for, and where is the site?',
-  site: 'What solar resource reaches this site, and at what orientation?',
-  besoins: 'How much energy is needed, and at what times? Any error here affects the rest of the study.',
-  hypotheses: 'Is this project feasible, and at what order of cost—before choosing catalog equipment?',
-  materiel: 'Which real equipment should be used, and are the constraints met?',
-  protections: 'Which protection ratings and cable sections follow?',
-  chiffrage: 'What is the sale price, and what margin remains?',
-  dossier: 'What is delivered to the client, and is the file coherent?',
-};
+const SLUGS = ['projet', 'site', 'besoins', 'hypotheses', 'materiel', 'protections', 'chiffrage', 'dossier'] as const;
+export const STEPS: Step[] = SLUGS.map((slug) => ({ slug, label: `step.${slug}.label`, question: `step.${slug}.question` }));
 
 /** En-tête d'écran : rang, titre, et la question de l'écran. */
 export function StepHead({ slug, aside }: { slug: string; aside?: React.ReactNode }) {
-  const lang = useUi((state) => state.lang);
+  const t = useT();
   const i = STEPS.findIndex((s) => s.slug === slug);
   const step = STEPS[i];
   if (!step) return null;
@@ -91,11 +33,11 @@ export function StepHead({ slug, aside }: { slug: string; aside?: React.ReactNod
         <span className="stepbadge">
           {i + 1} <i>/</i> {STEPS.length}
         </span>
-        <h1 className="h-page">{lang === 'en' ? STEP_LABEL_EN[step.slug] ?? step.label : step.label}</h1>
+        <h1 className="h-page">{t(step.label)}</h1>
         <span className="sep" />
         {aside}
       </div>
-      <p className="stephead-q">{lang === 'en' ? STEP_QUESTION_EN[step.slug] ?? step.question : step.question}</p>
+      <p className="stephead-q">{t(step.question)}</p>
     </div>
   );
 }
@@ -109,6 +51,7 @@ export function StepHead({ slug, aside }: { slug: string; aside?: React.ReactNod
  * jamais rien et reste visible sur les sept écrans.
  */
 export function StepNext() {
+  const t = useT();
   const { id } = useParams();
   const nav = useNavigate();
   const { pathname } = useLocation();
@@ -120,14 +63,14 @@ export function StepNext() {
   return (
     <div className="stepnext">
       <span className="stepnext-where">
-        Étape {i + 1} sur {STEPS.length} · {STEPS[i]!.label}
+        {t('step.position').replace('{n}', String(i + 1)).replace('{total}', String(STEPS.length))} · {t(STEPS[i]!.label)}
       </span>
       {i > 0 && (
         <button
           className="btn btn-ghost"
           onClick={() => nav(`/projet/${id}/atelier/${STEPS[i - 1]!.slug}`)}
         >
-          <span aria-hidden="true">←</span> {STEPS[i - 1]!.label}
+          <span aria-hidden="true">←</span> {t(STEPS[i - 1]!.label)}
         </button>
       )}
       {next ? (
@@ -135,14 +78,14 @@ export function StepNext() {
           className="btn btn-primary"
           onClick={() => nav(`/projet/${id}/atelier/${next.slug}`)}
         >
-          Poursuivre vers {next.label} <span aria-hidden="true">→</span>
+          {t('step.continueTo')} {t(next.label)} <span aria-hidden="true">→</span>
         </button>
       ) : (
         <button
           className="btn btn-primary"
-          onClick={() => window.print()}
+          onClick={() => nav(`/projet/${id}/atelier/dossier?vue=documents`)}
         >
-          Imprimer le dossier <span aria-hidden="true">↧</span>
+          {t('step.printFile')} <span aria-hidden="true">↧</span>
         </button>
       )}
     </div>

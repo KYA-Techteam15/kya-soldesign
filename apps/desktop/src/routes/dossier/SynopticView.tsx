@@ -1,3 +1,4 @@
+import { saveFile, safeFileName } from '../../app/platform/files';
 import { useMemo, useRef, useState } from 'react';
 import type { Equipment } from '@ksd/catalog';
 import type { SizingOutputV1 } from '@ksd/engine';
@@ -72,12 +73,7 @@ export function SynopticView({
 
   const { plan, svg } = diagram;
   const download = () => {
-    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${project.details.projectNumber || 'schema'}-unifilaire.svg`;
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    void saveFile({ suggestedName: `${safeFileName(project.details.projectNumber || project.name, 'schema')}-unifilaire.svg`, data: svg, mimeType: 'image/svg+xml', filter: { name: 'SVG', extensions: ['svg'] } });
   };
 
   return (

@@ -1,5 +1,9 @@
 import { defineConfig, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
+
+/** Version et date de construction, lues par « À propos » et le rapport de diagnostic. */
+const packageVersion = (JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }).version;
 
 const externalDataProxy = {
   '/external/open-meteo/geocoding': {
@@ -34,6 +38,10 @@ const externalDataProxy = {
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageVersion),
+    'import.meta.env.VITE_BUILD_TIME': JSON.stringify(new Date().toISOString()),
+  },
   clearScreen: false,
   // Les fournisseurs réels n'autorisent pas les appels directs d'un navigateur.
   // La passerelle conserve des chemins fermés et de même origine ; elle n'est pas

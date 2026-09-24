@@ -5,6 +5,7 @@ import type { ProjectViewModel } from '../../app/models/projectView';
 import { ReportA4 } from './ReportA4';
 import { GenerateDialog } from './GenerateDialog';
 import { assessDocumentReadiness, type DocumentReadiness } from '../../app/models/documentReadiness';
+import type { CalculationFacts } from '../../domain/completion';
 import { useUi } from '../../store/ui';
 import { useSettings } from '../../store/settings';
 import { translate, useT } from '../../i18n';
@@ -36,8 +37,9 @@ const SHOWN = DOCS.filter((doc) => PUBLISHED.includes(doc.key));
 /** Ce que le dialogue de génération produira une fois validé. */
 type PendingAction = { readonly kind: DocKind; readonly action: 'word' | 'print' };
 
-export function DossierDocuments({ project, sizing, finance, solar, presizing, catalog }: {
+export function DossierDocuments({ project, sizing, finance, solar, presizing, catalog, facts }: {
   project: ProjectViewModel;
+  facts: CalculationFacts;
   sizing: SizingOutputV1 | null;
   finance: FinanceOutputV1 | null;
   solar: SolarResourceAnalysisOutputV1 | null;
@@ -45,11 +47,10 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
   catalog: readonly Equipment[];
 }) {
   const t = useT();
-  const { ask } = useUi();
+  const { ask, notify } = useUi();
   const settings = useSettings();
   const lang = useUi((state) => state.lang);
   const [preview, setPreview] = useState<DocKind>('rapport');
-  const [readiness, setReadiness] = useState<DocumentReadiness>(() => assessDocumentReadiness(project, 'rapport', sizing, finance));
   const paperRef = useRef<HTMLDivElement>(null);
   const first = useRef<DocKind | null>(null);
   const logoUrl = useReportAssetUrl(settings.reports.logoAssetId);
@@ -69,6 +70,28 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
    */
   const [composition, setComposition] = useState<Partial<Record<DocKind, ReportOptions>>>({});
   const optionsFor = (kind: DocKind): ReportOptions => composition[kind] ?? defaultReportOptions(kind, lang);
+  const readinessFor = (kind: DocKind, options: ReportOptions): DocumentReadiness =>
+    assessDocumentReadiness({ project, kind, facts, withPrices: options.withPrices, companyName: settings.company.name });
+  // Recalculé à chaque rendu : le bandeau suit les données, pas le dernier clic.
+  const readiness = readinessFor(preview, optionsFor(preview));
+
+  /**
+   * Garde commune au Word et à l'impression : un bloquant arrête l'action et
+   * s'affiche sur l'aperçu ; un avertissement demande confirmation.
+   */
+  const guarded = (kind: DocKind, options: ReportOptions, run: () => void) => {
+    setPreview(kind);
+    const next = readinessFor(kind, options);
+    if (next.blockers.length > 0) {
+      notify({ kind: 'error', title: t('documents.readiness.blocked'), detail: next.blockers.map((item) => t(item.messageKey)).join(' · ') });
+      return;
+    }
+    if (next.warnings.length > 0) {
+      ask({ title: t('documents.readiness.warningTitle'), message: next.warnings.map((warning) => t(warning.messageKey)).join(' · '), confirmLabel: t('documents.readiness.continue'), onConfirm: run });
+      return;
+    }
+    run();
+  };
 
   /**
    * Export Word. Le document reprend l'aperçu section pour section ; seule la
@@ -104,28 +127,9 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
     first.current = preview;
   }, [preview]);
 
-  const selectPreview = (kind: DocKind) => {
-    setPreview(kind);
-    setReadiness(assessDocumentReadiness(project, kind, sizing, finance));
-  };
-
-  const print = (kind: DocKind) => {
-    setPreview(kind);
-    const next = assessDocumentReadiness(project, kind, sizing, finance);
-    setReadiness(next);
-    if (next.blockers.length > 0) return;
-    const fire = () => window.setTimeout(() => window.print(), 120);
-    if (next.warnings.length > 0) {
-      ask({
-        title: t('documents.readiness.warningTitle'),
-        message: next.warnings.map((warning) => t(warning.messageKey)).join(' · '),
-        confirmLabel: t('documents.readiness.continue'),
-        onConfirm: fire,
-      });
-      return;
-    }
-    fire();
-  };
+  const selectPreview = (kind: DocKind) => setPreview(kind);
+  const print = (kind: DocKind, options: ReportOptions = optionsFor(kind)) => guarded(kind, options, () => window.setTimeout(() => window.print(), 120));
+  const exportWord = (kind: DocKind, options: ReportOptions = optionsFor(kind)) => guarded(kind, options, () => { void word(kind, options); });
 
   const confirmPending = (options: ReportOptions) => {
     if (pending === null) return;
@@ -133,8 +137,8 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
     const action = pending.action;
     const kind = pending.kind;
     setPending(null);
-    if (action === 'word') void word(kind, options);
-    else { selectPreview(kind); print(kind); }
+    if (action === 'word') exportWord(kind, options);
+    else print(kind, options);
   };
 
   return <>
@@ -150,7 +154,7 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
         disabled={busy !== null}
         aria-label={`${t('documents.exportWord')} ${t(doc.labelKey)}`}
         title={`${t('documents.exportWord')} ${t(doc.labelKey)}`}
-        onClick={() => { void word(doc.key, optionsFor(doc.key)); }}
+        onClick={() => exportWord(doc.key)}
       >{busy === doc.key ? t('documents.exporting') : t('documents.word')}</button>
       <button
         className="btn btn-icon"

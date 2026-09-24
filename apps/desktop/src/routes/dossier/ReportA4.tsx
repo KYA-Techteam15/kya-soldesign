@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { FinanceOutputV1, PresizingOutputV1, SizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectViewModel } from '../../app/models/projectView';
-import { dateFr } from '../../domain/format';
+
 import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { translate } from '../../i18n';
@@ -71,7 +71,7 @@ export function ReportA4({ project, kind, sizing, finance, solar, presizing, cat
       documentFooter={document.footer}
       companyName={settings.company.name}
       contact={brandContact}
-      editedOn={`${t('report.editedOn')} ${dateFr(project.details.projectDate)}`}
+      editedOn={document.issuedOn}
       logo={effectiveLogoUrl}
       watermark={document.watermark}
       page={index + 1}

@@ -20,15 +20,9 @@ export function Splash() {
     const destination = session.route && projects.some((project) => project.id === session.currentProjectId)
       ? session.route + session.search
       : '/accueil';
-    if (seen) {
-      void nav(destination, { replace: true });
-      return;
-    }
-    const timer = setTimeout(() => {
-      markSeen();
-      void nav(destination, { replace: true });
-    }, 1800);
-    return () => clearTimeout(timer);
+    // Aucun délai artificiel : l'écran de démarrage ne dure que le temps du chargement.
+    markSeen();
+    void nav(destination, { replace: true });
   }, [seen, nav, markSeen, projects]);
 
   return (
@@ -42,7 +36,6 @@ export function Splash() {
         {t('splash.loading')} — {summary?.accepted['pv-module'] ?? '—'} modules ·{' '}
         {summary?.accepted.battery ?? '—'} batteries · {summary?.accepted.inverter ?? '—'} onduleurs
       </p>
-      <p className="version">{t('splash.prototype')}</p>
     </div>
   );
 }

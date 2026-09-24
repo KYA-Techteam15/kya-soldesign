@@ -25,6 +25,8 @@ export interface Toast {
   readonly kind: 'info' | 'success' | 'warning' | 'error';
   readonly title: string;
   readonly detail?: string;
+  /** Action réversible proposée dans la notification (ex. « Annuler » une suppression). */
+  readonly action?: { readonly label: string; readonly run: () => void };
 }
 export interface ConfirmRequest {
   readonly title: string;
@@ -42,6 +44,9 @@ interface UiStore {
   confirm: ConfirmRequest | null;
   verdictCollapsed: boolean;
   verdictTabTop: number;
+  /** Palette de commandes ouverte (Ctrl K ou bouton « Rechercher une action »). */
+  paletteOpen: boolean;
+  setPaletteOpen: (open: boolean) => void;
   setTheme: (theme: Theme) => void;
   setVibe: (vibe: Vibe) => void;
   toggleVibe: () => void;
@@ -60,7 +65,8 @@ let toastSequence = 0;
 const initialSettings = readSettings();
 export const useUi = create<UiStore>()((set, get) => ({
   ...initialSettings, splashSeen: false, toasts: [],
-  confirm: null, verdictCollapsed: false, verdictTabTop: 42,
+  confirm: null, verdictCollapsed: false, verdictTabTop: 42, paletteOpen: false,
+  setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setTheme: (theme) => { set({ theme }); saveSettings({ theme, vibe: get().vibe, lang: get().lang }); },
   setVibe: (vibe) => { set({ vibe }); saveSettings({ theme: get().theme, vibe, lang: get().lang }); },
   toggleVibe: () => { const vibe = VIBES[(VIBES.indexOf(get().vibe) + 1) % VIBES.length]; set({ vibe }); saveSettings({ theme: get().theme, vibe, lang: get().lang }); },
@@ -70,7 +76,8 @@ export const useUi = create<UiStore>()((set, get) => ({
   notify: (toast) => {
     const id = ++toastSequence;
     set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
-    setTimeout(() => set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) })), 4200);
+    // Une notification qui porte une action reste le temps de la lire et d'agir.
+    setTimeout(() => set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) })), toast.action ? 10_000 : toast.kind === 'error' ? 8000 : 4200);
   },
   dismiss: (id) => set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) })),
   ask: (confirm) => set({ confirm }),

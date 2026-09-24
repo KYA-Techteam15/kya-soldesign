@@ -11,5 +11,8 @@ export * from './sizing/optimization-contracts.js';
 export * from './sizing/optimizer.js';
 export * from './protection-cabling/contracts.js';
 export * from './protection-cabling/engine.js';
+export * from './protection-cabling/iec60364.js';
 export * from './finance/contracts.js';
 export * from './finance/engine.js';
+export * from './simulation/hourly-balance.js';
+export { hashInput } from './shared/trace.js';

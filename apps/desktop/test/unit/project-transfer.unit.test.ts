@@ -26,8 +26,14 @@ describe('project transfer and document readiness', () => {
 
   it('returns blockers and warnings as separate document states', () => {
     const view = projectFileToView(project);
-    expect(assessDocumentReadiness(view, 'proforma', null, null).blockers.map((item) => item.code)).toContain('FINANCE_MISSING');
-    expect(assessDocumentReadiness(view, 'rapport', null, null).warnings.length).toBeGreaterThan(0);
+    const missing = { presizing: 'missing', sizing: 'missing', finance: 'missing', protectionsValid: 0 } as const;
+    const proforma = assessDocumentReadiness({ project: view, kind: 'proforma', facts: missing, withPrices: true, companyName: '' });
+    expect(proforma.blockers.map((item) => item.code)).toEqual(expect.arrayContaining(['FINANCE_MISSING', 'SIZING_MISSING']));
+    const stale = assessDocumentReadiness({ project: view, kind: 'rapport', facts: { ...missing, sizing: 'stale', finance: 'stale' }, withPrices: true, companyName: 'KYA' });
+    expect(stale.blockers.map((item) => item.code)).toEqual(expect.arrayContaining(['SIZING_STALE', 'FINANCE_STALE']));
+    const technical = assessDocumentReadiness({ project: view, kind: 'rapport', facts: { ...missing, sizing: 'ready' }, withPrices: false, companyName: '' });
+    expect(technical.blockers.map((item) => item.code)).not.toContain('FINANCE_MISSING');
+    expect(technical.warnings.map((item) => item.code)).toContain('COMPANY_MISSING');
   });
 
   it('validates report assets before replacing the configured asset', async () => {

@@ -13,10 +13,3 @@ test('loads every canonical catalog family, accepted counts, columns, provenance
   await page.locator('.hdr-search').fill('no-match-ksd');
   await expect(page.locator('.tbl tbody tr')).toHaveCount(0);
 });
-
-test('recovers from the retained injected catalog adapter harness', async ({ page }) => {
-  await page.goto('/catalog-error.html');
-  await expect(page.getByRole('alert')).toContainText('Le catalogue canonique est indisponible.');
-  await page.getByRole('button', { name: 'Réessayer' }).click();
-  await expect(page.locator('.tbl tbody tr').first()).toBeVisible();
-});

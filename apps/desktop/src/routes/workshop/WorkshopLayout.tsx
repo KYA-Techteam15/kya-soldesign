@@ -13,6 +13,11 @@ import { sectionStates } from '../../domain/completion';
 import { useCatalog } from '../../app/CatalogProvider';
 import { useCalculationState } from '../../app/CalculationProvider';
 import type { PresizingOutputV1 } from '@ksd/engine';
+import { useCalculationFacts } from '../../app/calculation/useCalculationFacts';
+import { createEmptyProjectFile, projectFileToView } from '../../app/models/projectAdapters';
+
+/** Projet neutre : les hooks de faits s'appellent avant de savoir si le projet existe. */
+const PLACEHOLDER_PROJECT = projectFileToView(createEmptyProjectFile('00000000-0000-4000-8000-000000000000', 'standalone-all-in-one', '2026-01-01T00:00:00.000Z', '—'));
 
 /**
  * Les 8 étapes de l'atelier. Aucun ordre n'est imposé (critère A4).
@@ -38,12 +43,15 @@ export function WorkshopLayout() {
   const t = useT();
   const projects = useProjects((s) => s.projects);
   const open = useProjects((s) => s.open);
+  const validationError = useProjects((s) => (id === undefined ? undefined : s.validationErrors[id]));
+  const lang = useUi((s) => s.lang);
   const verdictCollapsed = useUi((s) => s.verdictCollapsed);
   const toggleVerdict = useUi((s) => s.toggleVerdict);
   const { pathname } = useLocation();
   const centerRef = useRef<HTMLElement>(null);
   const { summary } = useCatalog();
   const project = projects.find((p) => p.id === id) ?? null;
+  const { facts } = useCalculationFacts(project ?? PLACEHOLDER_PROJECT);
   const presizing = useCalculationState<PresizingOutputV1>(project?.id ?? '', 'presizing', project?.updatedAt ?? '');
 
   useEffect(() => {
@@ -65,9 +73,9 @@ export function WorkshopLayout() {
           <div className="page-inner">
             <div className="empty">
               <b>{t('workshop.projectMissing')}</b>
-              Il a peut-être été supprimé.{' '}
+              {t('workshop.projectMissingHelp')}{' '}
               <button className="linkish" onClick={() => nav('/accueil')}>
-                Retour à l’accueil
+                {t('workshop.backHome')}
               </button>
             </div>
           </div>
@@ -77,8 +85,7 @@ export function WorkshopLayout() {
     );
   }
 
-  const lang = useUi((s) => s.lang);
-  const states = sectionStates(project, lang);
+  const states = sectionStates(project, lang, facts);
   return (
     <div className={`app ${verdictCollapsed ? 'verdict-off' : ''}`}>
       {/* Plus de bouton « Dossier client » : le dossier est la huitième étape
@@ -141,6 +148,7 @@ export function WorkshopLayout() {
         </nav>
 
         <main className="pane pane-center pinned" ref={centerRef}>
+          {validationError && <div className="alert warn" role="alert"><div><b>{t('workshop.notSaved')}</b> {t('workshop.notSavedHelp')} <code>{validationError}</code></div></div>}
           <Outlet context={project} />
           <MoreBelow containerRef={centerRef} />
           <StepNext />

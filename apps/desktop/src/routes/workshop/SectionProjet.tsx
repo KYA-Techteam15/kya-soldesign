@@ -6,10 +6,10 @@ import type { ApplicationType } from '../../app/models/projectView';
 import { useT } from '../../i18n';
 
 const APPLICATIONS: { value: ApplicationType; label: string }[] = [
-  { value: 'residential', label: 'Résidentiel' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'industrial', label: 'Industriel' },
-  { value: 'agricultural', label: 'Agricole' },
+  { value: 'residential', label: 'project2.app.residential' },
+  { value: 'commercial', label: 'project2.app.commercial' },
+  { value: 'industrial', label: 'project2.app.industrial' },
+  { value: 'agricultural', label: 'project2.app.agricultural' },
 ];
 
 export function SectionProjet() {
@@ -24,71 +24,71 @@ export function SectionProjet() {
         slug="projet"
         aside={
           <span className="label">
-            Ces informations alimentent l’en-tête des documents remis au client.
+            {t('project.headerFeedsDocuments')}
           </span>
         }
       />
 
       <div className="form-grid">
-        <Group title="Projet">
+        <Group title={t('project2.projet')}>
           <TextField
-            label="Nom du projet"
+            label={t('project2.nomDuProjet')}
             value={project.name}
-            placeholder="ex. Installation solaire à la mairie"
+            placeholder={t('project2.exInstallationSolaireA')}
             onChange={(v) => update((p) => { p.name = v; })}
           />
           <TextField
-            label="Numéro de dossier"
+            label={t('project2.numeroDeDossier')}
             value={d.projectNumber}
             placeholder="2026-041"
             onChange={(v) => update((p) => { p.details.projectNumber = v; })}
           />
           <TextField
-            label="Date"
+            label={t('project2.date')}
             value={d.projectDate}
             onChange={(v) => update((p) => { p.details.projectDate = v; })}
           />
           <TextField
-            label="Localisation du site"
+            label={t('project2.localisationDuSite')}
             value={d.projectLocation}
-            placeholder="ex. Lomé, Togo"
+            placeholder={t('project2.exLomeTogo')}
             onChange={(v) => update((p) => { p.details.projectLocation = v; })}
           />
           <SelectField
-            label="Type d’application"
+            label={t('project2.typeDApplication')}
             value={d.applicationType}
-            options={APPLICATIONS}
+            options={APPLICATIONS.map((item) => ({ ...item, label: t(item.label) }))}
             onChange={(v) =>
               update((p) => { p.details.applicationType = v as ApplicationType; })
             }
           />
           <TextField
-            label="Chargé de projet"
+            label={t('project2.chargeDeProjet')}
             value={d.followerName}
             onChange={(v) => update((p) => { p.details.followerName = v; })}
           />
         </Group>
 
-        <Group title="Client">
+        <Group title={t('project2.client')}>
           <TextField
-            label="Nom du client"
+            label={t('project2.nomDuClient')}
             value={d.clientName}
-            placeholder="Nom complet du client"
+            placeholder={t('project2.nomCompletDuClient')}
             onChange={(v) => update((p) => { p.details.clientName = v; })}
           />
           <TextField
-            label="Adresse"
+            label={t('project2.adresse')}
             value={d.clientAddress}
             onChange={(v) => update((p) => { p.details.clientAddress = v; })}
           />
           <TextField
-            label="Téléphone"
+            label={t('project2.telephone')}
             value={d.clientTel}
             placeholder="+228 90 12 34 56"
             onChange={(v) => update((p) => { p.details.clientTel = v; })}
           />
           <TextField
-            label="E-mail"
+            label={t('project2.eMail')}
             value={d.clientEmail}
             onChange={(v) => update((p) => { p.details.clientEmail = v; })}
           />
@@ -99,8 +99,7 @@ export function SectionProjet() {
         <div className="alert">
           <div>
             <b>{t('project.clientMissing')}</b>
-            Le rapport et la facture proforma porteront un en-tête vide. Rien ne vous
-            empêche de continuer et d’y revenir plus tard.
+            {t('project.clientMissingHelp')}
           </div>
         </div>
       )}

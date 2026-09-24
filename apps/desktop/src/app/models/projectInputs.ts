@@ -1,5 +1,20 @@
 import { z } from 'zod';
-import { solarIrradianceObservationV1Schema } from '@ksd/domain';
+import { solarIrradianceObservationV1Schema, type SolarIrradianceObservationV1 } from '@ksd/domain';
+
+/**
+ * La série horaire (8 760 observations) est validée une fois, puis reconnue par
+ * sa référence : elle n'est jamais modifiée sur place, seulement remplacée. La
+ * valider à chaque frappe coûtait l'essentiel du temps d'une modification.
+ */
+const validatedIrradiance = new WeakSet<object>();
+const hourlyIrradianceArraySchema = z.array(solarIrradianceObservationV1Schema).length(8_760);
+const hourlyIrradianceSchema = z.custom<SolarIrradianceObservationV1[]>((value) => {
+  if (typeof value !== 'object' || value === null) return false;
+  if (validatedIrradiance.has(value)) return true;
+  const valid = hourlyIrradianceArraySchema.safeParse(value).success;
+  if (valid) validatedIrradiance.add(value);
+  return valid;
+}, { message: 'hourlyIrradiance must hold 8760 valid observations' });
 
 const nullableFinite = z.number().finite().nullable();
 const nullableNonNegative = z.number().finite().min(0).nullable();
@@ -41,6 +56,8 @@ export const siteInputV1Schema = z.object({
   weatherSourceId: z.string().min(1).nullable(),
   timezoneIana: timezoneIana.nullable(),
   designMonth: z.number().int().min(1).max(12).nullable(),
+  /** Température ambiante minimale retenue pour le Voc à froid ; null = valeur de la série météo. */
+  designColdTemperatureC: z.number().finite().min(-60).max(40).nullable().optional(),
   solarResource: z.object({
     weatherSourceId: z.string().min(1),
     provider: z.string().min(1),
@@ -56,7 +73,9 @@ export const siteInputV1Schema = z.object({
     sourceSha256: z.string().regex(/^[a-f0-9]{64}$/u).optional(),
     timezoneOffsetMinutes: z.number().int().min(-840).max(840).optional(),
     albedo: z.number().finite().min(0).max(1).optional(),
-    hourlyIrradiance: z.array(solarIrradianceObservationV1Schema).length(8_760).optional(),
+    ambientTemperatureMinC: z.number().finite().min(-90).max(60).optional(),
+    ambientTemperatureMaxC: z.number().finite().min(-90).max(70).optional(),
+    hourlyIrradiance: hourlyIrradianceSchema.optional(),
   }).strict().nullable(),
 }).strict();
 
@@ -282,6 +301,16 @@ export type ProjectDetailsInputV1 = z.infer<typeof projectDetailsInputV1Schema>;
 export type SiteInputV1 = z.infer<typeof siteInputV1Schema>;
 export type LoadInputV1 = z.infer<typeof loadInputV1Schema>;
 
+const parsedInputs = new WeakMap<object, ProjectInputsV1>();
+
+/** Les entrées d'une version de projet sont lues par plusieurs calculs : une seule validation. */
 export function parseProjectInputsV1(value: unknown): ProjectInputsV1 {
+  if (typeof value === 'object' && value !== null) {
+    const cached = parsedInputs.get(value);
+    if (cached) return cached;
+    const parsed = projectInputsV1Schema.parse(value);
+    parsedInputs.set(value, parsed);
+    return parsed;
+  }
   return projectInputsV1Schema.parse(value);
 }

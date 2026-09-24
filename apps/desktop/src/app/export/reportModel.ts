@@ -3,7 +3,9 @@ import type { FinanceOutputV1, PresizingOutputV1, SizingOutputV1, SolarResourceA
 import type { BillOfMaterialRow } from '@ksd/diagram';
 import type { CableSegment, ProjectViewModel } from '../models/projectView';
 import type { ApplicationSettingsV2 } from '../models/applicationSettings';
-import { dateFr, fmt } from '../../domain/format';
+import { currencyLabel, dateLong, fmt } from '../../domain/format';
+import { countryName } from '../models/catalogView';
+import { safeFileName } from '../platform/files';
 import { projectProtections } from '../diagram/projectDiagram';
 import { buildReportLoadSummary, type ReportLoadSummary } from './reportLoadSummary.js';
 import { dailyLoadChart, monthlyIrradiationChart } from './reportCharts.js';
@@ -69,6 +71,8 @@ export interface DocSection {
 export interface ReportDocument {
   readonly fileName: string;
   readonly title: string;
+  /** « Édité le … », identique en en-tête, en couverture et dans le Word. */
+  readonly issuedOn: string;
   readonly company: { readonly name: string; readonly contact: string };
   readonly footer: string;
   readonly watermark: string;
@@ -143,6 +147,8 @@ export interface ReportModelInput {
   readonly diagram: { readonly svg: string; readonly width: number; readonly height: number; readonly bom: readonly BillOfMaterialRow[] } | null;
   /** Visuels résolus par l'appelant depuis les réglages. */
   readonly assets?: { readonly logoUrl: string | null; readonly coverUrl: string | null; readonly signatureUrl?: string | null };
+  /** Date d'émission du document ; à défaut, maintenant. */
+  readonly issuedAtIso?: string;
   /** Choix faits au moment de générer ; à défaut, la composition par défaut. */
   readonly options?: ReportOptions;
 }
@@ -185,6 +191,7 @@ export function buildReportDocument(input: ReportModelInput): ReportDocument {
   return {
     fileName: `${chosenName.length > 0 ? slug(chosenName) : `${slug(project.name)}-${kind}`}.docx`,
     title,
+    issuedOn: `${t('report.editedOn')} ${dateLong(issuedAt(input), options.lang)}`,
     company: { name: settings.company.name || 'KYA-SolDesign', contact },
     footer: settings.reports.footerText.trim() || `${settings.company.name || 'KYA-SolDesign'} · ${title}`,
     watermark: options.watermark.trim(),
@@ -220,6 +227,21 @@ function blocksFor(id: SectionId, input: ReportModelInput): readonly Block[] {
   }
 }
 
+/** Date d'émission : celle de la génération, jamais une date saisie ailleurs. */
+function issuedAt(input: ReportModelInput): string { return input.issuedAtIso ?? new Date().toISOString(); }
+function lang(input: ReportModelInput): 'fr' | 'en' { return input.options?.lang ?? 'fr'; }
+
+/** Site affiché partout de la même façon : libellé saisi, sinon localité et pays. */
+function siteLabel(input: ReportModelInput): string {
+  const { project } = input;
+  if (project.details.projectLocation.trim()) return project.details.projectLocation.trim();
+  const country = project.site.countryCode ? countryName(project.site.countryCode, lang(input)) : project.site.country;
+  return [project.site.region, country].filter((part) => part && part.trim()).join(', ') || '—';
+}
+
+/** Postes affichés au client : les frais nuls ne sont pas des lignes de devis. */
+function visibleLines(finance: FinanceOutputV1) { return finance.lines.filter((line) => line.totalSale !== 0 || line.totalCost !== 0); }
+
 function coverBlock(input: ReportModelInput): Block {
   const { project, kind, sizing, finance, t, assets } = input;
   const details = project.details;
@@ -232,12 +254,12 @@ function coverBlock(input: ReportModelInput): Block {
     system: retainedSystem(sizing, t),
     systemLabel: t('report.selectedSystem'),
     sri: finance ? fmt(finance.simulation.sri, 2) : '—',
-    ownership: `© ${input.settings.company.name || 'KYA-SolDesign'} ${new Date(details.projectDate || Date.now()).getFullYear() || new Date().getFullYear()}`,
+    ownership: `© ${input.settings.company.name || 'KYA-SolDesign'} ${new Date(issuedAt(input)).getFullYear()}`,
     cells: [
       { label: t('report.client'), value: dash(details.clientName) },
-      { label: t('report.site'), value: dash(details.projectLocation || project.site.region) },
+      { label: t('report.site'), value: siteLabel(input) },
       { label: t('report.follower'), value: dash(details.followerName) },
-      { label: t('report.editedOn'), value: dateFr(details.projectDate) },
+      { label: t('report.editedOn'), value: dateLong(issuedAt(input), lang(input)) },
     ],
     logoUrl: assets?.logoUrl ?? null,
     coverUrl: assets?.coverUrl ?? null,
@@ -245,6 +267,7 @@ function coverBlock(input: ReportModelInput): Block {
 }
 
 function identityBlocks(input: ReportModelInput): readonly Block[] {
+  const site = siteLabel(input);
   const { project, kind, t } = input;
   const details = project.details;
   const [titleKey, subtitleKey] = TITLE_KEYS[kind];
@@ -254,10 +277,10 @@ function identityBlocks(input: ReportModelInput): readonly Block[] {
       kind: 'meta',
       items: [
         { label: t('report.client'), value: dash(details.clientName), note: details.clientTel || details.clientEmail || '' },
-        { label: t('report.project'), value: project.name, note: `n° ${dash(details.projectNumber)} · ${details.applicationType}` },
+        { label: t('report.project'), value: project.name, note: `n° ${dash(details.projectNumber)} · ${t(`report.applicationType.${details.applicationType}`)}` },
         {
           label: t('report.site'),
-          value: `${dash(project.site.region)}, ${dash(project.site.country)}`,
+          value: site,
           note: `${fmt(project.site.latitude, 4)} · ${fmt(project.site.longitude, 4)}`,
         },
         {
@@ -375,7 +398,7 @@ function loadNeedsBlocks(input: ReportModelInput): readonly Block[] {
  * d'études obtiennent des résultats différents sur le même site parce qu'ils
  * n'ont pas visé la même fiabilité.
  */
-function methodologyBlocks({ project, t }: ReportModelInput): readonly Block[] {
+function methodologyBlocks({ project, t, options }: ReportModelInput): readonly Block[] {
   const a = project.assumptions;
   return [
     { kind: 'heading', text: t('report.methodology') },
@@ -393,7 +416,7 @@ function methodologyBlocks({ project, t }: ReportModelInput): readonly Block[] {
         [t('report.batteryEfficiency'), `${fmt(a.batteryYield, 1)} %`],
         [t('report.studyDuration'), `${fmt(a.projectLifetime, 0)} ${t('report.years')}`],
         [t('report.discountRate'), `${fmt(a.actualizationRate, 1)} %`],
-        [t('report.gridReference'), `${fmt(a.lcoeGrid, 1)} ${project.currency}/kWh`],
+        [t('report.gridReference'), `${fmt(a.lcoeGrid, 1)} ${currencyLabel(project.currency, options?.lang ?? 'fr')}/kWh`],
         [t('report.emissionFactor'), `${fmt(a.emissionFactor, 2)} kgCO₂/kWh`],
       ],
     },
@@ -484,7 +507,7 @@ function systemBlocks({ project, sizing, catalog, t }: ReportModelInput): readon
   ];
 }
 
-function performanceBlocks({ project, finance, t }: ReportModelInput): readonly Block[] {
+function performanceBlocks({ project, finance, t, options }: ReportModelInput): readonly Block[] {
   const sim = finance?.simulation;
   const life = finance?.lifecycle;
   return [
@@ -493,7 +516,7 @@ function performanceBlocks({ project, finance, t }: ReportModelInput): readonly 
       kind: 'kpis',
       items: [
         { label: t('report.annualProduction'), value: sim ? fmt(sim.annualProductionKwh) : '—', unit: 'kWh' },
-        { label: t('report.lcoe'), value: life ? fmt(life.lcoeActualized, 1) : '—', unit: `${project.currency}/kWh` },
+        { label: t('report.lcoe'), value: life ? fmt(life.lcoeActualized, 1) : '—', unit: `${currencyLabel(project.currency, options?.lang ?? 'fr')}/kWh` },
         { label: 'SVI', value: life ? fmt(life.svi, 2) : '—', unit: '/ 1' },
         { label: t('report.co2'), value: life ? fmt(life.co2AvoidedKg / 1000, 1) : '—', unit: t('unit.tonnes') },
       ],
@@ -515,20 +538,27 @@ function protectionBlocks(input: ReportModelInput): readonly Block[] {
   ];
 }
 
-function pricingBlocks({ project, finance, t }: ReportModelInput): readonly Block[] {
+function pricingBlocks(input: ReportModelInput): readonly Block[] {
+  const { project, finance, t } = input;
+  const money = currencyLabel(project.currency, lang(input));
+  const lines = finance === null ? [] : visibleLines(finance);
+  const rows: string[][] = lines.map((line) => [t(`costing.line.${line.key}`), fmt(line.quantity), fmt(line.unitSale), fmt(line.totalSale)]);
+  if (finance !== null && finance.discount > 0) {
+    rows.push([t('report.grossSale'), '', '', fmt(finance.grossSaleHt)]);
+    rows.push([t('report.granted'), '', '', `−${fmt(finance.discount)}`]);
+  }
+  const totalIndex = rows.length;
+  rows.push([t('report.totalExclTax'), '', '', finance ? fmt(finance.totalSaleHt) : '—']);
+  rows.push([`${t('report.vat')} ${fmt(project.costing.tvaPercent, 1)} %`, '', '', finance ? fmt(finance.vatAmount) : '—']);
+  rows.push([t('report.totalInclTax'), '', '', finance ? fmt(finance.totalTtc) : '—']);
   return [
     { kind: 'heading', text: t('report.financialAssessment') },
     {
       kind: 'table',
-      head: [t('report.item'), t('report.quantity'), t('report.unitPrice'), t('report.totalExclTax')],
+      head: [t('report.item'), t('report.quantity'), `${t('report.unitPrice')} (${money})`, `${t('report.totalExclTax')} (${money})`],
       numeric: [1, 2, 3],
-      emphasis: finance ? [finance.lines.length, finance.lines.length + 2] : [],
-      rows: [
-        ...(finance?.lines ?? []).map((line) => [line.label, fmt(line.quantity), fmt(line.unitSale), fmt(line.totalSale)]),
-        [t('report.totalExclTax'), '', '', finance ? fmt(finance.totalSaleHt) : '—'],
-        [`${t('report.vat')} ${fmt(project.costing.tvaPercent, 1)} %`, '', '', finance ? fmt(finance.vatAmount) : '—'],
-        [t('report.totalInclTax'), '', '', finance ? fmt(finance.totalTtc) : '—'],
-      ],
+      emphasis: finance ? [totalIndex, totalIndex + 2] : [],
+      rows,
     },
   ];
 }
@@ -539,8 +569,8 @@ function pricingBlocks({ project, finance, t }: ReportModelInput): readonly Bloc
  * Réservé à l'offre interne : c'est ce qui la distingue enfin de la pièce
  * remise au client, qui affichait exactement les mêmes prix de vente.
  */
-function internalCostBlocks({ project, finance, t }: ReportModelInput): readonly Block[] {
-  const money = project.currency;
+function internalCostBlocks({ project, finance, t, options }: ReportModelInput): readonly Block[] {
+  const money = currencyLabel(project.currency, options?.lang ?? 'fr');
   if (finance === null) {
     return [
       { kind: 'heading', text: t('report.internalCosts') },
@@ -554,10 +584,10 @@ function internalCostBlocks({ project, finance, t }: ReportModelInput): readonly
       kind: 'table',
       head: [t('report.item'), t('report.quantity'), t('report.unitCost'), t('report.totalCost'), t('report.marginRate'), t('report.profit')],
       numeric: [1, 2, 3, 4, 5],
-      emphasis: [finance.lines.length],
+      emphasis: [visibleLines(finance).length],
       rows: [
-        ...finance.lines.map((line) => [
-          line.label, fmt(line.quantity), fmt(line.unitCost), fmt(line.totalCost),
+        ...visibleLines(finance).map((line) => [
+          t(`costing.line.${line.key}`), fmt(line.quantity), fmt(line.unitCost), fmt(line.totalCost),
           `${fmt(line.marginRatio * 100, 1)} %`, fmt(line.profit),
         ]),
         [t('report.total'), '', '', fmt(finance.totalCost), `${fmt(finance.averageMarginRatio * 100, 1)} %`, fmt(finance.profit)],
@@ -575,8 +605,8 @@ function internalCostBlocks({ project, finance, t }: ReportModelInput): readonly
   ];
 }
 
-function economicsBlocks({ project, finance, t }: ReportModelInput): readonly Block[] {
-  const money = project.currency;
+function economicsBlocks({ project, finance, t, options }: ReportModelInput): readonly Block[] {
+  const money = currencyLabel(project.currency, options?.lang ?? 'fr');
   const life = finance?.lifecycle;
   return [
     { kind: 'heading', text: t('report.economicIndicators') },
@@ -592,12 +622,13 @@ function economicsBlocks({ project, finance, t }: ReportModelInput): readonly Bl
   ];
 }
 
-function conditionBlocks({ project, t }: ReportModelInput): readonly Block[] {
-  const details = project.details;
-  const money = project.currency;
+function conditionBlocks(input: ReportModelInput): readonly Block[] {
+  const { project, t } = input;
+  const money = currencyLabel(project.currency, lang(input));
+  const validUntil = new Date(new Date(issuedAt(input)).getTime() + project.costing.offerValidity * 86_400_000).toISOString();
   return [
     { kind: 'heading', text: t('report.conditions') },
-    { kind: 'paragraph', label: `${t('report.validity')} :`, text: `${fmt(project.costing.offerValidity)} ${t('report.days')} ${t('report.from')} ${dateFr(details.projectDate)}.` },
+    { kind: 'paragraph', label: `${t('report.validity')} :`, text: `${fmt(project.costing.offerValidity)} ${t('report.days')}, ${t('report.validUntil')} ${dateLong(validUntil, lang(input))}.` },
     { kind: 'paragraph', label: `${t('report.delivery')} :`, text: `${fmt(project.costing.deliveryTime)} ${t('report.days')} ${t('report.afterDeposit')}.` },
     { kind: 'paragraph', label: `${t('report.warranty')} :`, text: `${fmt(project.costing.productWarranty)} ${t('report.months')}.` },
     { kind: 'paragraph', label: `${t('report.studyDuration')} :`, text: `${fmt(project.assumptions.projectLifetime)} ${t('report.years')} · ${t('report.discountRate')} ${fmt(project.assumptions.actualizationRate, 1)} %.` },
@@ -611,8 +642,9 @@ function conditionBlocks({ project, t }: ReportModelInput): readonly Block[] {
  * Une proforma sans échéancier ni coordonnées de paiement n'est pas payable :
  * c'était pourtant le seul document que l'application appelait « facture ».
  */
-function paymentBlocks({ project, finance, settings, t }: ReportModelInput): readonly Block[] {
-  const money = project.currency;
+function paymentBlocks(input: ReportModelInput): readonly Block[] {
+  const { project, finance, settings, t } = input;
+  const money = `${currencyLabel(project.currency, lang(input))} (${project.currency})`;
   const bank = settings.reports.bankDetails?.trim() ?? '';
   const blocks: Block[] = [
     { kind: 'heading', text: t('report.payment') },
@@ -751,10 +783,4 @@ function buildProtectionRows(
   });
 }
 
-const slug = (value: string): string =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/gu, '')
-    .replace(/[^a-zA-Z0-9]+/gu, '-')
-    .replace(/^-|-$/gu, '')
-    .toLowerCase() || 'projet';
+const slug = (value: string): string => safeFileName(value, 'projet').toLowerCase();

@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import type { ProjectSessionPort, UiLocale } from './contracts.js';
-import { BrowserProjects } from './adapters/browserProjects.js';
+import { InMemoryProjects } from './adapters/inMemoryProjects.js';
+import type { SaveState } from './persistence/persistentProjects.js';
 import {
   projectFileToView,
   projectViewToFile,
@@ -14,14 +15,22 @@ import { useSettings } from '../store/settings.js';
 
 type ProjectMutation = (draft: ProjectViewModel) => void;
 
+/** Port de session optionnellement durable : l'état d'enregistrement est alors observable. */
+export type ObservableProjectSessionPort = ProjectSessionPort & {
+  readonly subscribe?: (listener: () => void) => () => void;
+  readonly getSaveState?: () => SaveState;
+  readonly retry?: () => Promise<void>;
+};
+
+interface ProjectHistory { readonly past: readonly ProjectViewModel[]; readonly future: readonly ProjectViewModel[] }
+
 interface ProjectSessionContextValue {
   readonly projects: readonly ProjectViewModel[];
   readonly canonicalProjects: readonly ProjectFileV1[];
   readonly currentId: string | null;
-  readonly savedAt: number;
+  readonly saveState: SaveState;
+  readonly retrySave: () => void;
   readonly validationErrors: Readonly<Record<string, string>>;
-  readonly past: readonly (readonly ProjectViewModel[])[];
-  readonly future: readonly (readonly ProjectViewModel[])[];
   readonly canUndo: () => boolean;
   readonly canRedo: () => boolean;
   readonly undo: () => void;
@@ -29,14 +38,19 @@ interface ProjectSessionContextValue {
   readonly current: () => ProjectViewModel | null;
   readonly open: (id: string) => void;
   readonly create: (system: SystemType) => string;
-  readonly remove: (id: string) => void;
+  /** Supprime et renvoie la restauration exacte du projet, pour l'action « Annuler ». */
+  readonly remove: (id: string) => (() => void) | null;
   readonly update: (mutate: ProjectMutation) => void;
-  readonly touchSaved: () => void;
   readonly replaceCanonical: (project: ProjectFileV1) => void;
   readonly addCanonical: (project: ProjectFileV1) => void;
 }
 
 const ProjectSessionContext = createContext<ProjectSessionContextValue | null>(null);
+const HISTORY_LIMIT = 50;
+/** Frappes successives regroupées en une seule étape d'annulation. */
+const HISTORY_COALESCE_MS = 800;
+const MEMORY_SAVE_STATE: SaveState = { status: 'saved', pending: 0, lastSavedAt: null, error: null, unreadable: 0 };
+const noopSubscribe = () => () => undefined;
 
 function filesToViews(files: readonly ProjectFileV1[]): ProjectViewModel[] {
   return files.map((project) => projectFileToView(project));
@@ -46,105 +60,138 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'PROJECT_INPUT_INVALID';
 }
 
+/**
+ * Copie de travail d'un projet. La série météo horaire (8 760 points) est
+ * toujours remplacée d'un bloc, jamais modifiée sur place : elle est partagée
+ * entre les versions plutôt que recopiée à chaque frappe et à chaque étape
+ * d'annulation.
+ */
+function cloneProject(view: ProjectViewModel): ProjectViewModel {
+  const source = view.site.downloadedSource;
+  const irradiance = source?.hourlyIrradiance;
+  if (source === null || irradiance === undefined) return structuredClone(view);
+  const { hourlyIrradiance: _shared, ...rest } = source;
+  const copy = structuredClone({ ...view, site: { ...view.site, downloadedSource: rest } }) as ProjectViewModel;
+  copy.site.downloadedSource!.hourlyIrradiance = irradiance;
+  return copy;
+}
+
 export function ProjectSessionProvider({
   children,
   service: providedService,
   locale = 'fr',
 }: {
   readonly children: ReactNode;
-  readonly service?: ProjectSessionPort;
+  readonly service?: ObservableProjectSessionPort;
   readonly locale?: UiLocale;
 }) {
-  const service = useMemo(() => providedService ?? new BrowserProjects(), [providedService]);
+  const service = useMemo<ObservableProjectSessionPort>(() => providedService ?? new InMemoryProjects(), [providedService]);
   const [projects, setProjects] = useState<ProjectViewModel[]>(() => filesToViews(service.list()));
+  const [canonicalProjects, setCanonicalProjects] = useState<readonly ProjectFileV1[]>(() => service.list());
   const [currentId, setCurrentId] = useState<string | null>(() => readNavigationSession(service.list()).currentProjectId);
-  const [savedAt, setSavedAt] = useState(() => Date.now());
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [past, setPast] = useState<readonly ProjectViewModel[][]>([]);
-  const [future, setFuture] = useState<readonly ProjectViewModel[][]>([]);
+  const [histories, setHistories] = useState<Readonly<Record<string, ProjectHistory>>>({});
+  const lastHistoryPush = useRef<{ id: string; at: number } | null>(null);
+  const saveState = useSyncExternalStore(service.subscribe ?? noopSubscribe, service.getSaveState ?? (() => MEMORY_SAVE_STATE));
 
-  const replaceViews = useCallback((next: ProjectViewModel[]) => {
-    for (const view of next) service.replace(projectViewToFile(view));
-    setProjects(next);
-    setSavedAt(Date.now());
+  const projectsRef = useRef(projects);
+  useEffect(() => { projectsRef.current = projects; }, [projects]);
+
+  /** Écrit un seul projet, puis publie la liste canonique à jour. */
+  const persist = useCallback((view: ProjectViewModel): boolean => {
+    try {
+      service.replace(projectViewToFile(view));
+      setCanonicalProjects(service.list());
+      setValidationErrors((errors) => { if (!(view.id in errors)) return errors; const { [view.id]: _removed, ...remaining } = errors; return remaining; });
+      return true;
+    } catch (error) {
+      setValidationErrors((errors) => ({ ...errors, [view.id]: errorMessage(error) }));
+      return false;
+    }
   }, [service]);
 
-  const undo = useCallback(() => {
-    setPast((history) => {
-      const previous = history.at(-1);
-      if (!previous) return history;
-      setFuture((redoHistory) => [...redoHistory, projects].slice(-50));
-      replaceViews(structuredClone(previous));
-      return history.slice(0, -1);
-    });
-  }, [projects, replaceViews]);
+  const replaceView = useCallback((next: ProjectViewModel) => {
+    setProjects((current) => current.map((project) => (project.id === next.id ? next : project)));
+    persist(next);
+  }, [persist]);
 
-  const redo = useCallback(() => {
-    setFuture((history) => {
-      const next = history.at(-1);
-      if (!next) return history;
-      setPast((undoHistory) => [...undoHistory, projects].slice(-50));
-      replaceViews(structuredClone(next));
-      return history.slice(0, -1);
+  const pushHistory = useCallback((previous: ProjectViewModel) => {
+    const now = Date.now();
+    const last = lastHistoryPush.current;
+    lastHistoryPush.current = { id: previous.id, at: now };
+    if (last !== null && last.id === previous.id && now - last.at < HISTORY_COALESCE_MS) return;
+    setHistories((all) => {
+      const history = all[previous.id] ?? { past: [], future: [] };
+      return { ...all, [previous.id]: { past: [...history.past, previous].slice(-HISTORY_LIMIT), future: [] } };
     });
-  }, [projects, replaceViews]);
+  }, []);
+
+  const step = useCallback((direction: 'undo' | 'redo') => {
+    if (currentId === null) return;
+    const present = projectsRef.current.find((project) => project.id === currentId);
+    const history = histories[currentId];
+    if (!present || !history) return;
+    const source = direction === 'undo' ? history.past : history.future;
+    const target = source.at(-1);
+    if (!target) return;
+    lastHistoryPush.current = null;
+    setHistories((all) => ({
+      ...all,
+      [currentId]: direction === 'undo'
+        ? { past: history.past.slice(0, -1), future: [...history.future, present] }
+        : { past: [...history.past, present], future: history.future.slice(0, -1) },
+    }));
+    replaceView(target);
+  }, [currentId, histories, replaceView]);
 
   const create = useCallback((system: SystemType): string => {
     const file = service.create(systemTypeToCanonical(system), locale);
     const view = projectFileToView(applyProjectDefaults(file, useSettings.getState()));
-    service.replace(projectViewToFile(view));
-    setPast((history) => [...history, projects].slice(-50));
-    setFuture([]);
-    setProjects([view, ...projects]);
+    persist(view);
+    setProjects((current) => [view, ...current]);
     setCurrentId(file.id);
-    setSavedAt(Date.now());
     return file.id;
-  }, [locale, projects, service]);
+  }, [locale, persist, service]);
 
-  const remove = useCallback((id: string) => {
+  const remove = useCallback((id: string): (() => void) | null => {
+    const file = service.get(id);
+    if (file === null) return null;
     service.remove(id);
-    setPast((history) => [...history, projects].slice(-50));
-    setFuture([]);
+    setCanonicalProjects(service.list());
     setProjects((current) => current.filter((project) => project.id !== id));
-    setCurrentId((current) => current === id ? null : current);
-    setSavedAt(Date.now());
-  }, [projects, service]);
+    setHistories((all) => { const { [id]: _removed, ...rest } = all; return rest; });
+    setCurrentId((current) => (current === id ? null : current));
+    return () => {
+      service.add(file);
+      setCanonicalProjects(service.list());
+      setProjects((current) => [projectFileToView(file), ...current]);
+    };
+  }, [service]);
 
   const update = useCallback((mutate: ProjectMutation) => {
     if (currentId === null) return;
-    const next = structuredClone(projects);
-    const index = next.findIndex((project) => project.id === currentId);
-    const draft = next[index];
-    if (!draft) return;
+    const present = projectsRef.current.find((project) => project.id === currentId);
+    if (!present) return;
+    const draft = cloneProject(present);
     mutate(draft);
     draft.updatedAt = new Date().toISOString();
-    setPast((history) => [...history, projects].slice(-50));
-    setFuture([]);
-    setProjects(next);
-    try {
-      service.replace(projectViewToFile(draft));
-      setValidationErrors((errors) => {
-        const { [currentId]: _removed, ...remaining } = errors;
-        return remaining;
-      });
-      setSavedAt(Date.now());
-    } catch (error) {
-      setValidationErrors((errors) => ({ ...errors, [currentId]: errorMessage(error) }));
-    }
-  }, [currentId, projects, service]);
+    pushHistory(present);
+    projectsRef.current = projectsRef.current.map((project) => (project.id === draft.id ? draft : project));
+    setProjects(projectsRef.current);
+    persist(draft);
+  }, [currentId, persist, pushHistory]);
 
   const value = useMemo<ProjectSessionContextValue>(() => ({
     projects,
-    canonicalProjects: service.list(),
+    canonicalProjects,
     currentId,
-    savedAt,
+    saveState,
+    retrySave: () => { void service.retry?.(); },
     validationErrors,
-    past,
-    future,
-    canUndo: () => past.length > 0,
-    canRedo: () => future.length > 0,
-    undo,
-    redo,
+    canUndo: () => currentId !== null && (histories[currentId]?.past.length ?? 0) > 0,
+    canRedo: () => currentId !== null && (histories[currentId]?.future.length ?? 0) > 0,
+    undo: () => step('undo'),
+    redo: () => step('redo'),
     current: () => projects.find((project) => project.id === currentId) ?? null,
     open: (id) => {
       setCurrentId(id);
@@ -154,18 +201,21 @@ export function ProjectSessionProvider({
     create,
     remove,
     update,
-    touchSaved: () => setSavedAt(Date.now()),
     replaceCanonical: (project) => {
       service.replace(project);
-      setProjects(filesToViews(service.list()));
-      setSavedAt(Date.now());
+      setCanonicalProjects(service.list());
+      const view = projectFileToView(service.get(project.id) ?? project);
+      projectsRef.current = projectsRef.current.some((item) => item.id === view.id)
+        ? projectsRef.current.map((item) => (item.id === view.id ? view : item))
+        : [view, ...projectsRef.current];
+      setProjects(projectsRef.current);
     },
     addCanonical: (project) => {
       service.add(project);
+      setCanonicalProjects(service.list());
       setProjects(filesToViews(service.list()));
-      setSavedAt(Date.now());
     },
-  }), [create, currentId, future, past, projects, redo, remove, savedAt, service, undo, update, validationErrors]);
+  }), [canonicalProjects, create, currentId, histories, projects, remove, saveState, service, step, update, validationErrors]);
 
   return <ProjectSessionContext.Provider value={value}>{children}</ProjectSessionContext.Provider>;
 }

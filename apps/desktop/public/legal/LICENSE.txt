@@ -1,0 +1,43 @@
+KYA-SolDesign — Contrat de licence utilisateur final
+Copyright © 2026 KYA-Energy Group. Tous droits réservés.
+
+BROUILLON — À VALIDER PAR LE CONSEIL JURIDIQUE DE KYA-ENERGY GROUP AVANT DIFFUSION.
+
+1. Objet
+Le présent contrat accorde au licencié un droit personnel, non exclusif et non
+transférable d'installer et d'utiliser le logiciel KYA-SolDesign (« le Logiciel »)
+pour ses besoins professionnels internes, dans les limites de la licence acquise.
+
+2. Propriété
+Le Logiciel, sa documentation, ses bases de données techniques et ses modèles de
+documents demeurent la propriété exclusive de KYA-Energy Group. Aucun droit de
+propriété n'est cédé au licencié.
+
+3. Restrictions
+Sauf accord écrit préalable, le licencié s'interdit de copier, modifier, adapter,
+traduire, décompiler, désassembler ou procéder à l'ingénierie inverse du Logiciel,
+de le louer, de le prêter, de le sous-licencier ou de le mettre à disposition de tiers.
+
+4. Données
+Les projets créés par le licencié lui appartiennent et sont enregistrés sur son
+poste. Le Logiciel contacte des services tiers (PVGIS, service de géocodage) uniquement
+à la demande explicite de l'utilisateur, pour télécharger des données météorologiques
+ou localiser un site ; aucune donnée de projet n'est transmise à ces services.
+
+5. Résultats de calcul
+Les résultats du Logiciel sont une aide à la décision. Ils ne dispensent pas le
+licencié de vérifier la conformité de chaque installation aux normes et
+réglementations applicables, ni de faire valider les choix de protection et de
+câblage par une personne qualifiée.
+
+6. Garantie et responsabilité
+Le Logiciel est fourni conformément à sa documentation. Dans les limites permises
+par la loi, KYA-Energy Group ne saurait être tenu responsable des dommages indirects
+résultant de l'utilisation du Logiciel.
+
+7. Composants tiers
+Le Logiciel intègre des composants distribués sous leurs propres licences, listés
+dans le fichier THIRD_PARTY_NOTICES fourni avec l'application.
+
+8. Droit applicable
+Le présent contrat est régi par le droit applicable au siège de KYA-Energy Group.

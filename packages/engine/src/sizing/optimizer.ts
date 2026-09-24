@@ -11,6 +11,8 @@ export async function optimizeSizing(input: {
   readonly inverters: readonly SizingInputV1['selectedEquipment']['inverter'][];
   readonly costs?: OptimizationCosts;
   readonly onProgress?: (progress: { readonly completed: number; readonly total: number }) => void;
+  /** Rend la main à l'hôte (interface) à intervalles réguliers ; sans effet par défaut. */
+  readonly yieldControl?: () => Promise<void>;
 }): Promise<OptimizationResult> {
   if (!input.request.enabled) return { status: 'blocked', code: 'OPTIMIZATION_DISABLED', message: 'Optimization requires explicit activation' };
   const modules = inScope(input.modules, input.request.module);
@@ -26,6 +28,7 @@ export async function optimizeSizing(input: {
     const sizingInput: SizingInputV1 = { ...input.base, selectedEquipment: { module, battery, inverter } };
     const envelope = await engine.calculate(sizingInput);
     completed += 1; input.onProgress?.({ completed, total });
+    if (completed % 50 === 0) await input.yieldControl?.();
     if (!envelope.output.valid) { rejected += 1; continue; }
     const metrics = metricsFor(envelope.output, input.base);
     const limits = input.request.maxOversizeRatio;

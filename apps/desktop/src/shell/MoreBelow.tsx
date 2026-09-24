@@ -12,8 +12,10 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '../i18n';
 
 export function MoreBelow({ containerRef }: { containerRef: React.RefObject<HTMLElement | null> }) {
+  const t = useT();
   const [left, setLeft] = useState(0);
   const [unit, setUnit] = useState<'group' | 'field'>('group');
   const [bottom, setBottom] = useState(0);
@@ -76,10 +78,10 @@ export function MoreBelow({ containerRef }: { containerRef: React.RefObject<HTML
 
   const label =
     left <= 0
-      ? 'Suite plus bas'
+      ? t('moreBelow.suitePlusBas')
       : unit === 'group'
-        ? `Encore ${left} ${left > 1 ? 'groupes' : 'groupe'}`
-        : `Encore ${left} ${left > 1 ? 'champs' : 'champ'}`;
+        ? t(left > 1 ? 'moreBelow.groups' : 'moreBelow.group').replace('{count}', String(left))
+        : t(left > 1 ? 'moreBelow.fields' : 'moreBelow.field').replace('{count}', String(left));
 
   return (
     <>
@@ -89,7 +91,7 @@ export function MoreBelow({ containerRef }: { containerRef: React.RefObject<HTML
         style={{ bottom: bottom + 8 }}
         onClick={jump}
         tabIndex={-1}
-        title="Afficher la suite de la feuille"
+        title={t('moreBelow.afficherLaSuiteDe')}
       >
         <span>{label}</span>
         <span aria-hidden>↓</span>

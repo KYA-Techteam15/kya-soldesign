@@ -1,9 +1,10 @@
+import { saveFile, safeFileName } from '../../app/platform/files';
 import { useMemo, useRef, useState } from 'react';
 import { validateAnnualCalendar } from '@ksd/engine';
 import type { LoadCalendarView, LoadCompositionView } from '../../app/models/projectView';
 import { Dialog } from '../../ui/Dialog';
 import { exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
-import { useT } from '../../i18n';
+import { fill, tr, useT } from '../../i18n';
 
 type Organization = LoadCompositionView['organization'];
 
@@ -54,20 +55,19 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
   const exportSelected = () => {
     if (selected === undefined) return;
     const bytes = exportHourlyProfileWorkbook(selected.hourly.map((point) => ({ hourIndex: point.hour, activePowerKw: point.realPower, peakPowerKw: point.peakPower })));
-    const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${selected.name.replace(/[^a-z0-9]+/giu, '-').toLowerCase() || 'profil'}.xlsx`; link.click(); URL.revokeObjectURL(link.href);
+    void saveFile({ suggestedName: `${safeFileName(selected.name, 'profil')}.xlsx`, data: new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filter: { name: 'Excel', extensions: ['xlsx'] } });
   };
   const importSelected = async (file: File) => {
     const result = inspectHourlyProfileWorkbook(await file.arrayBuffer());
     if (result.status === 'invalid') { setImportMessage(result.issues.slice(0, 2).map((issue) => `${issue.columnName || issue.cellAddress}: ${issue.message}`).join(' · ')); return; }
     if (selected === undefined) return;
     updateSelected((profile) => ({ ...profile, hourly: result.candidate.map((point) => ({ hour: point.hourIndex, realPower: point.activePowerKw, peakPower: point.peakPowerKw ?? point.activePowerKw })) }));
-    setImportMessage(result.warnings.length > 0 ? 'Profil importé ; les pointes vides ont été ramenées à la moyenne.' : 'Profil importé et validé.');
+    setImportMessage(result.warnings.length > 0 ? t('composed.profilImporteLesPointes') : t('composed.profilImporteEtValide'));
   };
 
   return <Dialog
-    title="Composer les profils annuels"
-    lead="calendrier, combinaisons et valeurs de puissance de 00 h à 23 h"
+    title={t('composed.composerLesProfilsAnnuels')}
+    lead={t('composed.calendrierCombinaisonsEtValeurs')}
     wide
     onClose={onCancel}
     footer={<>
@@ -85,8 +85,8 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
     <div className="composed-dialog">
       <section className="composed-section">
         <div className="tbl-title"><h2 className="h-sec">{t('loads.composedOrganization')}</h2><span className="label">{t('loads.composedOneMethod')}</span></div>
-        <div className="seg" role="radiogroup" aria-label="Organisation des profils">
-          <button role="radio" aria-checked={draft.organization === 'workweek-weekend'} className={draft.organization === 'workweek-weekend' ? 'active' : ''} onClick={() => changeOrganization('workweek-weekend')}>Ouvrés / week-end</button>
+        <div className="seg" role="radiogroup" aria-label={t('composed.organisationDesProfils')}>
+          <button role="radio" aria-checked={draft.organization === 'workweek-weekend'} className={draft.organization === 'workweek-weekend' ? 'active' : ''} onClick={() => changeOrganization('workweek-weekend')}>{t('composed.ouvresWeekEnd')}</button>
           <button role="radio" aria-checked={draft.organization === 'periods'} className={draft.organization === 'periods' ? 'active' : ''} onClick={() => changeOrganization('periods')}>{t('loads.composedPeriods')}</button>
           <button role="radio" aria-checked={draft.organization === 'periods-by-day-type'} className={draft.organization === 'periods-by-day-type' ? 'active' : ''} onClick={() => changeOrganization('periods-by-day-type')}>{t('loads.composedPeriodDays')}</button>
         </div>
@@ -98,10 +98,10 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
         <div className="composed-calendar">
           <div className="composed-periods">
             {draft.calendar.periods.map((period, index) => <div className="composed-period" key={period.id}>
-              <input aria-label={`Nom de la période ${index + 1}`} value={period.name} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, name: event.target.value } : item) } }))} />
-              <input aria-label={`Début de ${period.name}`} placeholder="MM-JJ" value={period.startMonthDay} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, startMonthDay: event.target.value } : item) } }))} />
+              <input aria-label={fill(t('composed.periodNameN'), { n: index + 1 })} value={period.name} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, name: event.target.value } : item) } }))} />
+              <input aria-label={`${t('calendar2.startOf')} ${period.name}`} placeholder="MM-JJ" value={period.startMonthDay} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, startMonthDay: event.target.value } : item) } }))} />
               <span>→</span>
-              <input aria-label={`Fin de ${period.name}`} placeholder="MM-JJ" value={period.endMonthDay} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, endMonthDay: event.target.value } : item) } }))} />
+              <input aria-label={`${t('calendar2.endOf')} ${period.name}`} placeholder="MM-JJ" value={period.endMonthDay} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, endMonthDay: event.target.value } : item) } }))} />
             </div>)}
           </div>
           <div className="composed-matrix">
@@ -122,12 +122,12 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
       <section className="composed-section">
         <div className="tbl-title"><h2 className="h-sec">{t('loads.composedHourly')}</h2><span className="label">{t('loads.composedHourlyHint')}</span><button className="btn" onClick={() => addProfile(false)}>{t('loads.calendarNewProfile')}</button><button className="btn" disabled={selected === undefined} onClick={() => addProfile(true)}>{t('loads.composedDuplicate')}</button><button className="btn" disabled={selected === undefined || draft.profiles.length <= 1} onClick={removeSelected}>{t('loads.composedDelete')}</button><button className="btn" disabled={selected === undefined} onClick={exportSelected}>{t('loads.composedExport')}</button><button className="btn" disabled={selected === undefined} onClick={() => importRef.current?.click()}>{t('loads.composedImport')}</button></div>
         <div className="composed-profile-layout">
-          <div className="composed-profile-list" role="listbox" aria-label="Profils disponibles">
+          <div className="composed-profile-list" role="listbox" aria-label={t('composed.profilsDisponibles')}>
             {draft.profiles.map((profile) => <button key={profile.id} className={profile.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedProfileId(profile.id)}>{profile.name}</button>)}
           </div>
           {selected && <div className="composed-profile-editor">
             <div className="form-rows composed-profile-meta"><label><span>{t('loads.composedName')}</span><input value={selected.name} onChange={(event) => updateSelected((profile) => ({ ...profile, name: event.target.value }))} /></label><label><span>{t('loads.composedColor')}</span><input type="color" value={selected.color} onChange={(event) => updateSelected((profile) => ({ ...profile, color: event.target.value }))} /></label></div>
-            <div className="hourgrid composed-hourgrid">{selected.hourly.map((point) => <label key={point.hour}><span>{String(point.hour).padStart(2, '0')} h</span><input aria-label={`Puissance à ${point.hour} h`} inputMode="decimal" value={point.realPower} onChange={(event) => { const value = Number(event.target.value.replace(',', '.')); if (!Number.isFinite(value) || value < 0) return; updateSelected((profile) => ({ ...profile, hourly: profile.hourly.map((item) => item.hour === point.hour ? { ...item, realPower: value, peakPower: Math.max(value, item.peakPower) } : item) })); }} /></label>)}</div>
+            <div className="hourgrid composed-hourgrid">{selected.hourly.map((point) => <label key={point.hour}><span>{String(point.hour).padStart(2, '0')} h</span><input aria-label={fill(t('loads2.powerAtHour'), { hour: point.hour })} inputMode="decimal" value={point.realPower} onChange={(event) => { const value = Number(event.target.value.replace(',', '.')); if (!Number.isFinite(value) || value < 0) return; updateSelected((profile) => ({ ...profile, hourly: profile.hourly.map((item) => item.hour === point.hour ? { ...item, realPower: value, peakPower: Math.max(value, item.peakPower) } : item) })); }} /></label>)}</div>
           </div>}
         </div>
       </section>
@@ -141,9 +141,9 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
 
 function validateComposition(composition: LoadCompositionView) {
   const profileIds = new Set(composition.profiles.map((profile) => profile.id));
-  const directIssues = composition.profiles.flatMap((profile) => profile.hourly.length !== 24 ? [{ code: 'PROFILE_HOURS_COUNT', path: profile.id, message: `${profile.name} doit contenir 24 heures` }] : profile.hourly.filter((point) => !Number.isFinite(point.realPower) || point.realPower < 0 || point.peakPower < point.realPower).map((point) => ({ code: 'PROFILE_HOUR_INVALID', path: `${profile.id}.${point.hour}`, message: `La puissance de ${point.hour} h est invalide` })));
+  const directIssues = composition.profiles.flatMap((profile) => profile.hourly.length !== 24 ? [{ code: 'PROFILE_HOURS_COUNT', path: profile.id, message: fill(tr('composed.needs24Hours'), { name: profile.name }) }] : profile.hourly.filter((point) => !Number.isFinite(point.realPower) || point.realPower < 0 || point.peakPower < point.realPower).map((point) => ({ code: 'PROFILE_HOUR_INVALID', path: `${profile.id}.${point.hour}`, message: fill(tr('composed.invalidPowerAt'), { hour: point.hour }) })));
   const calendarIssues = validateAnnualCalendar(composition.calendar).map((issue) => ({ code: issue.code, path: issue.path, message: issue.message }));
-  const unknown = composition.calendar.assignments.filter((assignment) => !profileIds.has(assignment.profileId)).map((assignment) => ({ code: 'PROFILE_UNKNOWN', path: assignment.profileId, message: 'Une combinaison référence un profil inexistant' }));
+  const unknown = composition.calendar.assignments.filter((assignment) => !profileIds.has(assignment.profileId)).map((assignment) => ({ code: 'PROFILE_UNKNOWN', path: assignment.profileId, message: tr('composed.uneCombinaisonReferenceUn') }));
   return [...directIssues, ...calendarIssues, ...unknown];
 }
 
@@ -177,10 +177,10 @@ export function makeExampleComposition(): LoadCompositionView {
   });
 
   const profiles = [
-    { id: 'example-hot-week', name: 'Saison chaude · ouvré', color: '#F99D32', hourly: shape(1, 1) },
-    { id: 'example-hot-weekend', name: 'Saison chaude · week-end', color: '#E9724C', hourly: shape(0.6, 0.2) },
-    { id: 'example-mild-week', name: 'Saison tempérée · ouvré', color: '#2B9C8F', hourly: shape(0.35, 1) },
-    { id: 'example-mild-weekend', name: 'Saison tempérée · week-end', color: '#1CA18C', hourly: shape(0.2, 0.2) },
+    { id: 'example-hot-week', name: tr('composed.saisonChaudeOuvre'), color: '#F99D32', hourly: shape(1, 1) },
+    { id: 'example-hot-weekend', name: tr('composed.saisonChaudeWeekEnd'), color: '#E9724C', hourly: shape(0.6, 0.2) },
+    { id: 'example-mild-week', name: tr('composed.saisonTempereeOuvre'), color: '#2B9C8F', hourly: shape(0.35, 1) },
+    { id: 'example-mild-weekend', name: tr('composed.saisonTempereeWeekEnd'), color: '#1CA18C', hourly: shape(0.2, 0.2) },
   ];
 
   const dayGroups = [
@@ -189,8 +189,8 @@ export function makeExampleComposition(): LoadCompositionView {
   ];
   // Deux périodes qui couvrent l'année sans trou ni recouvrement.
   const periods = [
-    { id: 'example-hot', name: 'Saison chaude', startMonthDay: '02-01', endMonthDay: '05-31' },
-    { id: 'example-mild', name: 'Saison tempérée', startMonthDay: '06-01', endMonthDay: '01-31' },
+    { id: 'example-hot', name: tr('composed.saisonChaude'), startMonthDay: '02-01', endMonthDay: '05-31' },
+    { id: 'example-mild', name: tr('composed.saisonTemperee'), startMonthDay: '06-01', endMonthDay: '01-31' },
   ];
 
   return {
@@ -209,7 +209,7 @@ export function makeExampleComposition(): LoadCompositionView {
 }
 
 function makeDefaultComposition(): LoadCompositionView {
-  const profiles = [{ id: 'composed-workweek', name: 'Jours ouvrés', color: '#F99D32', hourly: hours(0) }, { id: 'composed-weekend', name: 'Week-end', color: '#2B9C8F', hourly: hours(0) }];
+  const profiles = [{ id: 'composed-workweek', name: tr('composed.joursOuvres'), color: '#F99D32', hourly: hours(0) }, { id: 'composed-weekend', name: 'Week-end', color: '#2B9C8F', hourly: hours(0) }];
   return { organization: 'workweek-weekend', calendar: calendarForOrganization('workweek-weekend', null, profiles[0]!.id, profiles[1]!.id), profiles };
 }
 
@@ -217,13 +217,13 @@ function calendarForOrganization(organization: Organization, previous: LoadCalen
   const groups = organization === 'periods'
     ? [{ id: 'all-days', kind: 'all-days' as const, weekdaysIso: [1, 2, 3, 4, 5, 6, 7] }]
     : [{ id: 'workweek', kind: 'workweek' as const, weekdaysIso: [1, 2, 3, 4, 5] }, { id: 'weekend', kind: 'weekend' as const, weekdaysIso: [6, 7] }];
-  const periods = previous?.periods.length ? structuredClone(previous.periods) : [{ id: 'annual', name: 'Année', startMonthDay: '01-01', endMonthDay: '12-31' }];
+  const periods = previous?.periods.length ? structuredClone(previous.periods) : [{ id: 'annual', name: tr('calendar2.year'), startMonthDay: '01-01', endMonthDay: '12-31' }];
   return { version: 2, mode: organization, dayGroups: groups, periods, assignments: periods.flatMap((period) => groups.map((group) => ({ periodId: period.id, dayGroupId: group.id, profileId: group.id === 'weekend' ? secondProfileId : firstProfileId }))) };
 }
 
 function addPeriod(calendar: LoadCalendarView, profileId: string): LoadCalendarView {
   const index = calendar.periods.length + 1;
-  const period = { id: `period-${Date.now()}`, name: `Période ${index}`, startMonthDay: '01-01', endMonthDay: '12-31' };
+  const period = { id: `period-${Date.now()}`, name: fill(tr('calendar2.periodN'), { n: index }), startMonthDay: '01-01', endMonthDay: '12-31' };
   return { ...calendar, periods: [...calendar.periods, period], assignments: [...calendar.assignments, ...calendar.dayGroups.map((group) => ({ periodId: period.id, dayGroupId: group.id, profileId }))] };
 }
 

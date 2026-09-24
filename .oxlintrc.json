@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "oxc", "unicorn"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "off"
+  },
+  "ignorePatterns": ["**/dist/**", "**/src-tauri/target/**", "**/src-tauri/gen/**"]
+}

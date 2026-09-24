@@ -1,9 +1,21 @@
 import type { PresizingCandidateV1, PresizingEnvelopeV1, PresizingInputV1, PresizingProgress } from './contracts.js';
+import { simulateHourlyEnergyBalance } from '../simulation/hourly-balance.js';
+import { hashInput, trace } from '../shared/trace.js';
+
+const loadSeriesCache = new WeakMap<readonly number[], readonly number[]>();
+/** La série de charge en kWh, convertie une fois par entrée plutôt qu'à chaque couple. */
+function loadKwhSeries(hourlyLoadWh: readonly number[]): readonly number[] {
+  const cached = loadSeriesCache.get(hourlyLoadWh);
+  if (cached) return cached;
+  const series = hourlyLoadWh.map((value) => value / 1000);
+  loadSeriesCache.set(hourlyLoadWh, series);
+  return series;
+}
 
 const GRID = Array.from({ length: 11 }, (_, index) => index / 10);
 
 export class PresizingEngine {
-  public readonly version = 'presizing-1.1.0';
+  public readonly version = 'presizing-1.2.0';
 
   public async calculate(input: PresizingInputV1, onProgress?: (progress: PresizingProgress) => void, yieldControl: () => Promise<void> = () => Promise.resolve()): Promise<PresizingEnvelopeV1> {
     validateInput(input);
@@ -28,10 +40,15 @@ export class PresizingEngine {
       .toSorted((a, b) => reliableCandidates.length > 0 ? a.svi - b.svi || b.co2AvoidedKg - a.co2AvoidedKg : b.sri - a.sri || a.svi - b.svi)[0]!;
     return {
       engineVersion: this.version,
-      inputHash: hash(JSON.stringify(input)),
+      inputHash: hashInput(input),
       output: { evaluatedPairs: completed, totalPairs: pairs, selected, sriMin, reliable: reliableCandidates.length > 0, viable: selected.svi < 1 },
       issues: reliableCandidates.length > 0 ? [] : [{ code: 'SRI_TARGET_NOT_REACHED', severity: 'warning', message: 'Aucune configuration n’atteint le seuil de fiabilité.', sourceId: this.version }],
-      trace: [],
+      trace: [
+        trace('selected.pvPeakKw', 'Eq.16:E_ex/(H_poa·PR)', 'KYA-methodology-2026', ['dailyEnergyWh', 'yEn', 'hourlyPoaWm2', 'systemPr']),
+        trace('selected.storageKwh', 'Eq.18:E_T·((α_A−α_N−1)·yEn+1+α_N)', 'KYA-methodology-2026', ['dailyEnergyWh', 'yEn']),
+        trace('selected.sri', 'hourly-balance:(1−LOLP)·(1−LPSP)', 'research-010-R2', ['hourlyLoadWh', 'hourlyPoaWm2', 'inverterEfficiency', 'batteryEfficiency']),
+        trace('selected.lcoe', 'LCC/Σ E_served·annuity', 'KYA-methodology-2026', ['pvSpecificCostPerKw', 'batterySpecificCostPerKwh', 'inverterSpecificCostPerKw', 'discountRateRatio']),
+      ],
     };
   }
 }
@@ -56,30 +73,15 @@ function evaluateCandidate(input: PresizingInputV1, alphaA: number, alphaN: numb
   const storageKwh = dailyEnergyKwh * ((alphaA - alphaN - 1) * input.yEn + 1 + alphaN);
   if (pvPeakKw <= 0 || storageKwh < 0) return null;
   const inverterKw = Math.max(input.peakPowerW / 1000, pvPeakKw * input.inverterEfficiency);
-  // La charge est soit une journée type répétée, soit une année complète. Le
-  // modulo porte donc sur sa propre longueur : sur 8 760 valeurs il ne boucle
-  // jamais, et la saisonnalité réellement saisie atteint la simulation au lieu
-  // d'être écrasée par une moyenne.
-  const loadHours = input.hourlyLoadWh.length;
-  let storedKwh = storageKwh; let lossHours = 0; let served = 0; let production = 0; let demanded = 0;
-  for (let hour = 0; hour < input.hourlyPoaWm2.length; hour += 1) {
-    const loadKwh = (input.hourlyLoadWh[hour % loadHours] ?? 0) / 1000;
-    demanded += loadKwh;
-    const pvKwh = pvPeakKw * (input.hourlyPoaWm2[hour]! / 1000) * input.systemPr;
-    production += pvKwh;
-    const direct = Math.min(loadKwh, pvKwh * input.inverterEfficiency);
-    const deficit = loadKwh - direct;
-    const discharged = Math.min(storedKwh, deficit / Math.max(input.batteryEfficiency, 0.01));
-    storedKwh = Math.min(storageKwh, Math.max(0, storedKwh + Math.max(0, pvKwh - direct) * input.batteryEfficiency - discharged));
-    served += direct + discharged * input.batteryEfficiency;
-    if (direct + discharged * input.batteryEfficiency + 1e-9 < loadKwh) lossHours += 1;
-  }
-  // Le besoin total se lit sur la simulation elle-même. Le déduire d'une
-  // énergie journalière multipliée par 365 supposait une année plate.
-  const totalLoadKwh = demanded;
-  const servedEnergyKwh = Math.min(served, totalLoadKwh);
-  const lpsp = Math.max(0, Math.min(1, 1 - servedEnergyKwh / Math.max(totalLoadKwh, 0.001)));
-  const lolp = lossHours / input.hourlyPoaWm2.length; const sri = (1 - lolp) * (1 - lpsp);
+  // Même bilan horaire que l'évaluation du système retenu : un couple et le
+  // système qui le réalise doivent annoncer la même fiabilité.
+  const balance = simulateHourlyEnergyBalance({
+    pvPeakKw, usableStorageKwh: storageKwh, inverterKw,
+    hourlyLoadKwh: loadKwhSeries(input.hourlyLoadWh), hourlyPoaWm2: input.hourlyPoaWm2,
+    performanceRatio: input.systemPr, inverterEfficiency: input.inverterEfficiency, batteryEfficiency: input.batteryEfficiency,
+  });
+  const { servedEnergyKwh, lpsp, lolp, sri } = balance;
+  const production = balance.annualProductionKwh;
   const investment = pvPeakKw * input.pvSpecificCostPerKw + storageKwh * input.batterySpecificCostPerKwh + inverterKw * input.inverterSpecificCostPerKw;
   const discountFactor = (year: number) => 1 / ((1 + input.discountRateRatio) ** year);
   const annuity = Array.from({ length: input.projectLifetimeYears }, (_, index) => discountFactor(index + 1)).reduce((sum, value) => sum + value, 0);
@@ -125,4 +127,4 @@ function validateInput(input: PresizingInputV1): void {
   const lifetimes = [input.projectLifetimeYears, input.pvLifetimeYears, input.batteryLifetimeYears, input.inverterLifetimeYears];
   if (lifetimes.some((value) => !Number.isInteger(value) || value <= 0)) throw new Error('ASSUMPTION_OUT_OF_RANGE');
 }
-function hash(value: string): string { let result = 2166136261; for (let index = 0; index < value.length; index += 1) result = Math.imul(result ^ value.charCodeAt(index), 16777619); return (result >>> 0).toString(16).padStart(8, '0'); }
+

@@ -1,3 +1,4 @@
+import { saveFile, type SaveOutcome } from '../platform/files';
 import {
   AlignmentType,
   BorderStyle,
@@ -583,6 +584,7 @@ function sectionOf(
             children: [
               text(document.company.name, { bold: true, size: 10, color: TEAL_DARK }),
               text(document.company.contact ? `    ${document.company.contact}` : '', { size: 7.5, color: MUTED }),
+              text(`    ${document.issuedOn}`, { size: 7.5, color: MUTED }),
             ],
           }),
         ],
@@ -623,13 +625,8 @@ export async function writeDocx(document: ReportDocument): Promise<Blob> {
   return Packer.toBlob(file);
 }
 
-/** Écrit puis propose le fichier au téléchargement. */
-export async function downloadDocx(document: ReportDocument): Promise<void> {
+/** Écrit le document, puis l'enregistre (boîte native sous Tauri). */
+export async function downloadDocx(document: ReportDocument): Promise<SaveOutcome> {
   const blob = await writeDocx(document);
-  const url = URL.createObjectURL(blob);
-  const anchor = window.document.createElement('a');
-  anchor.href = url;
-  anchor.download = document.fileName;
-  anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return saveFile({ suggestedName: document.fileName, data: blob, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', filter: { name: 'Word', extensions: ['docx'] } });
 }

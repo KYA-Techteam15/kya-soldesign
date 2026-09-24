@@ -1,3 +1,4 @@
+import { saveFile } from '../app/platform/files';
 import { useEffect, useState, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from 'react';
 import { TopBar } from '../shell/TopBar';
 import { StatusBar } from '../shell/StatusBar';
@@ -6,7 +7,7 @@ import { useUi, VIBES, type Vibe } from '../store/ui';
 import { useSettings } from '../store/settings';
 import type { ApplicationSettingsV2 } from '../app/models/applicationSettings';
 import { createManualRate } from '../app/services/exchangeRates';
-import { applicationReleaseInfo } from '../app/models/releaseInfo';
+import { AboutSection, DataSection } from './settings/AboutAndData';
 import { reportAssetRepository, useReportAssetUrl } from '../app/adapters/reportAssetRepository';
 import { packSettings, unpackSettings } from '../app/services/settingsTransfer';
 import { unavailableLicense } from '../app/adapters/unavailableLicense';
@@ -32,10 +33,8 @@ export function SettingsRoute() {
      ne se remarque qu'au premier document imprimé sur la nouvelle machine. */
   const exportSettings = async () => {
     try {
-      const blob = new Blob([await packSettings(settings)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
-      anchor.href = url; anchor.download = 'kya-sol-design-settings-v2.json'; anchor.click(); URL.revokeObjectURL(url);
-      notify({ kind: 'success', title: t('settings.exported') });
+      const outcome = await saveFile({ suggestedName: 'kya-sol-design-reglages.json', data: await packSettings(settings), mimeType: 'application/json', filter: { name: 'JSON', extensions: ['json'] } });
+      if (outcome.status === 'saved') notify({ kind: 'success', title: t('settings.exported') });
     } catch (error) {
       notify({ kind: 'error', title: t('settings.exportFailed'), detail: error instanceof Error ? error.message : '' });
     }
@@ -62,7 +61,8 @@ export function SettingsRoute() {
     <SettingsGroup title={t('settings.projectsFiles')} onReset={() => resetCategories('projects')}><NumberSetting label={t('settings.recentLimit')} unit={t('settings.projects')} value={settings.projects.recentProjectLimit} onCommit={(value) => updateProjects({ recentProjectLimit: value })} integer /><label className="kpi"><span>{t('settings.autosave')}</span><select value={settings.projects.autosaveStrategy} onChange={(event) => updateProjects({ autosaveStrategy: event.target.value as 'immediate' | 'debounced' })}><option value="immediate">{t('settings.autosaveImmediate')}</option><option value="debounced">{t('settings.autosaveDebounced')}</option></select></label>{settings.projects.autosaveStrategy === 'debounced' && <NumberSetting label={t('settings.autosaveDelay')} unit="ms" value={settings.projects.autosaveDebounceMs} onCommit={(value) => updateProjects({ autosaveDebounceMs: value })} integer />}<label className="kpi"><span>{t('settings.exportDestination')}</span><select value={settings.projects.exportDestinationMode} onChange={(event) => updateProjects({ exportDestinationMode: event.target.value as 'ask-each-time' | 'platform-handle' })}><option value="ask-each-time">{t('settings.exportAsk')}</option><option value="platform-handle">{t('settings.exportPlatform')}</option></select></label></SettingsGroup>
     <SettingsGroup title={t('settings.currency')} onReset={() => resetCategories('currency')}><TextSetting label={t('settings.inputCurrency')} value={settings.currency.inputCurrencyCode} maxLength={3} onCommit={(value) => updateCurrency({ inputCurrencyCode: value.toUpperCase() })} /><TextSetting label={t('settings.outputCurrency')} value={settings.currency.outputCurrencyCode} maxLength={3} onCommit={(value) => updateCurrency({ outputCurrencyCode: value.toUpperCase() })} /><TextSetting label={t('settings.exchangeRate')} value={settings.currency.rate?.decimalRate ?? ''} placeholder="ex. 1,00" onCommit={setManualRate} /><div className="kpi"><span>{t('settings.rateSource')}</span><span className="label">{settings.currency.rate ? `${settings.currency.rate.sourceLabel} · ${settings.currency.rate.observedAtIso}` : t('settings.rateUnavailable')}</span></div></SettingsGroup>
     <SettingsGroup title={t('settings.license')}><div className="kpi"><span>{t('settings.licenseStatus')}</span><span className="label">{licenseLabel(licenseState, t)}</span></div></SettingsGroup>
-    <SettingsGroup title={t('settings.about')}><div className="kpi"><span>{t('settings.release')}</span><span className="label">{applicationReleaseInfo.version} · {applicationReleaseInfo.channel}</span></div><details className="kpi"><summary>{t('settings.changelog')}</summary>{applicationReleaseInfo.changelogEntries.map((entry) => <div key={`${entry.version}-${entry.dateIso}`}><b>{entry.version}</b> · {entry.dateIso}<br /><span className="label">{entry.message}</span></div>)}</details></SettingsGroup>
+    <DataSection />
+    <AboutSection />
     <div className="rowline"><span className="label">{settings.migrationIgnoredKeys.length > 0 ? t('settings.legacyIgnored') + ': ' + settings.migrationIgnoredKeys.join(', ') : ''}</span><span className="sep" />{settings.storageError && <span className="error">{t('settings.persistenceError')}: {settings.storageError}</span>}<button className="btn" onClick={reset}>{t('settings.reset')}</button></div>
   </div></div><StatusBar /></div>;
 }

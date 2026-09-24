@@ -23,7 +23,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --grep-invert @visual",
     "test:visual": "playwright test --grep @visual",
-    "check:ui": "node tools/ui/check-production-boundaries.mjs && node tools/ui/check-i18n.mjs && node tools/ui/check-ui-copy.mjs",
+    "check:ui": "node tools/ui/check-production-boundaries.mjs && node tools/ui/check-i18n.mjs && node tools/ui/check-hardcoded-copy.mjs && node tools/ui/check-ui-copy.mjs",
     "verify:phase": "node tools/verify-phase.mjs",
     "verify": "node tools/verify.mjs"
   },
@@ -36,6 +36,7 @@
     "fast-check": "4.9.0",
     "oxlint": "1.78.0",
     "oxlint-tsgolint": "7.0.2001",
+    "sharp": "0.34.4",
     "typescript": "7.0.2",
     "vite": "8.2.1",
     "vitest": "4.1.10"

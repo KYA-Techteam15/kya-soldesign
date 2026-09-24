@@ -5,9 +5,14 @@
  * ferme, et l'écran principal ne paie pas la place d'une action qu'on fait
  * une fois par dossier. `ConfirmDialog` reste réservé aux confirmations
  * oui/non ; celui-ci accueille du contenu.
+ *
+ * Un clic hors du dialogue ne le ferme pas : une saisie en cours ne doit pas
+ * disparaître sur un clic égaré. On ferme par ✕, Échap ou les boutons du pied.
  */
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
+import { useT } from '../i18n';
+import { useModal } from './useModal';
 
 export function Dialog({
   title,
@@ -24,36 +29,27 @@ export function Dialog({
   footer?: ReactNode;
   children: ReactNode;
 }) {
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      previouslyFocused?.focus();
-    };
-  }, []);
+  const t = useT();
+  const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const leadId = useId();
+  useModal(ref, onClose);
 
   return (
-    <div className="scrim" onClick={onClose}>
+    <div className="scrim">
       <div
+        ref={ref}
         className={`modal ${wide ? 'modal-wide' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
+        aria-labelledby={titleId}
+        aria-describedby={lead ? leadId : undefined}
+        tabIndex={-1}
       >
         <header>
-          <span>{title}</span>
-          {lead && <small>{lead}</small>}
-          <button className="modal-x" onClick={onClose} aria-label="Fermer">
+          <span id={titleId}>{title}</span>
+          {lead && <small id={leadId}>{lead}</small>}
+          <button className="modal-x" onClick={onClose} aria-label={t('dialog.fermer')}>
             ✕
           </button>
         </header>

@@ -68,16 +68,12 @@ export function OptimizationResults({ result, request, equipment, onApply, onClo
         )}
       </div>
       {confirming && (
-        <div className="scrim" onClick={() => setConfirming(null)}>
-          <div className="modal" role="dialog" aria-modal="true" aria-label={t('optimization.applyConfirmTitle')} onClick={(event) => event.stopPropagation()}>
-            <header><span>{t('optimization.applyConfirmTitle')}</span><button className="modal-x" aria-label={t('g.cancel')} onClick={() => setConfirming(null)}>✕</button></header>
-            <div className="body"><p>{t('optimization.applyConfirmBody')}</p></div>
-            <footer>
-              <button className="btn" onClick={() => setConfirming(null)}>{t('g.cancel')}</button>
-              <button className="btn btn-ok" onClick={() => { onApply(confirming); setConfirming(null); }}>{t('optimization.apply')}</button>
-            </footer>
-          </div>
-        </div>
+        <Dialog title={t('optimization.applyConfirmTitle')} onClose={() => setConfirming(null)} footer={<>
+          <button className="btn" onClick={() => setConfirming(null)} data-autofocus>{t('g.cancel')}</button>
+          <button className="btn btn-ok" onClick={() => { onApply(confirming); setConfirming(null); }}>{t('optimization.apply')}</button>
+        </>}>
+          <p>{t('optimization.applyConfirmBody')}</p>
+        </Dialog>
       )}
     </Dialog>
   );

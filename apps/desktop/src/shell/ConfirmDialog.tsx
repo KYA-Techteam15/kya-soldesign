@@ -1,18 +1,29 @@
+import { useId, useRef } from 'react';
 import { useT } from '../i18n';
-import { useUi } from '../store/ui';
+import { useUi, type ConfirmRequest } from '../store/ui';
+import { useModal } from '../ui/useModal';
 
 export function ConfirmDialog() {
-  const t = useT();
   const confirm = useUi((s) => s.confirm);
   const close = useUi((s) => s.closeConfirm);
   if (!confirm) return null;
+  return <ConfirmBody confirm={confirm} close={close} />;
+}
+
+/** Confirmation oui/non : le focus part sur « Annuler », l'action sûre. */
+function ConfirmBody({ confirm, close }: { readonly confirm: ConfirmRequest; readonly close: () => void }) {
+  const t = useT();
+  const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const messageId = useId();
+  useModal(ref, close);
   return (
-    <div className="scrim" onClick={close}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <header>{confirm.title}</header>
-        <div className="body">{confirm.message}</div>
+    <div className="scrim">
+      <div ref={ref} className="modal" role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId} tabIndex={-1}>
+        <header id={titleId}>{confirm.title}</header>
+        <div className="body" id={messageId}>{confirm.message}</div>
         <footer>
-          <button className="btn btn-ghost" onClick={close}>
+          <button className="btn btn-ghost" onClick={close} data-autofocus>
             {t('g.cancel')}
           </button>
           <button

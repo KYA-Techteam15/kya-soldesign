@@ -3,8 +3,8 @@ import { expect, test } from '@playwright/test';
 test('keeps Page 1 active and future calculated surfaces explicitly unavailable', async ({ page }) => {
   await page.goto('/accueil');
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
-  await expect(page.locator('.statusbar')).toContainText('Moteur Page 1 actif · AIO-001');
-  await expect(page.locator('.statusbar')).toContainText('Calculs AIO traçables');
+  // La barre d'état rend compte de l'enregistrement du dossier, pas du fonctionnement interne.
+  await expect(page.locator('.statusbar')).toContainText('Enregistré');
 
   await page.locator('.nav-item').nth(2).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();

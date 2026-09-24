@@ -245,7 +245,8 @@ export function buildTopology(source: TopologySource): SingleLineTopology {
           ? {
               reference: `F${index + 1}`,
               kind: labels.stringFuse,
-              ratingA: moduleIsc === null ? null : Math.ceil(moduleIsc * 1.5),
+              // Le calibre est celui choisi en « Protections » ; sans choix, « à choisir ».
+              ratingA: pvProtection?.selectedType === 'Fusible gPV' ? positive(pvProtection.caliberA) : null,
               voltageV: stringVocCold,
               quantity: strings.length * 2,
             }

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Prov } from './Prov';
+import { DecimalInput } from './DecimalInput';
 
 export const parseNum = (v: string): number => {
   const parsed = Number.parseFloat(v.replace(',', '.').replace(/\s/g, ''));
@@ -208,5 +209,32 @@ export function Fold({
       </button>
       {open && <div className="fold-body">{children}</div>}
     </section>
+  );
+}
+
+/**
+ * Champ numérique à brouillon (virgule décimale, validation à la sortie), avec
+ * unité et action optionnelle. À préférer à `NumField` pour toute nouvelle saisie.
+ */
+export function DecimalField({ label, unit, value, onCommit, decimals = 0, min, max, ariaLabel, note }: {
+  label: string;
+  unit?: string;
+  value: number;
+  onCommit: (v: number) => void;
+  decimals?: number;
+  min?: number;
+  max?: number;
+  ariaLabel?: string;
+  note?: ReactNode;
+}) {
+  return (
+    <label>
+      {label && <span>{label}</span>}
+      <span className="uf">
+        <DecimalInput value={value} decimals={decimals} {...(min === undefined ? {} : { min })} {...(max === undefined ? {} : { max })} aria-label={ariaLabel ?? label} onCommit={(next) => { if (next !== null) onCommit(next); }} />
+        {unit && <span className="uf-unit">{unit}</span>}
+      </span>
+      {note}
+    </label>
   );
 }

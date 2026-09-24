@@ -23,9 +23,13 @@ describe('FinanceEngine', () => {
       selfConsumptionRatio: 1, dieselSpecificCostPerKw: 300_000,
     });
     expect(result.output.totalCost).toBe(1_100_000);
-    expect(result.output.totalSaleHt).toBeCloseTo(1_201_750);
-    expect(result.output.totalTtc).toBeCloseTo(1_418_065);
-    expect(result.output.downPayment).toBeCloseTo(result.output.totalTtc / 2);
+    expect(result.output.totalSaleHt).toBe(1_201_750);
+    expect(result.output.totalTtc).toBe(1_418_065);
+    expect(result.output.downPayment).toBe(Math.round(result.output.totalTtc / 2));
+    expect(result.output.downPayment + result.output.balanceDue).toBe(result.output.totalTtc);
+    for (const amount of [result.output.totalCost, result.output.totalSaleHt, result.output.vatAmount, result.output.totalTtc, result.output.lifecycle.annualMaintenanceCost]) expect(Number.isInteger(amount)).toBe(true);
+    expect(result.trace.length).toBeGreaterThan(0);
+    expect(result.output.lifecycle.co2AvoidedTrees).toBeCloseTo(result.output.lifecycle.co2AvoidedKg / (22 * 20));
     expect(result.output.simulation.sri).toBeGreaterThan(0.9);
     expect(result.output.lifecycle.lcoeActualized).toBeGreaterThan(0);
     expect(result.output.lifecycle.svi).toBeCloseTo(result.output.lifecycle.lcoeActualized / 125);

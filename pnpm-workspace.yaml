@@ -1,4 +1,6 @@
 packages:
   - "apps/*"
   - "packages/*"
-
+allowBuilds:
+  # Binaires précompilés (@img/sharp-*) : aucun script d'installation nécessaire.
+  sharp: false

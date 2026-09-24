@@ -4,17 +4,17 @@ import { StatusBar } from '../shell/StatusBar';
 import { useT } from '../i18n';
 import { useProjects } from '../store/project';
 import { useUi } from '../store/ui';
-import { fmt, relativeFr } from '../domain/format';
+import { fmt, relativeTime } from '../domain/format';
 import { projectProgress, studioMetrics } from '../app/models/homeMetrics';
 import { useSettings } from '../store/settings';
 import { readProjectResumeTarget } from '../app/navigationSession';
 import type { SystemType } from '../app/models/projectView';
-import schemaAllInOne from '../assets/systems/standalone-all-in-one.png';
-import schemaInverterController from '../assets/systems/standalone-inverter-controller.png';
-import schemaGridTied from '../assets/systems/grid-tied.png';
-import schemaPvDiesel from '../assets/systems/pv-diesel.png';
-import schemaStreetLight from '../assets/systems/solar-street-light.png';
-import schemaWaterPumping from '../assets/systems/solar-water-pumping.png';
+import schemaAllInOne from '../assets/systems/standalone-all-in-one.webp';
+import schemaInverterController from '../assets/systems/standalone-inverter-controller.webp';
+import schemaGridTied from '../assets/systems/grid-tied.webp';
+import schemaPvDiesel from '../assets/systems/pv-diesel.webp';
+import schemaStreetLight from '../assets/systems/solar-street-light.webp';
+import schemaWaterPumping from '../assets/systems/solar-water-pumping.webp';
 
 /**
  * `schema` porte le synoptique de l'architecture. Le visuel complète le titre et
@@ -58,6 +58,7 @@ export function Home() {
   const notify = useUi((s) => s.notify);
   const lang = useUi((s) => s.lang);
   const recentLimit = useSettings((s) => s.projects.recentProjectLimit);
+  const companyName = useSettings((s) => s.company.name);
 
   const sorted = [...projects].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const recent = sorted.slice(0, recentLimit);
@@ -134,6 +135,15 @@ export function Home() {
             )}
           </div>
 
+          {!companyName.trim() && (
+            <div className="alert info home-identity" role="note">
+              <div>
+                <b>{t('home.identityTitle')}</b> {t('home.identityLead')}
+              </div>
+              <button className="btn" onClick={() => nav('/reglages')}>{t('home.identityCta')}</button>
+            </div>
+          )}
+
           <section>
             <div className="rowline" style={{ marginBottom: 8 }}>
               <h2 className="h-sec">{t('home.systems')}</h2>
@@ -165,16 +175,12 @@ export function Home() {
                 </button>
               ))}
             </div>
-            <h3 className="h-sec upcoming-title">{t('home.upcomingSection')}</h3>
-            <p className="label">{t('home.roadmapHint')}</p>
-            <div className="sys-grid">
+            {/* Les architectures à venir tiennent en une ligne : l'accueil montre
+                d'abord ce que l'on peut faire aujourd'hui. */}
+            <div className="upcoming-list">
+              <span className="label">{t('home.upcomingSection')} :</span>
               {SYSTEMS.filter((s) => !s.ready).map((s) => (
-                <button key={s.type} className={'sys-card ' + (s.schema ? 'has-schema' : '')} disabled>
-                  {s.schema && <img className="sys-schema" src={s.schema} alt="" aria-hidden="true" />}
-                  <span className="sys-name"><b>{t('sys.' + s.type)}</b></span>
-                  <span className="sys-desc">{t('sysd.' + s.type)}</span>
-                  <span className="sys-state">{t('home.comingSoon')}</span>
-                </button>
+                <span key={s.type} className="upcoming-item" title={t('sysd.' + s.type)}>{t('sys.' + s.type)}</span>
               ))}
             </div>
           </section>
@@ -218,7 +224,7 @@ export function Home() {
                         <small>{progress.done}/{progress.total}</small>
                       </span>
                       <span className="when">n° {p.details.projectNumber || '—'}</span>
-                      <span className="when">{relativeFr(p.updatedAt)}</span>
+                      <span className="when">{relativeTime(p.updatedAt, lang)}</span>
                     </button>
                   );
                 })}

@@ -1,0 +1,15 @@
+/* Éléments dont le contenu dépend de l'heure de la prise de vue. La largeur est
+   fixée pour que le texte variable (« Enregistrement… », « Enregistré · 12:43 »)
+   ne décale pas le reste de la barre d'état. */
+.statusbar .save-state {
+  visibility: hidden;
+  display: inline-block;
+  width: 14rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Notifications : éphémères, elles disparaissent sur minuterie pendant la capture. */
+.toasts {
+  visibility: hidden;
+}

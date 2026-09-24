@@ -16,7 +16,7 @@ export function TopBar({ project, primary, secondary, back }: Props) {
   const t = useT();
   const nav = useNavigate();
   const { theme, toggleTheme, lang, setLang } = useUi();
-  const { undo, redo, past, future } = useProjects();
+  const { undo, redo, canUndo, canRedo } = useProjects();
 
   return (
     <header className="topbar">
@@ -55,16 +55,18 @@ export function TopBar({ project, primary, secondary, back }: Props) {
           <button
             className="btn btn-ghost"
             onClick={undo}
-            disabled={past.length === 0}
-            title="Annuler (Ctrl Z)"
+            disabled={!canUndo()}
+            title={t('topbar.annulerCtrlZ')}
+            aria-label={t('topbar.annulerCtrlZ')}
           >
             ↶
           </button>
           <button
             className="btn btn-ghost"
             onClick={redo}
-            disabled={future.length === 0}
-            title="Rétablir (Ctrl Y)"
+            disabled={!canRedo()}
+            title={t('topbar.retablirCtrlY')}
+            aria-label={t('topbar.retablirCtrlY')}
           >
             ↷
           </button>
@@ -72,19 +74,15 @@ export function TopBar({ project, primary, secondary, back }: Props) {
       )}
       <button
         className="btn btn-ghost"
-        title="Palette de commandes"
-        onClick={() =>
-          window.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }),
-          )
-        }
+        title={t('topbar.paletteDeCommandes')}
+        onClick={() => useUi.getState().setPaletteOpen(true)}
       >
         {t('app.search')} <span className="kbd">Ctrl K</span>
       </button>
       <button
-        className="btn btn-ghost"
+        className="btn btn-ghost lang-toggle"
         onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-        title="Langue"
+        title={t('topbar.langue')}
       >
         {lang === 'fr' ? 'FR' : 'EN'}
       </button>

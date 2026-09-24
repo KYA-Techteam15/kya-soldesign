@@ -1,32 +1,110 @@
-import type { CableSizingInput, CableSizingResult, ProtectionSizingInput, ProtectionSizingResult, ProtectionType } from './contracts.js';
-export const STANDARD_SECTIONS = [1.5,2.5,4,6,10,16,25,35,50,70,95,120,150,185,240,300,400,500,630] as const;
-const GPV=[2,4,6,8,10,12,15,16,20,25,32,40,50,63,80,100,125,160,200];
-const GG=[10,16,20,25,32,40,50,63,80,100,125,160,200,250];
-const AC=[6,10,16,20,25,32,40,50,63];
-const rho={ copper:0.01851, aluminium:0.0283 } as const;
-const up=(n:number, values:readonly number[])=>values.find(v=>v>=n) ?? null;
-const finite=(n:number)=>Number.isFinite(n)&&n>0?n:0;
-export function sizeProtectionSegment(i: ProtectionSizingInput): ProtectionSizingResult {
-  let requiredA=0, voltage= i.acVoltageV || 230, recommended: ProtectionType; let quantity=i.poles??1; const allowedTypes: readonly ProtectionType[] = i.segment === 'pv_inverter' ? ['Fusible gPV', 'Disjoncteur DC'] : i.segment === 'inverter_battery' ? ['Fusible gG', 'Disjoncteur DC'] : ['Disjoncteur AC'];
-  if(i.segment==='pv_inverter'){ requiredA=1.5*finite(i.moduleIscA??0); voltage=1.2*(i.pvModulesInSeries??1)*finite(i.moduleVocV??0); recommended='Fusible gPV'; quantity=i.pvStrings??1; }
-  else if(i.segment==='inverter_battery'){ requiredA=1.25*finite(i.inverterPowerW)/(i.dcVoltageV||1); voltage=i.dcVoltageV||0; recommended='Disjoncteur DC'; quantity=i.poles??1; }
-  else { requiredA=1.25*finite(i.inverterPowerW)/(i.acVoltageV||230); voltage=i.acVoltageV||230; recommended='Disjoncteur AC'; quantity=i.poles??1; }
-  const legacyAuto = i.selectedType === undefined;
-  const selectedType = legacyAuto ? recommended : i.selectedType ?? null;
-  // Sans courant à couvrir, aucun calibre ne peut être déclaré valable : tous
-  // les passeraient. Le segment est indisponible tant que le dimensionnement
-  // n'a rien produit, plutôt que « validé » contre une exigence nulle.
-  const sizeable = requiredA > 0;
-  const options = selectedType === null || !sizeable ? [] : ratingSeries(selectedType).filter((value) => value >= requiredA && (i.maximumCurrentA === null || i.maximumCurrentA === undefined || value <= i.maximumCurrentA));
-  const selectedRating = i.selectedCaliberA ?? null;
-  const usesFallback = sizeable && selectedType !== null && options.length === 0;
-  const caliberA = !sizeable ? null : selectedRating !== null && options.includes(selectedRating) ? selectedRating : options[0] ?? (usesFallback ? requiredA : null);
-  const state = !sizeable ? 'unavailable' : selectedType === null ? 'awaiting-type' : usesFallback ? 'estimated' : caliberA === null ? 'awaiting-rating' : 'valid';
-  return { segment:i.segment, kind:selectedType ?? recommended, allowedTypes, selectedType:legacyAuto ? null : selectedType, requiredA, minimumCurrentA:requiredA, maximumCurrentA:i.maximumCurrentA ?? null, serviceVoltageV:voltage, quantity, options, compatibleRatingsA:options, caliberA, selectedRatingA:caliberA, exact:state === 'valid', overridden:caliberA !== null && options.length > 0 && caliberA !== options[0], state, methodVersion:'core-v1' };
+import type { CableSizingInput, CableSizingResult, ProtectionSegment, ProtectionSizingInput, ProtectionSizingResult, ProtectionType } from './contracts.js';
+import { ampacityA, IEC_SECTIONS_MM2, REFERENCE_TEMPERATURE_C, temperatureCorrectionFactor, type InstallationMethod } from './iec60364.js';
+
+export const STANDARD_SECTIONS = IEC_SECTIONS_MM2;
+
+/** Séries de calibres normalisées (research.md R3). */
+const RATINGS: Record<ProtectionType, readonly number[]> = {
+  // IEC 60269-6
+  'Fusible gPV': [1, 2, 3, 4, 6, 8, 10, 12, 15, 16, 20, 25, 30, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400],
+  // IEC 60269-2
+  'Fusible gG': [2, 4, 6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630],
+  // IEC 60947-2 (DC)
+  'Disjoncteur DC': [6, 10, 13, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 320, 400, 500, 630],
+  // IEC 60898-1 jusqu'à 125 A, puis boîtiers moulés IEC 60947-2
+  'Disjoncteur AC': [6, 10, 13, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 320, 400, 500, 630],
+};
+
+const ALLOWED_TYPES: Record<ProtectionSegment, readonly ProtectionType[]> = {
+  pv_inverter: ['Fusible gPV', 'Disjoncteur DC'],
+  inverter_battery: ['Fusible gG', 'Disjoncteur DC'],
+  inverter_load: ['Disjoncteur AC'],
+};
+const RECOMMENDED_TYPE: Record<ProtectionSegment, ProtectionType> = { pv_inverter: 'Fusible gPV', inverter_battery: 'Disjoncteur DC', inverter_load: 'Disjoncteur AC' };
+
+/** Seuil de coupure / tension nominale : 1,75/2,0 V (plomb) = 2,8/3,2 V (LFP) = 0,875. */
+export const BATTERY_CUTOFF_VOLTAGE_RATIO = 0.875;
+/** Résistivité en service, Ω·mm²/m. */
+const RESISTIVITY = { copper: 0.01851, aluminium: 0.0283 } as const;
+
+const positive = (value: number | undefined | null): number => value !== undefined && value !== null && Number.isFinite(value) && value > 0 ? value : 0;
+
+function requirement(input: ProtectionSizingInput): { readonly requiredA: number; readonly voltageV: number; readonly quantity: number } {
+  if (input.segment === 'pv_inverter') {
+    const series = input.pvModulesInSeries ?? 1;
+    const voltageV = positive(input.stringVocColdV) || 1.2 * series * positive(input.moduleVocV);
+    // IEC 62548 : une protection de chaîne dimensionnée à 1,5 × Isc STC.
+    return { requiredA: 1.5 * positive(input.moduleIscA), voltageV, quantity: input.pvStrings ?? 1 };
+  }
+  if (input.segment === 'inverter_battery') {
+    const nominal = positive(input.dcVoltageV);
+    const efficiency = positive(input.inverterEfficiencyRatio) || 1;
+    // Le courant est maximal au seuil bas de tension et avant les pertes de conversion.
+    const requiredA = nominal === 0 ? 0 : 1.25 * positive(input.inverterPowerW) / (efficiency * nominal * BATTERY_CUTOFF_VOLTAGE_RATIO);
+    return { requiredA, voltageV: nominal, quantity: input.poles ?? 1 };
+  }
+  const voltageV = positive(input.acVoltageV);
+  return { requiredA: voltageV === 0 ? 0 : 1.25 * positive(input.inverterPowerW) / voltageV, voltageV, quantity: input.poles ?? 1 };
 }
-export function sizeCableSegment(i: CableSizingInput): CableSizingResult {
-  const current=finite(i.currentA), voltage=finite(i.voltageV), length=Math.max(0,finite(i.lengthM)); const maxDrop=i.maxDropPercent ?? 3; const b=i.phase==='three_phase'?Math.sqrt(3):2; const factor=1; const resistivity=rho[i.material]; const issues:string[]=[]; if(current<=0) issues.push('CURRENT_MISSING'); if(voltage<=0) issues.push('VOLTAGE_MISSING'); if(length<=0) issues.push('LENGTH_INVALID'); if(maxDrop<=0) issues.push('MAX_VOLTAGE_DROP_INVALID'); if(issues.length>0) return {segment:i.segment,state:'blocked',currentA:current,voltageV:voltage,minimalSection:0,normalizedSection:0,dropPercent:0,maxDropPercent:maxDrop,thermalSection:0,voltageDropSection:0,governingConstraint:'thermal',resistivity,correctionFactor:factor,issues}; const voltageDropSection=resistivity*length*current*factor*b/(voltage*(maxDrop/100)); const thermal=current/(i.material==='copper'?5:3); const minimal=Math.max(voltageDropSection,thermal); const normalized=up(minimal,STANDARD_SECTIONS); const drop=normalized===null||voltage===0?0:resistivity*length*current*factor*b/(normalized*voltage)*100; const governingConstraint=voltageDropSection>thermal?'voltage-drop':'thermal'; return {segment:i.segment,state:normalized===null?'unavailable':'valid',currentA:current,voltageV:voltage,minimalSection:minimal,normalizedSection:normalized??0,dropPercent:drop,maxDropPercent:maxDrop,thermalSection:thermal,voltageDropSection,governingConstraint,resistivity,correctionFactor:factor,issues:normalized===null?['NO_STANDARD_SECTION']:[]};
+
+/**
+ * Le type puis le calibre sont des choix explicites de l'ingénieur. Le moteur
+ * propose le plus petit calibre normalisé qui couvre le courant, sans jamais
+ * l'appliquer, et ne propose aucun calibre hors série.
+ */
+export function sizeProtectionSegment(input: ProtectionSizingInput): ProtectionSizingResult {
+  const { requiredA, voltageV, quantity } = requirement(input);
+  const allowedTypes = ALLOWED_TYPES[input.segment];
+  const recommendedType = RECOMMENDED_TYPE[input.segment];
+  const selectedType = input.selectedType !== undefined && input.selectedType !== null && allowedTypes.includes(input.selectedType) ? input.selectedType : null;
+  const sizeable = requiredA > 0;
+  const series = RATINGS[selectedType ?? recommendedType];
+  const options = !sizeable ? [] : series.filter((value) => value >= requiredA && (input.maximumCurrentA == null || value <= input.maximumCurrentA));
+  const recommendedRatingA = options[0] ?? null;
+  const chosen = input.selectedCaliberA ?? null;
+  const caliberA = selectedType !== null && chosen !== null && options.includes(chosen) ? chosen : null;
+  const state: ProtectionSizingResult['state'] = !sizeable ? 'unavailable'
+    : selectedType === null ? 'awaiting-type'
+      : options.length === 0 ? 'out-of-range'
+        : caliberA === null ? 'awaiting-rating'
+          : 'valid';
+  return {
+    segment: input.segment, kind: selectedType ?? recommendedType, allowedTypes, recommendedType, selectedType,
+    requiredA, minimumCurrentA: requiredA, maximumCurrentA: input.maximumCurrentA ?? null, serviceVoltageV: voltageV, quantity,
+    options: selectedType === null ? [] : options, compatibleRatingsA: options, recommendedRatingA,
+    caliberA, selectedRatingA: caliberA, exact: state === 'valid', overridden: caliberA !== null && caliberA !== recommendedRatingA,
+    state, methodVersion: 'core-v2',
+  };
+}
+
+/**
+ * Section de câble : la plus petite section normalisée dont le courant admissible
+ * corrigé couvre le courant (IEC 60364-5-52) et qui tient la chute de tension.
+ */
+export function sizeCableSegment(input: CableSizingInput): CableSizingResult {
+  const current = positive(input.currentA); const voltage = positive(input.voltageV); const length = positive(input.lengthM);
+  const maxDrop = input.maxDropPercent ?? 3;
+  const b = input.phase === 'three_phase' ? Math.sqrt(3) : 2;
+  const resistivity = RESISTIVITY[input.material];
+  const method: InstallationMethod = input.installation === 'buried' ? 'D1' : 'C';
+  const assumed = method === 'D1' || input.ambientTemperatureC === undefined || input.ambientTemperatureC === null;
+  const designTemperatureC = method === 'C' && !assumed ? input.ambientTemperatureC! : REFERENCE_TEMPERATURE_C[method];
+  const factor = temperatureCorrectionFactor(method, designTemperatureC);
+  const base = { segment: input.segment, currentA: current, voltageV: voltage, maxDropPercent: maxDrop, resistivity, installationMethod: method, designTemperatureC, temperatureAssumed: assumed } as const;
+  const issues: string[] = [];
+  if (current <= 0) issues.push('CURRENT_MISSING');
+  if (voltage <= 0) issues.push('VOLTAGE_MISSING');
+  if (length <= 0) issues.push('LENGTH_INVALID');
+  if (maxDrop <= 0) issues.push('MAX_VOLTAGE_DROP_INVALID');
+  if (issues.length > 0) return { ...base, state: 'blocked', minimalSection: 0, normalizedSection: 0, dropPercent: 0, thermalSection: 0, voltageDropSection: 0, governingConstraint: 'thermal', correctionFactor: factor ?? 1, ampacityA: 0, issues };
+  if (factor === null) return { ...base, state: 'unavailable', minimalSection: 0, normalizedSection: 0, dropPercent: 0, thermalSection: 0, voltageDropSection: 0, governingConstraint: 'thermal', correctionFactor: 1, ampacityA: 0, issues: ['TEMPERATURE_OUT_OF_TABLE'] };
+  const admissible = (section: number) => (ampacityA(input.material, method, section) ?? 0) * factor;
+  const thermalSection = IEC_SECTIONS_MM2.find((section) => admissible(section) >= current) ?? null;
+  const voltageDropSection = resistivity * length * current * b / (voltage * (maxDrop / 100));
+  const normalized = thermalSection === null ? null : IEC_SECTIONS_MM2.find((section) => section >= thermalSection && section >= voltageDropSection) ?? null;
+  const governingConstraint = thermalSection !== null && voltageDropSection > thermalSection ? 'voltage-drop' : 'thermal';
+  if (normalized === null) return { ...base, state: 'unavailable', minimalSection: Math.max(thermalSection ?? 0, voltageDropSection), normalizedSection: 0, dropPercent: 0, thermalSection: thermalSection ?? 0, voltageDropSection, governingConstraint, correctionFactor: factor, ampacityA: 0, issues: ['NO_STANDARD_SECTION'] };
+  const drop = resistivity * length * current * b / (normalized * voltage) * 100;
+  return { ...base, state: 'valid', minimalSection: Math.max(thermalSection!, voltageDropSection), normalizedSection: normalized, dropPercent: drop, thermalSection: thermalSection!, voltageDropSection, governingConstraint, correctionFactor: factor, ampacityA: admissible(normalized), issues: [] };
 }
 export type { ProtectionSegment } from './contracts.js';
-
-function ratingSeries(type: ProtectionType): readonly number[] { return type === 'Fusible gPV' ? GPV : type === 'Fusible gG' ? GG : type === 'Disjoncteur AC' ? AC : GPV; }

@@ -35,38 +35,38 @@ export function EquipmentEditor({ kind, source, onSave, onClose }: {
       <TextField label={t('equipment.editor.model')} value={draft.model} onChange={(value) => setText('model', value)} />
     </div>
     {draft.kind === 'pv-module' && <div className="form-rows equipment-editor-fields">
-      <TextField label="Technologie" value={draft.technology ?? ''} onChange={(value) => setDraft((current) => current.kind === 'pv-module' ? { ...current, technology: value || null } : current)} />
-      <NumField label="Puissance nominale" unit="Wc" value={draft.nominalPowerW} onChange={(value) => setNumber('nominalPowerW', value)} />
+      <TextField label={t('equipmentEditor.technologie')} value={draft.technology ?? ''} onChange={(value) => setDraft((current) => current.kind === 'pv-module' ? { ...current, technology: value || null } : current)} />
+      <NumField label={t('equipmentEditor.puissanceNominale')} unit="Wc" value={draft.nominalPowerW} onChange={(value) => setNumber('nominalPowerW', value)} />
       <NumField label="Vmp" unit="V" value={draft.voltageAtMaximumPowerV} onChange={(value) => setNumber('voltageAtMaximumPowerV', value)} decimals={2} />
       <NumField label="Voc" unit="V" value={draft.openCircuitVoltageV} onChange={(value) => setNumber('openCircuitVoltageV', value)} decimals={2} />
       <NumField label="Imp" unit="A" value={draft.currentAtMaximumPowerA} onChange={(value) => setNumber('currentAtMaximumPowerA', value)} decimals={2} />
       <NumField label="Isc" unit="A" value={draft.shortCircuitCurrentA} onChange={(value) => setNumber('shortCircuitCurrentA', value)} decimals={2} />
-      <NumField label="Surface" unit="m²" value={draft.areaM2 ?? 0} onChange={(value) => setNullableNumber('areaM2', value)} decimals={2} />
-      <NumField label="Coefficient Pmax" unit="/°C" value={draft.temperatureCoefficientPmaxPerC ?? 0} onChange={(value) => setDraft((current) => current.kind === 'pv-module' ? { ...current, temperatureCoefficientPmaxPerC: value } : current)} decimals={4} />
-      <NumField label="Coefficient Voc" unit="/°C" value={draft.temperatureCoefficientVocPerC ?? 0} onChange={(value) => setDraft((current) => current.kind === 'pv-module' ? { ...current, temperatureCoefficientVocPerC: value } : current)} decimals={4} />
+      <NumField label={t('equipmentEditor.surface')} unit="m²" value={draft.areaM2 ?? 0} onChange={(value) => setNullableNumber('areaM2', value)} decimals={2} />
+      <NumField label={t('equipmentEditor.coefficientPmax')} unit="/°C" value={draft.temperatureCoefficientPmaxPerC ?? 0} onChange={(value) => setDraft((current) => current.kind === 'pv-module' ? { ...current, temperatureCoefficientPmaxPerC: value } : current)} decimals={4} />
+      <NumField label={t('equipmentEditor.coefficientVoc')} unit="/°C" value={draft.temperatureCoefficientVocPerC ?? 0} onChange={(value) => setDraft((current) => current.kind === 'pv-module' ? { ...current, temperatureCoefficientVocPerC: value } : current)} decimals={4} />
       <NumField label="NOCT" unit="°C" value={draft.nominalOperatingCellTemperatureC ?? 0} onChange={(value) => setNullableNumber('nominalOperatingCellTemperatureC', value)} decimals={1} />
     </div>}
     {draft.kind === 'battery' && <div className="form-rows equipment-editor-fields">
-      <TextField label="Technologie" value={draft.technology ?? ''} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, technology: value || null } : current)} />
-      <NumField label="Tension nominale" unit="V" value={draft.nominalVoltageV} onChange={(value) => setNumber('nominalVoltageV', value)} decimals={1} />
-      <NumField label="Capacité nominale" unit="Ah" value={draft.nominalCapacityAh} onChange={(value) => setNumber('nominalCapacityAh', value)} />
-      <NumField label="Énergie nominale" unit="kWh" value={draft.nominalEnergyWh / 1000} onChange={(value) => setNumber('nominalEnergyWh', value * 1000)} decimals={2} />
-      <NumField label="Profondeur utile" unit="%" value={(draft.usableDepthOfDischargeRatio ?? 0) * 100} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, usableDepthOfDischargeRatio: value / 100 } : current)} decimals={1} />
-      <NumField label="Rendement aller-retour" unit="%" value={(draft.roundTripEfficiencyRatio ?? 0) * 100} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, roundTripEfficiencyRatio: value / 100 } : current)} decimals={1} />
-      <NumField label="Durée de vie" unit="cycles" value={draft.cycleLife ?? 0} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, cycleLife: value > 0 ? Math.round(value) : null } : current)} />
+      <TextField label={t('equipmentEditor.technologie')} value={draft.technology ?? ''} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, technology: value || null } : current)} />
+      <NumField label={t('equipmentEditor.tensionNominale')} unit="V" value={draft.nominalVoltageV} onChange={(value) => setNumber('nominalVoltageV', value)} decimals={1} />
+      <NumField label={t('equipmentEditor.capaciteNominale')} unit="Ah" value={draft.nominalCapacityAh} onChange={(value) => setNumber('nominalCapacityAh', value)} />
+      <NumField label={t('equipmentEditor.energieNominale')} unit="kWh" value={draft.nominalEnergyWh / 1000} onChange={(value) => setNumber('nominalEnergyWh', value * 1000)} decimals={2} />
+      <NumField label={t('equipmentEditor.profondeurUtile')} unit="%" value={(draft.usableDepthOfDischargeRatio ?? 0) * 100} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, usableDepthOfDischargeRatio: value / 100 } : current)} decimals={1} />
+      <NumField label={t('equipmentEditor.rendementAllerRetour')} unit="%" value={(draft.roundTripEfficiencyRatio ?? 0) * 100} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, roundTripEfficiencyRatio: value / 100 } : current)} decimals={1} />
+      <NumField label={t('equipmentEditor.dureeDeVie')} unit="cycles" value={draft.cycleLife ?? 0} onChange={(value) => setDraft((current) => current.kind === 'battery' ? { ...current, cycleLife: value > 0 ? Math.round(value) : null } : current)} />
     </div>}
     {draft.kind === 'inverter' && <div className="form-rows equipment-editor-fields">
-      <TextField label="Type d’onduleur" value={draft.inverterType ?? ''} onChange={(value) => setDraft((current) => current.kind === 'inverter' ? { ...current, inverterType: value || null } : current)} />
-      <NumField label="Puissance AC nominale" unit="kW" value={draft.nominalAcPowerW / 1000} onChange={(value) => setNumber('nominalAcPowerW', value * 1000)} decimals={2} />
-      <NumField label="Tension DC nominale" unit="V" value={draft.nominalDcVoltageV} onChange={(value) => setNumber('nominalDcVoltageV', value)} />
-      <NumField label="Puissance de surcharge" unit="kW" value={(draft.surgePowerW ?? 0) / 1000} onChange={(value) => setNullableNumber('surgePowerW', value * 1000)} decimals={2} />
-      <NumField label="Tension AC de sortie" unit="V" value={draft.nominalAcVoltageV ?? 0} onChange={(value) => setNullableNumber('nominalAcVoltageV', value)} />
-      <NumField label="Rendement" unit="%" value={(draft.efficiencyRatio ?? 0) * 100} onChange={(value) => setDraft((current) => current.kind === 'inverter' ? { ...current, efficiencyRatio: value / 100 } : current)} decimals={1} />
-      <NumField label="Puissance PV maximale" unit="kWc" value={(draft.pvArrayMaxPowerW ?? 0) / 1000} onChange={(value) => setNullableNumber('pvArrayMaxPowerW', value * 1000)} decimals={2} />
-      <NumField label="MPPT minimale" unit="V" value={draft.mpptMinVoltageV ?? 0} onChange={(value) => setNullableNumber('mpptMinVoltageV', value)} />
-      <NumField label="MPPT maximale" unit="V" value={draft.mpptMaxVoltageV ?? 0} onChange={(value) => setNullableNumber('mpptMaxVoltageV', value)} />
-      <NumField label="Voc PV maximale" unit="V" value={draft.pvOpenCircuitMaxVoltageV ?? 0} onChange={(value) => setNullableNumber('pvOpenCircuitMaxVoltageV', value)} />
-      <NumField label="Courant de charge maximal" unit="A" value={draft.maxChargingCurrentA ?? 0} onChange={(value) => setNullableNumber('maxChargingCurrentA', value)} />
+      <TextField label={t('equipmentEditor.typeDOnduleur')} value={draft.inverterType ?? ''} onChange={(value) => setDraft((current) => current.kind === 'inverter' ? { ...current, inverterType: value || null } : current)} />
+      <NumField label={t('equipmentEditor.puissanceAcNominale')} unit="kW" value={draft.nominalAcPowerW / 1000} onChange={(value) => setNumber('nominalAcPowerW', value * 1000)} decimals={2} />
+      <NumField label={t('equipmentEditor.tensionDcNominale')} unit="V" value={draft.nominalDcVoltageV} onChange={(value) => setNumber('nominalDcVoltageV', value)} />
+      <NumField label={t('equipmentEditor.puissanceDeSurcharge')} unit="kW" value={(draft.surgePowerW ?? 0) / 1000} onChange={(value) => setNullableNumber('surgePowerW', value * 1000)} decimals={2} />
+      <NumField label={t('equipmentEditor.tensionAcDeSortie')} unit="V" value={draft.nominalAcVoltageV ?? 0} onChange={(value) => setNullableNumber('nominalAcVoltageV', value)} />
+      <NumField label={t('loads2.rendement')} unit="%" value={(draft.efficiencyRatio ?? 0) * 100} onChange={(value) => setDraft((current) => current.kind === 'inverter' ? { ...current, efficiencyRatio: value / 100 } : current)} decimals={1} />
+      <NumField label={t('equipmentEditor.puissancePvMaximale')} unit="kWc" value={(draft.pvArrayMaxPowerW ?? 0) / 1000} onChange={(value) => setNullableNumber('pvArrayMaxPowerW', value * 1000)} decimals={2} />
+      <NumField label={t('equipmentEditor.mpptMinimale')} unit="V" value={draft.mpptMinVoltageV ?? 0} onChange={(value) => setNullableNumber('mpptMinVoltageV', value)} />
+      <NumField label={t('equipmentEditor.mpptMaximale')} unit="V" value={draft.mpptMaxVoltageV ?? 0} onChange={(value) => setNullableNumber('mpptMaxVoltageV', value)} />
+      <NumField label={t('equipmentEditor.vocPvMaximale')} unit="V" value={draft.pvOpenCircuitMaxVoltageV ?? 0} onChange={(value) => setNullableNumber('pvOpenCircuitMaxVoltageV', value)} />
+      <NumField label={t('equipmentEditor.courantDeChargeMaximal')} unit="A" value={draft.maxChargingCurrentA ?? 0} onChange={(value) => setNullableNumber('maxChargingCurrentA', value)} />
     </div>}
     {errors.length > 0 && <div className="form-errors" role="alert"><b>{t('equipment.editor.correctFields')}</b><ul>{errors.map((issue) => <li key={`${issue.path}-${issue.code}`}>{issue.path || t('catalog.reference')} — {issue.message}</li>)}</ul></div>}
     {saveError && <div className="form-errors" role="alert">{saveError}</div>}

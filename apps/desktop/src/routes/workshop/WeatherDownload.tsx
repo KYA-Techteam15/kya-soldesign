@@ -9,7 +9,7 @@ import { fmt } from '../../domain/format';
 import { Dialog } from '../../ui/Dialog';
 import type { CanonicalWeatherFile } from '../../app/contracts';
 import { PvgisClient, WeatherAcquisitionError } from '../../app/adapters/pvgisClient';
-import { useT } from '../../i18n';
+import { fill, tr, useT } from '../../i18n';
 import { isDecimalDraft } from '../../app/models/formValues';
 import { ISO_ALPHA2_COUNTRIES } from '../../app/models/countryReference';
 
@@ -96,7 +96,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     const lon = parseNumber(longitude);
     if (mode === 'town' && town.trim().length === 0) return;
     if (mode === 'gps' && (!isCoordinate(lat, -90, 90) || !isCoordinate(lon, -180, 180))) {
-      setError('Renseignez une latitude et une longitude valides.');
+      setError(t('weather2.renseignezUneLatitudeEt'));
       return;
     }
     const controller = new AbortController();
@@ -207,7 +207,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
 
   const openFile = async (file: File) => {
     if (!siteName.trim() || !isCountryCode(countryCode) || !isTimezone(timezoneIana)) {
-      setError('Renseignez le nom du site, le pays et un fuseau IANA valide avant d’ouvrir le fichier.');
+      setError(t('weather2.renseignezLeNomDu'));
       return;
     }
     setBusy(true);
@@ -220,7 +220,7 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     } catch {
       setOpenedFileName(null);
       setPreview(null);
-      setError('Fichier refusé : fournissez le JSON TMY horaire original de PVGIS, avec 8 760 lignes G(h), Gb(n) et Gd(h).');
+      setError(t('weather2.fichierRefuseFournissezLe'));
     } finally {
       setBusy(false);
     }
@@ -233,17 +233,17 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     try {
       await onSave(preview);
     } catch {
-      setError('Impossible d’enregistrer ce fichier météo dans la bibliothèque locale. Réessayez.');
+      setError(t('weather2.impossibleDEnregistrerCe'));
     } finally {
       setSaving(false);
     }
   };
 
-  return <Dialog title="Télécharger les données d’irradiance d’une localité" lead="PVGIS 5.3 · année type · JSON réel" wide onClose={close} footer={<>
+  return <Dialog title={t('weather2.telechargerLesDonneesD')} lead={t('weather2.pvgis53Annee')} wide onClose={close} footer={<>
     <button className="btn btn-ghost" onClick={close}>{t('g.cancel')}</button>
     <button className="btn btn-ok" disabled={preview === null || busy || saving} onClick={() => void save()}>{saving ? 'Enregistrement…' : t('weather.save')}</button>
   </>}>
-    <div className="dlg-step"><span className="dlg-num">1</span><span className="dlg-step-t">{mode === 'file' ? 'Ouvrir un export PVGIS' : 'Localiser le site'}</span><span className="sep" /><span className="seg">
+    <div className="dlg-step"><span className="dlg-num">1</span><span className="dlg-step-t">{mode === 'file' ? t('weather2.ouvrirUnExportPvgis') : t('weather2.localiserLeSite')}</span><span className="sep" /><span className="seg">
       <button aria-selected={mode === 'town'} onClick={() => reset('town')}>{t('weather.byName')}</button>
       <button aria-selected={mode === 'gps'} onClick={() => reset('gps')}>{t('weather.byCoordinates')}</button>
       <button aria-selected={mode === 'file'} onClick={() => reset('file')}>{t('weather.fromFile')}</button>
@@ -251,11 +251,11 @@ export function WeatherDownload({ lang, onClose, onSave }: {
 
     {mode === 'file' ? <>
       <div className="form-rows"><label><span>{t('weather.siteName')}</span><input value={siteName} onChange={(event) => { setSiteName(event.target.value); setPreview(null); }} /></label><label><span>{t('weather.country')}</span><select value={countryCode} onChange={(event) => { setCountryCode(event.target.value); setPreview(null); }}>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></label><label><span>{t('weather.timezoneIana')}</span><input value={timezoneIana} onChange={(event) => { setTimezoneIana(event.target.value); setPreview(null); }} /></label></div>
-      <div className="file-drop" style={{ marginTop: 'var(--sp-3)' }}><input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void openFile(file); }} /><button className="btn btn-field" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? 'Lecture…' : openedFileName ? 'Choisir un autre fichier…' : 'Choisir un fichier JSON…'}</button><span className="label">{openedFileName ?? 'Export JSON TMY original de PVGIS · 8 760 heures obligatoires'}</span></div>
+      <div className="file-drop" style={{ marginTop: 'var(--sp-3)' }}><input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void openFile(file); }} /><button className="btn btn-field" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? 'Lecture…' : openedFileName ? t('weather2.choisirUnAutreFichier') : t('weather2.choisirUnFichierJson')}</button><span className="label">{openedFileName ?? t('weather2.exportJsonTmyOriginal')}</span></div>
     </> : <>
       <div className="form-rows">
-        {mode === 'town' ? <><label><span>{t('weather.country')}</span><select value={countryCode} onChange={(event) => { setCountryCode(event.target.value); setHit(null); setPreview(null); }}>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></label><label><span>{t('weather.city')}</span><input placeholder="ex. Bombouaka" value={town} onChange={(event) => { setTown(event.target.value); setHit(null); setPreview(null); }} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} /></label></> : <><label><span>{t('site.latitude')}</span><input inputMode="decimal" placeholder="10,7030" value={latitude} onChange={(event) => { if (!isDecimalDraft(event.target.value)) return; setLatitude(event.target.value); setHit(null); setPreview(null); }} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} /></label><label><span>{t('site.longitude')}</span><input inputMode="decimal" placeholder="0,2099" value={longitude} onChange={(event) => { if (!isDecimalDraft(event.target.value)) return; setLongitude(event.target.value); setHit(null); setPreview(null); }} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} /></label></>}
-        <label><span aria-hidden="true">&nbsp;</span><button aria-label="Rechercher" className="btn btn-field" disabled={busy || (mode === 'town' ? !town.trim() : !latitude.trim() || !longitude.trim())} onClick={() => void search()}>{busy ? 'Recherche…' : 'Rechercher'}</button></label>
+        {mode === 'town' ? <><label><span>{t('weather.country')}</span><select value={countryCode} onChange={(event) => { setCountryCode(event.target.value); setHit(null); setPreview(null); }}>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></label><label><span>{t('weather.city')}</span><input placeholder={t('weather2.exBombouaka')} value={town} onChange={(event) => { setTown(event.target.value); setHit(null); setPreview(null); }} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} /></label></> : <><label><span>{t('site.latitude')}</span><input inputMode="decimal" placeholder="10,7030" value={latitude} onChange={(event) => { if (!isDecimalDraft(event.target.value)) return; setLatitude(event.target.value); setHit(null); setPreview(null); }} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} /></label><label><span>{t('site.longitude')}</span><input inputMode="decimal" placeholder="0,2099" value={longitude} onChange={(event) => { if (!isDecimalDraft(event.target.value)) return; setLongitude(event.target.value); setHit(null); setPreview(null); }} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} /></label></>}
+        <label><span aria-hidden="true">&nbsp;</span><button aria-label={t('weather2.rechercher')} className="btn btn-field" disabled={busy || (mode === 'town' ? !town.trim() : !latitude.trim() || !longitude.trim())} onClick={() => void search()}>{busy ? 'Recherche…' : 'Rechercher'}</button></label>
       </div>
       {hit && <div className="form-rows" style={{ marginTop: 'var(--sp-3)' }}><label><span>{t('weather.siteName')}</span><input value={siteName} onChange={(event) => { setSiteName(event.target.value); setPreview(null); }} /></label><label><span>{t('weather.foundCoordinates')}</span><input readOnly value={`${fmt(hit.latitudeDeg, 4)}° / ${fmt(hit.longitudeDeg, 4)}°`} /></label><label><span>{t('weather.foundTimezone')}</span><input readOnly value={hit.timezoneIana} /></label></div>}
       {manual && !hit && mode === 'gps' && <div className="form-rows" style={{ marginTop: 'var(--sp-3)' }}>
@@ -268,9 +268,9 @@ export function WeatherDownload({ lang, onClose, onSave }: {
     {error && <div className="alert warn" role="alert" style={{ marginTop: 'var(--sp-3)' }}>{error}</div>}
     {notice && <div className="alert" role="status" style={{ marginTop: 'var(--sp-3)' }}>{notice}</div>}
 
-    {mode !== 'file' && <div className={`dlg-step ${resolved ? '' : 'is-off'}`}><span className="dlg-num">2</span><span className="dlg-step-t">{t('weather.downloadPreview')}</span><span className="sep" /><span className="label">rien n’est écrit à cette étape</span><button className="btn" disabled={!resolved || busy} onClick={() => void download()}>{busy ? 'Téléchargement…' : preview ? 'Retélécharger' : 'Télécharger'}</button></div>}
+    {mode !== 'file' && <div className={`dlg-step ${resolved ? '' : 'is-off'}`}><span className="dlg-num">2</span><span className="dlg-step-t">{t('weather.downloadPreview')}</span><span className="sep" /><span className="label">{t('weather2.rienNEstEcrit')}</span><button className="btn" disabled={!resolved || busy} onClick={() => void download()}>{busy ? t('weather2.downloading') : preview ? t('weather2.redownload') : t('weather2.download')}</button></div>}
 
-    {preview && <><div className="weather-preview"><div className="weather-bars" aria-label="Irradiation mensuelle calculée depuis le fichier">{preview.monthly.map((value, month) => <div key={month}><i aria-hidden="true" style={{ height: `${Math.max(2, value / max * 72)}px` }} /><span>{MONTHS[month]}</span><b>{fmt(value, 1)}</b></div>)}</div><div className="daily-note"><span>{preview.siteName} · {preview.countryCode}</span><span>· {fmt(preview.latitude, 4)}° / {fmt(preview.longitude, 4)}°</span><span className="sep" /><span className="label">SHA-256 {preview.payload.sourceSha256.slice(0, 12)}…</span></div></div><div className="dlg-step"><span className="dlg-num">{mode === 'file' ? '2' : '3'}</span><span className="dlg-step-t">{t('weather.save')}</span><span className="sep" /><span className="label">8 760 heures et leur preuve seront conservées dans la bibliothèque locale</span></div></>}
+    {preview && <><div className="weather-preview"><div className="weather-bars" aria-label={t('weather2.irradiationMensuelleCalculeeDepuis')}>{preview.monthly.map((value, month) => <div key={month}><i aria-hidden="true" style={{ height: `${Math.max(2, value / max * 72)}px` }} /><span>{MONTHS[month]}</span><b>{fmt(value, 1)}</b></div>)}</div><div className="daily-note"><span>{preview.siteName} · {preview.countryCode}</span><span>· {fmt(preview.latitude, 4)}° / {fmt(preview.longitude, 4)}°</span><span className="sep" /><span className="label">SHA-256 {preview.payload.sourceSha256.slice(0, 12)}…</span></div></div><div className="dlg-step"><span className="dlg-num">{mode === 'file' ? '2' : '3'}</span><span className="dlg-step-t">{t('weather.save')}</span><span className="sep" /><span className="label">{t('weather2.8760HeuresEt')}</span></div></>}
   </Dialog>;
 }
 
@@ -311,21 +311,21 @@ function distanceKm(latitudeA: number, longitudeA: number, latitudeB: number, lo
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 function weatherErrorMessage(cause: unknown): string {
-  if (!(cause instanceof WeatherAcquisitionError)) return 'PVGIS n’a pas fourni un JSON TMY 5.3 valide. Vérifiez le fichier ou la connexion.';
-  if (cause.code === 'PVGIS_TIMEOUT') return 'PVGIS n’a pas répondu en 30 secondes. Réessayez.';
-  if (cause.code === 'PVGIS_ABORTED') return 'Le téléchargement PVGIS a été annulé.';
-  if (cause.code === 'PVGIS_HTTP') return 'PVGIS a refusé la requête. Vérifiez les coordonnées puis réessayez.';
-  if (cause.code === 'PVGIS_UNAVAILABLE') return 'PVGIS est momentanément inaccessible. Vérifiez la connexion puis réessayez.';
-  return 'PVGIS n’a pas fourni un JSON TMY 5.3 valide.';
+  if (!(cause instanceof WeatherAcquisitionError)) return tr('weather2.errInvalidJsonCheck');
+  if (cause.code === 'PVGIS_TIMEOUT') return tr('weather2.errTimeout');
+  if (cause.code === 'PVGIS_ABORTED') return tr('weather2.errAborted');
+  if (cause.code === 'PVGIS_HTTP') return tr('weather2.errHttp');
+  if (cause.code === 'PVGIS_UNAVAILABLE') return tr('weather2.errUnavailable');
+  return tr('weather2.errInvalidJson');
 }
 function geocodingErrorMessage(cause: unknown, mode: 'town' | 'gps' | 'file', town: string): string {
-  if (!(cause instanceof GeocodingError)) return 'Le service de localisation est momentanément inaccessible. Vérifiez la connexion puis réessayez.';
+  if (!(cause instanceof GeocodingError)) return tr('weather2.errGeoUnavailable');
   if (cause.code === 'GEOCODING_NOT_FOUND') {
     return mode === 'town'
-      ? `Aucune position trouvée pour « ${town} » dans ce pays. Vérifiez l’orthographe ou utilisez les coordonnées GPS.`
-      : 'Aucune localité n’a été trouvée à cette position. Vérifiez les coordonnées ou utilisez la recherche par nom.';
+      ? fill(tr('weather2.errGeoNotFound'), { town })
+      : tr('weather2.aucuneLocaliteNA');
   }
-  if (cause.code === 'GEOCODING_TIMEOUT') return 'Le service de localisation n’a pas répondu dans le délai prévu. Réessayez.';
-  if (cause.code === 'GEOCODING_INVALID') return 'Le service de localisation a renvoyé une réponse inutilisable. Réessayez ou saisissez les coordonnées GPS.';
-  return 'Le service de localisation est momentanément inaccessible. Vérifiez la connexion puis réessayez.';
+  if (cause.code === 'GEOCODING_TIMEOUT') return tr('weather2.errGeoTimeout');
+  if (cause.code === 'GEOCODING_INVALID') return tr('weather2.errGeoInvalid');
+  return tr('weather2.errGeoUnavailable');
 }

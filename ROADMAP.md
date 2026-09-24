@@ -18,12 +18,13 @@ The product is decomposed into bounded vertical slices. IDs are immutable once r
 | SAFE-001 | Cables and protections | Size conductors and protections from sourced electrical rules | No commercial protection catalog or single-line document rendering | EQP-001 | planned | `specs/009-detailed-sizing-safety/` phases 5–6 |
 | FIN-001 | Lifecycle economics | Compute versioned costs, replacements, cash flows, LCOE, and financial outputs | No commercial document layout | SIM-001, EQP-001 | planned | — |
 | DOC-001 | Engineering dossier | Generate synthesis, report, synoptic, and export artifacts | No new engineering formulas | SAFE-001, FIN-001 | planned | — |
-| DESK-001 | Tauri desktop package | Add local persistence, worker hosting, installers, and platform integration | No cloud synchronization | UI-AIO-001 | planned | — |
+| DESK-001 | Tauri desktop package | Add local persistence, worker hosting, installers, and platform integration | No cloud synchronization | UI-AIO-001 | done | `specs/010-release-readiness/` |
 | CTRL-001 | Standalone controller/inverter | Support separated charge controller and inverter topology | No grid interaction | SIM-001, EQP-001 | planned | — |
 | GRID-001 | Grid-tied | Implement grid-connected sizing, production, and constraints | No diesel dispatch | SIM-001, EQP-001 | planned | — |
 | DIESEL-001 | PV-diesel hybrid | Implement dispatch and hybrid energy/economic model | No pumping-specific hydraulics | SIM-001, FIN-001 | planned | — |
 | PUMP-001 | Solar pumping | Implement hydraulic demand, pump, array, and storage sizing | No street-lighting model | DATA-001 | planned | — |
 | LIGHT-001 | Solar street lighting | Implement lighting demand, autonomy, and component sizing | No hydraulic model | DATA-001 | planned | — |
+| REL-001 | Release readiness | Correct calculation safety, persistence, synchronisation, documents, i18n and ship the Tauri installer | No new topology | UI-AIO-001, DESK-001 | done | `specs/010-release-readiness/` |
 
 ## Ordering rule
 

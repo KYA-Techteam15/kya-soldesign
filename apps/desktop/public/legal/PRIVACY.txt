@@ -1,0 +1,49 @@
+KYA-SolDesign — Politique de confidentialité / Privacy notice
+BROUILLON — À VALIDER PAR LE CONSEIL JURIDIQUE DE KYA-ENERGY GROUP / DRAFT — LEGAL REVIEW PENDING
+
+FRANÇAIS
+
+1. Données enregistrées
+Vos projets, réglages, visuels de rapport et fichiers météo sont enregistrés
+uniquement sur votre poste, dans le dossier de données de l'application. Une copie
+de sauvegarde de la base de projets est conservée à chaque démarrage (cinq copies).
+KYA-SolDesign ne transmet aucune donnée de projet à KYA-Energy Group ni à un tiers.
+
+2. Services externes contactés
+L'application ne se connecte à Internet que sur votre action explicite :
+- PVGIS (Centre commun de recherche de la Commission européenne) : téléchargement
+  d'une année météo type pour les coordonnées du site ;
+- service de géocodage Open-Meteo et BigDataCloud : recherche d'une ville ou
+  identification du lieu et du fuseau horaire correspondant à des coordonnées.
+Seuls le nom de la ville, le pays ou les coordonnées sont envoyés à ces services.
+Leur politique de confidentialité respective s'applique à ces échanges.
+
+3. Journaux et signalement
+Un journal technique est conservé sur le poste pour le diagnostic. Il ne contient
+pas de données de projet. Il n'est envoyé au support que si vous choisissez
+« Signaler un problème » et transmettez vous-même le rapport.
+
+4. Contact
+Pour toute question : le support de KYA-Energy Group.
+
+ENGLISH
+
+1. Stored data
+Your projects, settings, report visuals and weather files are stored only on your
+computer, in the application data folder. A backup copy of the project database is
+kept at each start-up (five copies). KYA-SolDesign sends no project data to
+KYA-Energy Group or to any third party.
+
+2. External services
+The application only connects to the Internet when you explicitly ask it to:
+- PVGIS (European Commission Joint Research Centre): download of a typical
+  meteorological year for the site coordinates;
+- Open-Meteo and BigDataCloud geocoding: search for a town, or identification of
+  the place and time zone of given coordinates.
+Only the town name, the country or the coordinates are sent to these services,
+whose own privacy policies apply.
+
+3. Logs and problem reports
+A technical log is kept on the computer for diagnosis. It contains no project data.
+It is sent to support only if you choose "Report a problem" and send the report
+yourself.

@@ -41,7 +41,7 @@ const protections: ProtectionSizingResult[] = [
   { segment: 'pv_inverter', kind: 'Disjoncteur DC', selectedType: 'Disjoncteur DC', caliberA: 32, serviceVoltageV: 556, quantity: 2 },
   { segment: 'inverter_battery', kind: 'Disjoncteur DC', selectedType: 'Disjoncteur DC', caliberA: 125, serviceVoltageV: 48, quantity: 2 },
   { segment: 'inverter_load', kind: 'Disjoncteur AC', selectedType: 'Disjoncteur AC', caliberA: 32, serviceVoltageV: 230, quantity: 1 },
-].map((item) => ({ ...item, allowedTypes: [], requiredA: 10, minimumCurrentA: 10, maximumCurrentA: null, options: [], compatibleRatingsA: [], selectedRatingA: item.caliberA, exact: true, overridden: false, state: 'valid', methodVersion: 'core-v1' })) as ProtectionSizingResult[];
+].map((item) => ({ ...item, allowedTypes: [], requiredA: 10, minimumCurrentA: 10, maximumCurrentA: null, options: [], compatibleRatingsA: [], recommendedType: item.kind, recommendedRatingA: item.caliberA, selectedRatingA: item.caliberA, exact: true, overridden: false, state: 'valid', methodVersion: 'core-v2' })) as ProtectionSizingResult[];
 
 const cables: CableSizingResult[] = (['pv_inverter', 'inverter_battery', 'inverter_load'] as const).map((segment) => ({
   segment,
@@ -57,6 +57,10 @@ const cables: CableSizingResult[] = (['pv_inverter', 'inverter_battery', 'invert
   governingConstraint: 'thermal',
   resistivity: 0.017,
   correctionFactor: 1,
+  installationMethod: 'C',
+  designTemperatureC: 30,
+  temperatureAssumed: true,
+  ampacityA: 36,
   issues: [],
 }));
 

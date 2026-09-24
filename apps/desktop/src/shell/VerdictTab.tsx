@@ -51,8 +51,8 @@ export function VerdictTab({ svi, viable }: { svi: number | null; viable: boolea
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      title="Rouvrir le panneau — glisser pour le déplacer"
-      aria-label="Rouvrir le panneau verdict"
+      title={t('verdictTab.rouvrirLePanneauGlisser')}
+      aria-label={t('verdictTab.rouvrirLePanneauVerdict')}
     >
       <span className="verdict-tab-grip" aria-hidden="true" />
       <span className="verdict-tab-txt">

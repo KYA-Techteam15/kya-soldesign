@@ -1,0 +1,82 @@
+name: release
+
+# Publie l'installateur Windows quand une étiquette de version est poussée (v1.2.3),
+# ou à la demande. La publication est créée en brouillon : elle est relue avant
+# d'être rendue visible aux clients.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Installateur Windows (NSIS)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      # Capacités activées par secrets (voir RELEASING.md) ; absentes, la version
+      # est construite sans signature ni mises à jour automatiques.
+      TAURI_UPDATER_ENDPOINT: ${{ vars.TAURI_UPDATER_ENDPOINT }}
+      TAURI_UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      VITE_OPEN_METEO_API_KEY: ${{ secrets.OPEN_METEO_API_KEY }}
+      VITE_SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
+      VITE_RELEASE_CHANNEL: stable
+      HAS_WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+      - run: pnpm install --frozen-lockfile
+      - name: Contrôles rapides
+        run: pnpm verify:phase
+      - name: Mentions des composants tiers
+        run: node tools/legal/generate-notices.mjs
+
+      - name: Importer le certificat de signature
+        if: env.HAS_WINDOWS_CERTIFICATE == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          $path = Join-Path $env:RUNNER_TEMP 'certificate.pfx'
+          [IO.File]::WriteAllBytes($path, $bytes)
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $path -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          "WINDOWS_CERTIFICATE_THUMBPRINT=$($certificate.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Configuration de publication
+        id: config
+        shell: pwsh
+        run: |
+          $args = node tools/release/prepare-config.mjs
+          "args=$args" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm exec tauri
+          args: ${{ steps.config.outputs.args }}
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: KYA-SolDesign ${{ github.ref_name }}
+          releaseBody: Voir CHANGELOG.md pour le détail de cette version.
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: ${{ vars.TAURI_UPDATER_ENDPOINT != '' }}

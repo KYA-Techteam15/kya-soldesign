@@ -1,3 +1,4 @@
+import { saveFile } from '../../app/platform/files';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
 import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary, type SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
@@ -9,7 +10,7 @@ import { useGridNav } from '../../ui/useGridNav';
 import type { LoadCompositionView, LoadSource, NamedProfile } from '../../app/models/projectView';
 import { useCalculationState } from '../../app/CalculationProvider';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
-import { useT } from '../../i18n';
+import { fill, tr, useT } from '../../i18n';
 import { useCatalog } from '../../app/CatalogProvider';
 import { OperatingHoursDialog } from './OperatingHoursDialog';
 import { Dialog } from '../../ui/Dialog';
@@ -23,9 +24,9 @@ const MODES: { key: LoadSource; label: string }[] = [
   /* Chaque onglet nomme la manière dont on renseigne la consommation, pas la
      forme du résultat : « Profil horaire » décrivait ce qu'on obtient, alors
      que le choix porte sur ce qu'on saisit. */
-  { key: 'equipments', label: 'Recenser les appareils' },
-  { key: 'hourly', label: 'Saisir heure par heure' },
-  { key: 'meter', label: 'Partir de la facture' },
+  { key: 'equipments', label: 'loads2.recenserLesAppareils' },
+  { key: 'hourly', label: 'loads2.saisirHeureParHeure' },
+  { key: 'meter', label: 'loads2.partirDeLaFacture' },
 ];
 
 function DraftNumberInput({
@@ -151,18 +152,18 @@ export function SectionBesoins() {
       }
     });
     const said: Record<LoadSource, string> = {
-      equipments: 'La liste d’appareils pilote désormais le calcul.',
-      hourly: 'Le profil horaire saisi est désormais la source active.',
-      meter: 'L’estimation depuis la facture pilote désormais le calcul.',
+      equipments: t('loads2.laListeDAppareils'),
+      hourly: t('loads2.leProfilHoraireSaisi'),
+      meter: t('loads2.lEstimationDepuisLa'),
     };
-    notify({ kind: 'info', title: 'Source de calcul changée', detail: said[next] });
+    notify({ kind: 'info', title: t('loads2.sourceDeCalculChangee'), detail: said[next] });
   };
 
   const addClassic = () =>
     mutateProfile((p) =>
       p.classic.push({
         id: `c-${Date.now()}`,
-        name: 'Nouvel appareil',
+        name: t('loads2.nouvelAppareil'),
         qty: 1,
         unitPower: 100,
         yield: 0.9,
@@ -175,7 +176,7 @@ export function SectionBesoins() {
     mutateProfile((p) =>
       p.inductive.push({
         id: `i-${Date.now()}`,
-        name: 'Nouveau moteur',
+        name: t('loads2.nouveauMoteur'),
         qty: 1,
         unitPower: 500,
         yield: 0.85,
@@ -193,8 +194,7 @@ export function SectionBesoins() {
   });
 
   const downloadWorkbook = (bytes: Uint8Array, filename: string) => {
-    const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+    void saveFile({ suggestedName: filename, data: new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filter: { name: 'Excel', extensions: ['xlsx'] } });
   };
 
   const exportEquipment = () => downloadWorkbook(exportEquipmentWorkbook([...profile.classic, ...profile.inductive].map((row) => ({
@@ -204,13 +204,13 @@ export function SectionBesoins() {
 
   const importEquipment = async (file: File) => {
     const result = inspectEquipmentWorkbook(await file.arrayBuffer());
-    if (result.status === 'invalid') { notify({ kind: 'error', title: 'Import refusé', detail: result.issues.slice(0, 3).map((issue) => `${issue.sheetName || 'Feuille'} ${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') }); return; }
+    if (result.status === 'invalid') { notify({ kind: 'error', title: t('loads2.importRefuse'), detail: result.issues.slice(0, 3).map((issue) => `${issue.sheetName || 'Feuille'} ${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') }); return; }
     update((draft) => {
       const target = draft.load.profiles.find((item) => item.id === draft.load.activeProfileId); if (!target) return;
       target.classic = result.candidate.filter((row) => row.startupPowerMultiplier === null).map((row) => ({ id: row.id, name: row.label, qty: row.quantity, unitPower: row.usefulPowerW, yield: row.efficiencyRatio, simultaneity: 1, operatingFractions: [...row.hourlyOperatingFractions] as number[], opHours: row.durationHours }));
       target.inductive = result.candidate.filter((row) => row.startupPowerMultiplier !== null).map((row) => ({ id: row.id, name: row.label, qty: row.quantity, unitPower: row.usefulPowerW, yield: row.efficiencyRatio, simultaneity: 1, operatingFractions: [...row.hourlyOperatingFractions] as number[], opHours: row.durationHours, startupCoef: row.startupPowerMultiplier }));
     });
-    notify({ kind: 'success', title: 'Inventaire Excel importé', detail: `${result.candidate.length} lignes validées${result.warnings.length ? ' · horaires par défaut appliqués' : ''}` });
+    notify({ kind: 'success', title: t('loads2.inventaireExcelImporte'), detail: `${fill(t('loads2.rowsValidated'), { count: result.candidate.length })}${result.warnings.length ? ` ${t('loads2.horairesParDefautAppliques')}` : ''}` });
   };
 
   const exportHourly = () => downloadWorkbook(exportHourlyProfileWorkbook(profile.hourly.map((point) => ({ hourIndex: point.hour, activePowerKw: point.realPower, peakPowerKw: point.peakPower }))), 'profil-horaire.xlsx');
@@ -280,9 +280,9 @@ export function SectionBesoins() {
         aside={
           <>
             {!composedActive && <div className="seg" role="tablist">
-              {MODES.map((m) => <button key={m.key} role="tab" aria-selected={profile.source === m.key} onClick={() => switchMode(m.key)}>{m.label}</button>)}
+              {MODES.map((m) => <button key={m.key} role="tab" aria-selected={profile.source === m.key} onClick={() => switchMode(m.key)}>{t(m.label)}</button>)}
             </div>}
-            <button className="btn" onClick={() => setShowComposer(true)}>{composedActive ? 'Modifier les profils composés' : 'Configurer des profils annuels'}</button>
+            <button className="btn" onClick={() => setShowComposer(true)}>{composedActive ? t('loads2.modifierLesProfilsComposes') : t('loads2.configurerDesProfilsAnnuels')}</button>
             {composedActive && <button className="btn btn-ghost" onClick={() => setConfirmSimpleSwitch(true)}>{t('loads.composedBackToSimple')}</button>}
           </>
         }
@@ -291,7 +291,7 @@ export function SectionBesoins() {
       {composedActive && project.load.composition && <section className="composed-summary" aria-label={t('loads.composedActive')}>
         <div><b>{t('loads.composedActive')}</b><span>{project.load.composition.organization === 'workweek-weekend' ? t('loads.calendarWorkweek') : project.load.composition.organization === 'periods' ? t('loads.composedPeriods') : t('loads.composedPeriodDays')}</span></div>
         <div><b>{project.load.composition.profiles.length}</b><span>profils horaires · {project.load.composition.calendar.periods.length} période(s)</span></div>
-        <p>Le dimensionnement utilise uniquement les puissances saisies de 00 h à 23 h et répète automatiquement chaque combinaison sur l’année.</p>
+        <p>{t('loads2.leDimensionnementUtiliseUniquement')}</p>
       </section>}
       {!composedActive && <>
       {profile.source === 'equipments' && (
@@ -300,31 +300,31 @@ export function SectionBesoins() {
             <div className="tbl-title">
               <h2 className="h-sec">{t('loads.classic')}</h2>
               <span className="label">
-                {profile.classic.length} lignes
-                {filter && ` · ${visibleClassic.length} filtrées`}
+                {fill(t(profile.classic.length === 1 ? 'loads.rowCountOne' : 'loads.rowCount'), { count: profile.classic.length })}
+                {filter && ` · ${fill(t('loads2.filtered'), { count: visibleClassic.length })}`}
               </span>
               <input
                 /* Champ de filtre : il attend une frappe, pas un clic. */
                 className="hdr-search"
                 style={{ width: 160 }}
-                placeholder="Filtrer par nom…"
+                placeholder={t('loads2.filtrerParNom')}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
               <span className="sep" />
-              <span className="label">colonnes grisées = calculées</span>
+              <span className="label">{t('loads2.colonnesGriseesCalculees')}</span>
               <button
                 className="btn"
                 onClick={() =>
                   notify({
                     kind: 'info',
-                    title: 'Collage depuis Excel',
+                    title: t('loads2.collageDepuisExcel'),
                     detail:
-                      'Copiez une plage dans le tableur, cliquez une cellule du tableau, puis Ctrl V. Les lignes manquantes sont créées.',
+                      t('loads2.pasteHelp'),
                   })
                 }
               >
-                Aide au collage
+                {t('loads.pasteHelpButton')}
               </button>
               <input ref={equipmentImportRef} type="file" accept=".xlsx,.xls" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importEquipment(file); event.target.value = ''; }} />
               <button className="btn" onClick={() => equipmentImportRef.current?.click()}>{t('loads.importExcel')}</button>
@@ -347,7 +347,7 @@ export function SectionBesoins() {
                     <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
                     <th className="derived">{t('loads.realPower')}<span className="unit">W</span></th>
                     <th className="derived">{t('loads.totalEnergy')}<span className="unit">Wh</span></th>
-                    <th aria-label="Actions" />
+                    <th aria-label={t('loads2.actions')} />
                   </tr>
                 </thead>
                 <tbody>
@@ -356,30 +356,30 @@ export function SectionBesoins() {
                     return (
                       <tr key={e.id}>
                         <td className="name">
-                          <input className="cell-in" data-r={i} data-c={0} aria-label="Nom" value={e.name}
+                          <input className="cell-in" data-r={i} data-c={0} aria-label={t('loads2.nom')} value={e.name}
                             onChange={(ev) => mutateProfile((p) => { p.classic[i].name = ev.target.value; })} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label="Quantité" value={e.qty}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label={t('loads2.quantite')} value={e.qty}
                             inputMode="numeric" onCommit={(value) => { if (value !== null && Number.isInteger(value) && value >= 1) mutateProfile((p) => { p.classic[i].qty = value; }); }} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label="Puissance unitaire" value={e.unitPower}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label={t('loads2.puissanceUnitaire')} value={e.unitPower}
                             onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.classic[i].unitPower = Math.max(0, value); }); }} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label="Rendement" nullable value={e.yield}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label={t('loads2.rendement')} nullable value={e.yield}
                             format={(value) => fmt(value, 2)} onCommit={(value) => { if (value === null || (value > 0 && value <= 1)) mutateProfile((p) => { p.classic[i].yield = value; }); }} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label="Heures d'usage" value={e.opHours}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label={t('loads2.heuresDUsage')} value={e.opHours}
                             format={(value) => fmt(value, value % 1 ? 2 : 0)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { const row = p.classic[i]; row.opHours = duration(String(value)); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); }); }} />
                         </td>
                         <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
                         <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
                         <td className="derived num">{line === null ? '—' : fmt(line.dailyEnergyWh, 0)}</td>
                         <td>
-                          <button className="rowdel" title="Supprimer la ligne"
+                          <button className="rowdel" title={t('loads2.supprimerLaLigne')}
                             onClick={() => mutateProfile((p) => { p.classic.splice(i, 1); })}>
                             ✕
                           </button>
@@ -403,10 +403,10 @@ export function SectionBesoins() {
                   className="btn"
                   onClick={addClassic}
                 >
-                  + Ajouter une ligne
+                  + {t('loads.addRow')}
                 </button>
                 <span className="sep" />
-                <span className="kbd">Entrée</span> nouvelle ligne ·{' '}
+                <span className="kbd">{t('loads2.entree')}</span> nouvelle ligne ·{' '}
                 <span className="kbd">Ctrl D</span> recopier vers le bas ·{' '}
                 <span className="kbd">Ctrl V</span> coller une plage Excel
               </div>
@@ -417,9 +417,8 @@ export function SectionBesoins() {
             <div className="tbl-title">
               <h2 className="h-sec">{t('loads.inductive')}</h2>
               <span className="label">
-                {profile.inductive.length} lignes
-                {filter && ` · ${visibleInductive.length} filtrées`} · coefficient de
-                démarrage appliqué à la pointe
+                {fill(t(profile.inductive.length === 1 ? 'loads.rowCountOne' : 'loads.rowCount'), { count: profile.inductive.length })}
+                {filter && ` · ${fill(t('loads2.filtered'), { count: visibleInductive.length })}`} · {t('loads.inrushApplied')}
               </span>
             </div>
             <div
@@ -440,7 +439,7 @@ export function SectionBesoins() {
                     <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
                     <th className="derived">{t('loads.realPower')}<span className="unit">W</span></th>
                     <th className="derived">{t('loads.totalEnergy')}<span className="unit">Wh</span></th>
-                    <th aria-label="Actions" />
+                    <th aria-label={t('loads2.actions')} />
                   </tr>
                 </thead>
                 <tbody>
@@ -449,34 +448,34 @@ export function SectionBesoins() {
                     return (
                       <tr key={e.id}>
                         <td className="name">
-                          <input className="cell-in" data-r={i} data-c={0} aria-label="Nom" value={e.name}
+                          <input className="cell-in" data-r={i} data-c={0} aria-label={t('loads2.nom')} value={e.name}
                             onChange={(ev) => mutateProfile((p) => { p.inductive[i].name = ev.target.value; })} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label="Quantité" value={e.qty}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label={t('loads2.quantite')} value={e.qty}
                             inputMode="numeric" onCommit={(value) => { if (value !== null && Number.isInteger(value) && value >= 1) mutateProfile((p) => { p.inductive[i].qty = value; }); }} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label="Puissance unitaire" value={e.unitPower}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label={t('loads2.puissanceUnitaire')} value={e.unitPower}
                             onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.inductive[i].unitPower = Math.max(0, value); }); }} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label="Rendement" nullable value={e.yield}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label={t('loads2.rendement')} nullable value={e.yield}
                             format={(value) => fmt(value, 2)} onCommit={(value) => { if (value === null || (value > 0 && value <= 1)) mutateProfile((p) => { p.inductive[i].yield = value; }); }} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label="Coefficient de démarrage" nullable value={e.startupCoef}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label={t('loads2.coefficientDeDemarrage')} nullable value={e.startupCoef}
                             format={(value) => fmt(value, 1)} onCommit={(value) => { if (value === null || value >= 1) mutateProfile((p) => { p.inductive[i].startupCoef = value; }); }} />
                         </td>
                         <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={5} aria-label="Heures d'usage" value={e.opHours}
+                          <DraftNumberInput className="cell-in" data-r={i} data-c={5} aria-label={t('loads2.heuresDUsage')} value={e.opHours}
                             format={(value) => fmt(value, value % 1 ? 2 : 0)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { const row = p.inductive[i]; row.opHours = duration(String(value)); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); }); }} />
                         </td>
                         <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
                         <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
                         <td className="derived num">{line === null ? '—' : fmt(line.dailyEnergyWh, 0)}</td>
                         <td>
-                          <button className="rowdel" title="Supprimer la ligne"
+                          <button className="rowdel" title={t('loads2.supprimerLaLigne')}
                             onClick={() => mutateProfile((p) => { p.inductive.splice(i, 1); })}>
                             ✕
                           </button>
@@ -507,11 +506,11 @@ export function SectionBesoins() {
                   className="btn"
                   onClick={addInductive}
                 >
-                  + Ajouter une ligne
+                  + {t('loads.addRow')}
                 </button>
                 <span className="sep" />
                 <button className="btn" disabled={profile.classic.length + profile.inductive.length === 0} onClick={() => setHoursEditor(true)}>
-                  Ajuster les heures…
+                  {t('loads.adjustHours')}
                 </button>
               </div>
             </div>
@@ -526,7 +525,7 @@ export function SectionBesoins() {
             <span className="label">{annualSeries ? t('loads.annualSeriesLabel') : t('loads.dailySeriesLabel')}</span>
             <span className="sep" />
             {!annualSeries && <button className="btn" onClick={() => setBulkEditor(true)}>
-              Édition en masse…
+              {t('loads.bulkEdit')}
             </button>}
             <input ref={hourlyImportRef} type="file" accept=".xlsx,.xls,.csv,text/csv" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void (file.name.toLowerCase().endsWith('.csv') ? importHourlyCsv(file, mutateProfile, notify) : importHourlyWorkbook(file, mutateProfile, notify)); event.target.value = ''; }} />
             <button className="btn" onClick={() => hourlyImportRef.current?.click()}>{t('loads.importExcel')}</button>
@@ -554,7 +553,7 @@ export function SectionBesoins() {
                   <span>{String(h.hour).padStart(2, '0')}</span>
                   <DraftNumberInput
                     className="cell-in"
-                    aria-label={`Puissance à ${h.hour} h`}
+                    aria-label={fill(t('loads2.powerAtHour'), { hour: h.hour })}
                     value={h.realPower}
                     format={(value) => fmt(value, 2)}
                     onCommit={(value) => {
@@ -570,8 +569,8 @@ export function SectionBesoins() {
               ))}
             </div>
           ))}
-          <div className="tbl-title" style={{ marginTop: 'var(--sp-4)' }}><h2 className="h-sec">{t('loads.hourlyPeak')}</h2><span className="label">kW · chaque valeur doit être ≥ à la puissance moyenne</span></div>
-          {[0, 12].map((offset) => <div className="hourgrid" key={`peak-${offset}`} style={{ marginBottom: 'var(--sp-3)' }}>{profile.hourly.slice(offset, offset + 12).map((h) => <div key={h.hour}><span>{String(h.hour).padStart(2, '0')}</span><DraftNumberInput className="cell-in" aria-label={`Puissance de pointe à ${h.hour} h`} value={h.peakPower} format={(value) => fmt(value, 2)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.hourly[h.hour].peakPower = Math.max(p.hourly[h.hour].realPower, value); }); }} /></div>)}</div>)}
+          <div className="tbl-title" style={{ marginTop: 'var(--sp-4)' }}><h2 className="h-sec">{t('loads.hourlyPeak')}</h2><span className="label">{t('loads2.kwChaqueValeurDoit')}</span></div>
+          {[0, 12].map((offset) => <div className="hourgrid" key={`peak-${offset}`} style={{ marginBottom: 'var(--sp-3)' }}>{profile.hourly.slice(offset, offset + 12).map((h) => <div key={h.hour}><span>{String(h.hour).padStart(2, '0')}</span><DraftNumberInput className="cell-in" aria-label={fill(t('loads2.peakAtHour'), { hour: h.hour })} value={h.peakPower} format={(value) => fmt(value, 2)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.hourly[h.hour].peakPower = Math.max(p.hourly[h.hour].realPower, value); }); }} /></div>)}</div>)}
           </>}
           <CapabilityNotice capability="sizing" state={calculation} compact />
         </section>
@@ -580,7 +579,7 @@ export function SectionBesoins() {
       {profile.source === 'meter' && profile.meter && (
         <section>
           <div className="tbl-title">
-            <h2 className="h-sec">Estimation depuis la facture d'électricité</h2>
+            <h2 className="h-sec">{t('loads2.estimationDepuisLaFacture')}</h2>
           </div>
           <div className="form-rows">
             <label>
@@ -611,10 +610,10 @@ export function SectionBesoins() {
 
       <AnnualLoadChart result={annual} />
 
-      <ComposedProfilesDialog open={showComposer} initial={project.load.composition} onCancel={() => setShowComposer(false)} onApply={(composition) => { applyComposition(composition); setShowComposer(false); notify({ kind: 'success', title: 'Profils composés enregistrés', detail: 'Le calendrier annuel a été recalculé.' }); }} />
+      <ComposedProfilesDialog open={showComposer} initial={project.load.composition} onCancel={() => setShowComposer(false)} onApply={(composition) => { applyComposition(composition); setShowComposer(false); notify({ kind: 'success', title: t('loads2.profilsComposesEnregistres'), detail: t('loads2.leCalendrierAnnuelA') }); }} />
       {confirmSimpleSwitch && <Dialog title={t('loads.composedSwitchTitle')} onClose={() => setConfirmSimpleSwitch(false)} footer={<><button className="btn btn-ghost" onClick={() => setConfirmSimpleSwitch(false)}>{t('g.cancel')}</button><button className="btn btn-ok" onClick={() => { update((draft) => { draft.load.activeMode = 'simple'; }); setConfirmSimpleSwitch(false); }}>{t('g.confirm')}</button></>}><p>{t('loads.composedSwitchBody')}</p></Dialog>}
 
-      {bulkEditor && <Dialog title="Édition en masse du profil horaire" lead="appliquer une puissance moyenne et une pointe sur une plage" onClose={() => setBulkEditor(false)} footer={<><button className="btn btn-ghost" onClick={() => setBulkEditor(false)}>{t('g.cancel')}</button><button className="btn btn-ok" onClick={() => { mutateProfile((target) => { target.hourly.forEach((point) => { const included = bulkRange.start <= bulkRange.end ? point.hour >= bulkRange.start && point.hour < bulkRange.end : point.hour >= bulkRange.start || point.hour < bulkRange.end; if (included) { point.realPower = bulkRange.meanKw; point.peakPower = Math.max(bulkRange.meanKw, bulkRange.peakKw); } }); }); setBulkEditor(false); notify({ kind: 'success', title: 'Profil horaire mis à jour', detail: `${String(bulkRange.start).padStart(2, '0')} h → ${String(bulkRange.end).padStart(2, '0')} h` }); }}>{t('loads.apply')}</button></>}>
+      {bulkEditor && <Dialog title={t('loads2.editionEnMasseDu')} lead={t('loads2.appliquerUnePuissanceMoyenne')} onClose={() => setBulkEditor(false)} footer={<><button className="btn btn-ghost" onClick={() => setBulkEditor(false)}>{t('g.cancel')}</button><button className="btn btn-ok" onClick={() => { mutateProfile((target) => { target.hourly.forEach((point) => { const included = bulkRange.start <= bulkRange.end ? point.hour >= bulkRange.start && point.hour < bulkRange.end : point.hour >= bulkRange.start || point.hour < bulkRange.end; if (included) { point.realPower = bulkRange.meanKw; point.peakPower = Math.max(bulkRange.meanKw, bulkRange.peakKw); } }); }); setBulkEditor(false); notify({ kind: 'success', title: t('loads2.profilHoraireMisA'), detail: `${String(bulkRange.start).padStart(2, '0')} h → ${String(bulkRange.end).padStart(2, '0')} h` }); }}>{t('loads.apply')}</button></>}>
         <div className="form-rows"><label><span>{t('loads.startHour')}</span><input type="number" min={0} max={23} value={bulkRange.start} onChange={(event) => setBulkRange((current) => ({ ...current, start: clampHour(Number(event.target.value)) }))} /></label><label><span>{t('loads.endHourExcluded')}</span><input type="number" min={0} max={24} value={bulkRange.end} onChange={(event) => setBulkRange((current) => ({ ...current, end: Math.min(24, Math.max(0, Number(event.target.value))) }))} /></label><label><span>{t('loads.averagePower')}</span><span className="uf"><input inputMode="decimal" value={bulkRange.meanKw} onChange={(event) => setBulkRange((current) => ({ ...current, meanKw: num(event.target.value) }))} /><span className="uf-unit">kW</span></span></label><label><span>{t('loads.peakPower')}</span><span className="uf"><input inputMode="decimal" value={bulkRange.peakKw} onChange={(event) => setBulkRange((current) => ({ ...current, peakKw: num(event.target.value) }))} /><span className="uf-unit">kW</span></span></label></div>
       </Dialog>}
 
@@ -676,7 +675,7 @@ function AnnualSeriesPanel({ hourly, onReduceToDay }: {
   const date = new Date(Date.UTC(2021, 0, 1 + day));
   return <div className="annual-series-panel">
     <div className="out-grid">
-      <div className="out-cell is-lead"><span className="out-lbl">{t('loads.annualTotal')}</span><span className="out-val"><b>{fmt(totalKwh, 0)}</b><span className="unit">kWh/an</span></span></div>
+      <div className="out-cell is-lead"><span className="out-lbl">{t('loads.annualTotal')}</span><span className="out-val"><b>{fmt(totalKwh, 0)}</b><span className="unit">{t('loads2.kwhAn')}</span></span></div>
       <div className="out-cell"><span className="out-lbl">{t('loads.annualPeak')}</span><span className="out-val"><b>{fmt(peakKw, 2)}</b><span className="unit">kW</span></span></div>
       <div className="out-cell"><span className="out-lbl">{t('loads.annualDesignDay')}</span><span className="out-val"><b>{date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', timeZone: 'UTC' })}</b></span><span className="out-note">{fmt(dayKwh, 1)} kWh</span></div>
       <div className="out-cell"><span className="out-lbl">{t('loads.annualHours')}</span><span className="out-val"><b>{fmt(hourly.length, 0)}</b><span className="unit">h</span></span></div>
@@ -714,11 +713,11 @@ async function importHourlyCsv(
     });
     notify({
       kind: 'success',
-      title: 'Profil CSV importé',
-      detail: size === 8_760 ? '8 760 heures · année complète, la simulation la lira telle quelle.' : '24 heures · puissance moyenne et pointe contrôlées.',
+      title: tr('loads2.profilCsvImporte'),
+      detail: size === 8_760 ? tr('loads2.8760HeuresAnnee') : tr('loads2.24HeuresPuissanceMoyenne'),
     });
   } catch {
-    notify({ kind: 'error', title: 'Import CSV refusé', detail: 'Attendu : 24 lignes (journée type) ou 8 760 lignes (année) « heure; moyenne_kW; pointe_kW », heures uniques et pointe ≥ moyenne.' });
+    notify({ kind: 'error', title: tr('loads2.importCsvRefuse'), detail: tr('loads2.attendu24LignesJournee') });
   }
 }
 
@@ -729,7 +728,7 @@ async function importHourlyWorkbook(
 ): Promise<void> {
   const result = inspectHourlyProfileWorkbook(await file.arrayBuffer());
   if (result.status === 'invalid') {
-    notify({ kind: 'error', title: 'Import refusé', detail: result.issues.slice(0, 3).map((issue) => `${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') });
+    notify({ kind: 'error', title: tr('loads2.importRefuse'), detail: result.issues.slice(0, 3).map((issue) => `${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') });
     return;
   }
   const size = result.candidate.length;
@@ -739,7 +738,7 @@ async function importHourlyWorkbook(
   });
   notify({
     kind: 'success',
-    title: 'Profil horaire importé',
-    detail: size === 8_760 ? '8 760 heures validées et remplacées atomiquement.' : '24 heures validées et remplacées atomiquement.',
+    title: tr('loads2.profilHoraireImporte'),
+    detail: size === 8_760 ? tr('loads2.8760HeuresValidees') : tr('loads2.24HeuresValideesEt'),
   });
 }
