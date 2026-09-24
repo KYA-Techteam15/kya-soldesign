@@ -63,7 +63,7 @@ export function SectionHypotheses() {
       <NumField label={t('presizing2.lolpMaximale')} unit="%" value={assumptions.lolpMax} onChange={set('lolpMax')} decimals={1} />
       <NumField label={t('presizing2.tarifReseauDeReference')} unit={`${money}/kWh`} value={assumptions.lcoeGrid} onChange={set('lcoeGrid')} />
     </div></section>
-    <div className={`runbar ${result === null ? 'is-stale' : ''}`}><button className="btn btn-ok btn-run" disabled={running || service.runPresizing === undefined} onClick={() => void run()}>{running ? t('presizing.running') : t('presizing.run')}</button><span className="runbar-note">{running && progress ? `${progress.completed} / ${progress.total}` : result === null ? t('presizing.readyToRun') : `${t('presizing.method')} ${result.engineVersion}`}</span></div>
+    <div className={`runbar ${result === null ? 'is-stale' : ''}`}><button className="btn btn-ok btn-run" disabled={running || service.runPresizing === undefined} onClick={() => void run()}>{running ? t('presizing.running') : t('presizing.run')}</button><span className="runbar-note">{running && progress ? `${progress.completed} / ${progress.total}` : result === null ? t('presizing.readyToRun') : t('presizing.upToDate')}</span></div>
     {running && progress && <progress value={progress.completed} max={progress.total} aria-label={t('presizing.progress')} />}
     {runError !== null && <div className="empty" role="alert"><b>{t('presizing.blocked')}</b><span>{runError}</span></div>}
     {result === null && !running && runError === null && <CapabilityNotice capability="presizing" state={state} compact />}

@@ -143,7 +143,7 @@ export function SectionMateriel() {
   const mountedStorage = result?.battery.usefulEnergyKwh ?? null;
   const satisfied = result === null ? 0 : 4 - Math.min(4, result.compatibility.issues.length);
   return <div className="sheet">
-    <StepHead slug="materiel" aside={<span className="label">{inverterCount} {t('equipment.inverters')} · {pre ? t('equipment.presizingDone') : t('equipment.presizingRequired')}</span>} />
+    <StepHead slug="materiel" aside={pre ? undefined : <span className="label">{t('equipment.presizingRequired')}</span>} />
     <section className="targets">
       <span className="targets-tag">{t('equipment.toCover')}</span>
       <Target label={t('equipment.pvField')} value={pre?.pvPeakKw ?? null} unit="kWc" decimals={2} got={result ? { text: `${fmt(result.pv.obtainedPowerKwc, 2)} kWc ${t('equipment.mounted')}`, ok: result.pv.marginRatio >= 0 } : undefined} />

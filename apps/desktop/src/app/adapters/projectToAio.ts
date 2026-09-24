@@ -1,5 +1,5 @@
 import type { AioSizingRequestV1, SolarResourceAnalysisInputV1, Locality, NormalizedHourlyProfile, Provenance, WeatherSource } from '@ksd/domain';
-import { DEFAULT_VOC_TEMPERATURE_COEFFICIENT_PER_C, computeLocalHours, type LocalHour, adjustHourlyFractionsToGamma, analyzeSolarGeometry, analyzeSolarResource, type SolarGeometryV1, buildAnnualLoadSeries, calculateAnnualYEn, designDayStartIndex, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
+import { hourlyPeakPowerWithStartupsW, DEFAULT_VOC_TEMPERATURE_COEFFICIENT_PER_C, computeLocalHours, type LocalHour, adjustHourlyFractionsToGamma, analyzeSolarGeometry, analyzeSolarResource, type SolarGeometryV1, buildAnnualLoadSeries, calculateAnnualYEn, designDayStartIndex, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
 import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
@@ -237,7 +237,7 @@ function normalizeActiveLoad(input: ProjectInputsV1, references: Page1References
   return profile.source === 'equipment'
     ? normalizeEquipmentRows({ timezoneIana: input.site.timezoneIana, rows: profile.items.map((item) => ({
       id: item.id, label: item.label, quantity: item.quantity, usefulPowerW: item.usefulPowerW,
-      efficiencyRatio: item.efficiencyRatio, simultaneityRatio: item.simultaneityRatio,
+      efficiencyRatio: item.efficiencyRatio,
       hourlyOperatingFractions: item.hourlyOperatingFractions, startupPowerMultiplier: item.startupPowerMultiplier,
     })) })
     : profile.source === 'hourly'
@@ -321,7 +321,7 @@ function annualGammaForProject(input: ProjectInputsV1, references: Page1Referenc
   for (const profile of sourceProfiles) {
     let hourlyEnergyWh: readonly number[];
     if (profile.source === 'equipment') {
-      const normalized = normalizeEquipmentRows({ timezoneIana: input.site.timezoneIana, rows: profile.items.map((item) => ({ id: item.id, label: item.label, quantity: item.quantity, usefulPowerW: item.usefulPowerW, efficiencyRatio: item.efficiencyRatio, simultaneityRatio: item.simultaneityRatio, hourlyOperatingFractions: item.hourlyOperatingFractions, startupPowerMultiplier: item.startupPowerMultiplier })) });
+      const normalized = normalizeEquipmentRows({ timezoneIana: input.site.timezoneIana, rows: profile.items.map((item) => ({ id: item.id, label: item.label, quantity: item.quantity, usefulPowerW: item.usefulPowerW, efficiencyRatio: item.efficiencyRatio, hourlyOperatingFractions: item.hourlyOperatingFractions, startupPowerMultiplier: item.startupPowerMultiplier })) });
       if (normalized.status === 'blocked') continue;
       hourlyEnergyWh = normalized.load.hourlyEnergyWh;
     } else if (profile.source === 'hourly') {
@@ -414,11 +414,5 @@ function deriveHourlyPeakPower(
 ): number[] | null {
   if (source === 'meter') return null;
   if (source === 'hourly') return directPeaks.map((value, hour) => value ?? hourlyMeanPowerW[hour]!);
-  const peaks = [...hourlyMeanPowerW];
-  for (const event of startupEvents) {
-    if (event.startupPowerMultiplier === null) continue;
-    const increment = event.runningPowerW * (event.startupPowerMultiplier - 1);
-    peaks[event.hourIndex] = peaks[event.hourIndex]! + increment;
-  }
-  return peaks;
+  return hourlyPeakPowerWithStartupsW(hourlyMeanPowerW, startupEvents);
 }

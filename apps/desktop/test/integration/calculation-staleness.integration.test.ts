@@ -24,7 +24,7 @@ describe('calculation staleness propagation', () => {
     const source = weatherSources.find((candidate) => candidate.localityId === locality.id)!;
     const file = weatherFiles.find((candidate) => candidate.metadata.weatherSourceId === source.id)!;
     const view = projectFileToView(projects.create('standalone-all-in-one', 'fr'));
-    view.load.profiles[0]!.classic.push({ id: 'l', name: 'L', qty: 10, unitPower: 150, yield: 1, simultaneity: 1, operatingFractions: Array.from({ length: 24 }, (_, hour) => (hour >= 8 && hour < 16 ? 1 : 0)), opHours: 8 });
+    view.load.profiles[0]!.appliances.push({ id: 'l', name: 'L', qty: 10, unitPower: 150, yield: 1, operatingFractions: Array.from({ length: 24 }, (_, hour) => (hour >= 8 && hour < 16 ? 1 : 0)), opHours: 8, startupCoef: 1, inductive: false });
     Object.assign(view.site, { localityId: locality.id, latitude: locality.latitudeDeg, longitude: locality.longitudeDeg, timezoneIana: file.metadata.timezoneIana, weatherSourceId: source.id, tilt: 15, azimuth: 180 });
     view.site.downloadedSource = { name: 'x', provider: 'PVGIS', versionOrDate: 'x', locator: 'x', retrievedAtIso: file.metadata.retrievedAtIso, qualityFlags: [], ...canonicalWeatherFileToProjectPayload(file) };
     view.selection.moduleId = equipment.find((item) => item.kind === 'pv-module')!.id;
@@ -53,14 +53,14 @@ describe('calculation staleness propagation', () => {
   });
 
   it('marks sizing and finance stale once the loads change after the presizing', async () => {
-    edit((view) => { view.load.profiles[0]!.classic[0]!.qty = 30; });
+    edit((view) => { view.load.profiles[0]!.appliances[0]!.qty = 30; });
     expect(await calc.read(projectId, 'presizing')).toMatchObject({ status: 'stale' });
     expect(await calc.read(projectId, 'sizing')).toMatchObject({ status: 'stale', reasonKey: 'state.presizingStale' });
     expect(await calc.read(projectId, 'finance')).toMatchObject({ status: 'stale' });
   });
 
   it('becomes current again when the loads come back to the calculated value', async () => {
-    edit((view) => { view.load.profiles[0]!.classic[0]!.qty = 10; });
+    edit((view) => { view.load.profiles[0]!.appliances[0]!.qty = 10; });
     expect((await calc.read(projectId, 'sizing')).status).toBe('ready');
   });
 });

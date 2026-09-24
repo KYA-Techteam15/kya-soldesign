@@ -28,7 +28,6 @@ export const loadItemSchema = z.object({
   quantity: z.number().int().positive(),
   activePowerW: z.number().finite().min(0),
   powerFactor: z.number().finite().gt(0).max(1).nullable(),
-  simultaneityRatio: fractionSchema,
   hourlyOperatingFractions: hourlyOperatingFractionsSchema,
 }).strict();
 
@@ -37,7 +36,7 @@ export type LoadItem = z.infer<typeof loadItemSchema>;
 
 export function deriveDailyLoadEnergyWh(load: LoadItem): number {
   const operatingHours = load.hourlyOperatingFractions.reduce((total, fraction) => total + fraction, 0);
-  return load.activePowerW * load.quantity * load.simultaneityRatio * operatingHours;
+  return load.activePowerW * load.quantity * operatingHours;
 }
 
 export function normalizeHourlyEnergyWeights(weights: readonly number[]): readonly number[] {

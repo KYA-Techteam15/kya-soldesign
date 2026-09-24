@@ -85,7 +85,7 @@ export function StepNext() {
           className="btn btn-primary"
           onClick={() => nav(`/projet/${id}/atelier/dossier?vue=documents`)}
         >
-          {t('step.printFile')} <span aria-hidden="true">↧</span>
+          {t('step.printFile')} <span aria-hidden="true">→</span>
         </button>
       )}
     </div>

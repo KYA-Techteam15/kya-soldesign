@@ -81,15 +81,13 @@ export function buildReportLoadSummary(
 }
 
 function equipmentRows(profile: NonNullable<ProjectViewModel['load']['profiles'][number]>): readonly ReportLoadRow[] {
-  const classic = profile.classic.map((row) => toReportRow(row, null));
-  const inductive = profile.inductive.map((row) => toReportRow(row, row.startupCoef));
-  return [...classic, ...inductive];
+  return profile.appliances.map((row) => toReportRow(row, row.startupCoef > 1 ? row.startupCoef : null));
 }
 
 function toReportRow(
   row: {
     id: string; name: string; qty: number; unitPower: number;
-    yield: number | null; simultaneity: number | null; operatingFractions: number[];
+    yield: number | null; operatingFractions: number[];
   },
   startupPowerMultiplier: number | null,
 ): ReportLoadRow {
@@ -101,7 +99,6 @@ function toReportRow(
     quantity: row.qty,
     usefulPowerW: row.unitPower,
     efficiencyRatio: row.yield,
-    simultaneityRatio: row.simultaneity,
     hourlyOperatingFractions: row.operatingFractions,
     startupPowerMultiplier,
   });

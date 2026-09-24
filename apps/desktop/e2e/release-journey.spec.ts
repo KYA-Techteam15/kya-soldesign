@@ -32,7 +32,7 @@ async function buildProject(page: Page) {
 
   await step(page, 2);
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
-  const classic = page.locator('.t-classic');
+  const classic = page.locator('.t-appliances');
   await classic.getByLabel('Quantité').first().fill('10');
   await classic.getByLabel('Puissance unitaire').first().fill('150');
   await classic.getByLabel("Heures d'usage").first().fill('8');
@@ -103,7 +103,7 @@ test('blocks client documents as soon as the sizing is stale', async ({ page }) 
   await buildProject(page);
 
   await step(page, 2);
-  await page.locator('.t-classic').getByLabel('Quantité').first().fill('30');
+  await page.locator('.t-appliances').getByLabel('Quantité').first().fill('30');
   await page.keyboard.press('Tab');
 
   await step(page, 7);

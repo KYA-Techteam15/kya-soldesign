@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { queryAnnualChart, reduceAnnualChartPoints, type AnnualChartFrequency, type AnnualChartRange } from '@ksd/engine';
 import type { AnnualLoadPresentationResult } from '../../app/models/annualLoadPresentation';
 import { useT } from '../../i18n';
+import { fmt } from '../../domain/format';
 
 export function AnnualLoadChart({ result }: { readonly result: AnnualLoadPresentationResult }) {
   const presentation = result.status === 'ready' ? result : null;
@@ -40,7 +41,7 @@ export function AnnualLoadChart({ result }: { readonly result: AnnualLoadPresent
   };
   const canNavigate = chart !== null && chart.points.length > displayLimit;
   return <section className="annual-load-view">
-    <div className="tbl-title"><h2 className="h-sec">{t('loads.calendarAnnualTitle')}</h2><span className="label">{t('loads.calendarWeightedYen')}</span><span className="sep" /><span className="metric-inline">{t('loads.yenLabel')} <b>{result.yEn.status === 'available' ? `${(result.yEn.annualGammaRatio * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %` : '—'}</b></span></div>
+    <div className="tbl-title"><h2 className="h-sec">{t('loads.calendarAnnualTitle')}</h2><span className="label">{t('loads.calendarWeightedYen')}</span><span className="sep" /><span className="metric-inline">{t('loads.yenLabel')} <b>{result.yEn.status === 'available' ? `${fmt(result.yEn.annualGammaRatio * 100, 1)} %` : '—'}</b></span></div>
     <div className="annual-chart-controls" aria-label={t('annualChart.optionsDuTraceAnnuel')}>
       <label><span>{t('loads.chartView')}</span><select value={range} onChange={(event) => setRange(event.target.value as AnnualChartRange)}><option value="year">{t('loads.chartYear')}</option><option value="period">{t('loads.chartPeriod')}</option><option value="month">{t('loads.chartMonth')}</option><option value="week">{t('loads.chartWeek')}</option><option value="day">{t('loads.chartDay')}</option><option value="custom-range">{t('loads.chartCustom')}</option></select></label>
       {range === 'period' && <label><span>{t('loads.chartPeriod')}</span><select value={periodId} onChange={(event) => setPeriodId(event.target.value)}><option value="">{t('loads.chartAllPeriods')}</option>{result.periods.map((period) => <option key={period.id} value={period.id}>{period.name}</option>)}</select></label>}

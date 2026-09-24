@@ -176,6 +176,17 @@ export function createEmptyProjectInputs(): ProjectInputsV1 {
   });
 }
 
+/**
+ * Appareils d'un ancien projet dont la simultanéité valait moins de 1. Elle est supprimée : leur
+ * énergie augmente, et l'utilisateur doit le savoir une fois. `null` : rien à signaler.
+ */
+function legacySimultaneityRows(input: ReturnType<typeof parseProjectInputsV1>): string[] | null {
+  const rows = input.load.profiles.flatMap((profile) => profile.items
+    .filter((item) => item.simultaneityRatio !== undefined && item.simultaneityRatio !== null && item.simultaneityRatio < 1)
+    .map((item) => item.label || item.id));
+  return rows.length === 0 ? null : rows;
+}
+
 export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
   const input = parseProjectInputsV1(project.inputs);
   const selected = project.selectedEquipmentIds;
@@ -184,20 +195,13 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
     name: profile.name,
     color: profile.displayColor,
     source: profile.source === 'equipment' ? 'equipments' as const : profile.source,
-    classic: profile.items.filter((item) => item.startupPowerMultiplier === null).map((item) => ({
+    appliances: profile.items.map((item) => ({
       id: item.id, name: item.label, qty: item.quantity,
       unitPower: item.usefulPowerW, yield: item.efficiencyRatio,
-      simultaneity: item.simultaneityRatio,
       operatingFractions: item.hourlyOperatingFractions,
       opHours: item.hourlyOperatingFractions.reduce((total, value) => total + value, 0),
-    })),
-    inductive: profile.items.filter((item) => item.startupPowerMultiplier !== null).map((item) => ({
-      id: item.id, name: item.label, qty: item.quantity,
-      unitPower: item.usefulPowerW, yield: item.efficiencyRatio,
-      simultaneity: item.simultaneityRatio,
-      operatingFractions: item.hourlyOperatingFractions,
-      opHours: item.hourlyOperatingFractions.reduce((total, value) => total + value, 0),
-      startupCoef: item.startupPowerMultiplier,
+      startupCoef: item.startupPowerMultiplier ?? 1,
+      inductive: item.startupPowerMultiplier !== null || item.inductive === true,
     })),
     hourly: profile.hourlyPoints.map((point) => ({
       hour: point.hourIndex,
@@ -280,6 +284,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       profiles: profileViews,
       activeProfileId: input.load.activeProfileId,
       irMin: valueOrZero(input.load.minimumOperatingIrradianceWPerM2),
+      simultaneityNotice: input.load.simultaneityNotice !== undefined ? input.load.simultaneityNotice : legacySimultaneityRows(input),
     },
     assumptions: {
       lpspMax: percent(input.assumptions.maxLpspRatio ?? PRESIZING_DEFAULTS.maxLpspRatio),
@@ -425,24 +430,18 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
       calendar: view.load.calendar,
       activeProfileId: view.load.activeProfileId,
       minimumOperatingIrradianceWPerM2: view.load.irMin,
+      simultaneityNotice: view.load.simultaneityNotice,
       profiles: view.load.profiles.map((profile) => ({
         id: profile.id, name: profile.name, displayColor: profile.color,
         source: profile.source === 'equipments' ? 'equipment' : profile.source,
-        items: [
-          ...profile.classic.map((item) => ({
-            id: item.id, label: item.name, quantity: item.qty,
-            usefulPowerW: item.unitPower, powerFactor: null,
-            simultaneityRatio: item.simultaneity, efficiencyRatio: item.yield,
-            hourlyOperatingFractions: item.operatingFractions, startupPowerMultiplier: null,
-          })),
-          ...profile.inductive.map((item) => ({
-            id: item.id, label: item.name, quantity: item.qty,
-            usefulPowerW: item.unitPower, powerFactor: null,
-            simultaneityRatio: item.simultaneity, efficiencyRatio: item.yield,
-            hourlyOperatingFractions: item.operatingFractions,
-            startupPowerMultiplier: item.startupCoef,
-          })),
-        ],
+        items: profile.appliances.map((item) => ({
+          id: item.id, label: item.name, quantity: item.qty,
+          usefulPowerW: item.unitPower, powerFactor: null, efficiencyRatio: item.yield,
+          hourlyOperatingFractions: item.operatingFractions,
+          // Un coefficient de 1 n'ajoute aucune pointe : seul un coefficient > 1 est un démarrage inductif.
+          startupPowerMultiplier: item.startupCoef > 1 ? item.startupCoef : null,
+          ...(item.inductive && !(item.startupCoef > 1) ? { inductive: true } : {}),
+        })),
         hourlyPoints: profile.hourly.map((point) => ({
           hourIndex: point.hour,
           activePowerW: point.realPower * 1000,

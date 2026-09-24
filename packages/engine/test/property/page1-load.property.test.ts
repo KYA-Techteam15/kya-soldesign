@@ -14,7 +14,7 @@ describe('Page 1 load normalization properties', () => {
           timezoneIana: 'Africa/Lome',
           rows: [{
             id: 'load', label: 'Charge', quantity, usefulPowerW,
-            efficiencyRatio: 1, simultaneityRatio: 1,
+            efficiencyRatio: 1,
             hourlyOperatingFractions: schedule, startupPowerMultiplier: null,
           }],
         });

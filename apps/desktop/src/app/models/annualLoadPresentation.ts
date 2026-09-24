@@ -43,13 +43,13 @@ export function buildAnnualLoadPresentationResult(project: ProjectViewModel, sol
       hourlyPeakPowerW: profile.hourly.map((point) => point.peakPower * 1_000),
     }))
     : project.load.profiles.map((profile) => {
-    const equipmentProfile = profile.classic.concat(profile.inductive).map((row) => ({
+    const equipmentProfile = profile.appliances.map((row) => ({
       id: row.id, label: row.name, quantity: row.qty, usefulPowerW: row.unitPower,
-      efficiencyRatio: row.yield, simultaneityRatio: row.simultaneity, hourlyOperatingFractions: row.operatingFractions,
-      startupPowerMultiplier: 'startupCoef' in row ? (row.startupCoef as number | null) : null,
+      efficiencyRatio: row.yield, hourlyOperatingFractions: row.operatingFractions,
+      startupPowerMultiplier: row.startupCoef > 1 ? row.startupCoef : null,
     }));
     const hourlyEnergyWh = profile.source === 'equipments' && equipmentProfile.length > 0
-      ? Array.from({ length: 24 }, (_, hour) => equipmentProfile.reduce((total, row) => total + row.usefulPowerW * row.quantity * (row.simultaneityRatio ?? 1) / (row.efficiencyRatio ?? 1) * row.hourlyOperatingFractions[hour]!, 0))
+      ? Array.from({ length: 24 }, (_, hour) => equipmentProfile.reduce((total, row) => total + row.usefulPowerW * row.quantity / (row.efficiencyRatio ?? 1) * row.hourlyOperatingFractions[hour]!, 0))
       : profile.hourly.map((point) => point.realPower * 1_000);
     const hourlyPeakPowerW = profile.source === 'equipments' && equipmentProfile.length > 0
       ? Array.from({ length: 24 }, (_, hour) => equipmentProfile.reduce((total, row) => {

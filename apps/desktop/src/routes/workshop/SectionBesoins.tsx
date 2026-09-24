@@ -1,21 +1,21 @@
 import { saveFile } from '../../app/platform/files';
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentProps } from 'react';
-import { defaultOperatingFractions, reconcileOperatingFractions, summarizeEquipmentRow, type AioSizingOutputV1, type EquipmentRowSummary, type SolarResourceAnalysisOutputV1 } from '@ksd/engine';
+import { useMemo, useRef, useState } from 'react';
+import type { AioSizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { useUi, type Toast } from '../../store/ui';
 import { StepHead } from '../../ui/Flow';
 import { fmt } from '../../domain/format';
-import { useGridNav } from '../../ui/useGridNav';
 import type { LoadCompositionView, LoadSource, NamedProfile } from '../../app/models/projectView';
 import { useCalculationState } from '../../app/CalculationProvider';
 import { CapabilityNotice } from '../../ui/CapabilityNotice';
 import { fill, tr, useT } from '../../i18n';
 import { useCatalog } from '../../app/CatalogProvider';
-import { OperatingHoursDialog } from './OperatingHoursDialog';
 import { Dialog } from '../../ui/Dialog';
-import { isDecimalDraft } from '../../app/models/formValues';
-import { exportEquipmentWorkbook, inspectEquipmentWorkbook, exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
+import { exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
+import { AppliancesTable } from './loads/AppliancesTable';
+import { DayBalance } from '../../shell/DayBalance';
+import { DraftNumberInput } from './loads/DraftNumberInput';
 import { ComposedProfilesDialog } from './ComposedProfilesDialog';
 import { AnnualLoadChart } from './AnnualLoadChart';
 import { buildAnnualLoadPresentationResult } from '../../app/models/annualLoadPresentation';
@@ -29,54 +29,6 @@ const MODES: { key: LoadSource; label: string }[] = [
   { key: 'meter', label: 'loads2.partirDeLaFacture' },
 ];
 
-function DraftNumberInput({
-  value,
-  onCommit,
-  format = (number) => String(number),
-  nullable = false,
-  inputMode = 'decimal',
-  ...props
-}: Omit<ComponentProps<'input'>, 'value' | 'onChange'> & {
-  readonly value: number | null;
-  readonly onCommit: (value: number | null) => void;
-  readonly format?: (value: number) => string;
-  readonly nullable?: boolean;
-}) {
-  const [draft, setDraft] = useState(() => value === null ? '' : format(value));
-  const [focused, setFocused] = useState(false);
-
-  useEffect(() => {
-    if (!focused) setDraft(value === null ? '' : format(value));
-  }, [focused, format, value]);
-
-  const commitDraft = (raw: string) => {
-    if (raw.trim() === '') {
-      if (nullable) onCommit(null);
-      return;
-    }
-    if (!isDecimalDraft(raw)) return;
-    const parsed = Number(raw.replace(',', '.'));
-    if (Number.isFinite(parsed)) onCommit(parsed);
-  };
-
-  return <input
-    {...props}
-    inputMode={inputMode}
-    value={draft}
-    onFocus={() => setFocused(true)}
-    onChange={(event: ChangeEvent<HTMLInputElement>) => {
-      const raw = event.target.value;
-      if (!isDecimalDraft(raw)) return;
-      setDraft(raw);
-      commitDraft(raw);
-    }}
-    onBlur={() => {
-      commitDraft(draft);
-      setFocused(false);
-    }}
-  />;
-}
-
 export function SectionBesoins() {
   const t = useT();
   const project = useProject();
@@ -85,12 +37,9 @@ export function SectionBesoins() {
   const { loadProfiles } = useCatalog();
   const [showComposer, setShowComposer] = useState(false);
   const [confirmSimpleSwitch, setConfirmSimpleSwitch] = useState(false);
-  const [filter, setFilter] = useState('');
-  const [hoursEditor, setHoursEditor] = useState(false);
   const [bulkEditor, setBulkEditor] = useState(false);
   const [bulkRange, setBulkRange] = useState({ start: 8, end: 18, meanKw: 0, peakKw: 0 });
   const hourlyImportRef = useRef<HTMLInputElement>(null);
-  const equipmentImportRef = useRef<HTMLInputElement>(null);
 
   const profile = project.load.profiles.find(
     (p) => p.id === project.load.activeProfileId,
@@ -122,8 +71,6 @@ export function SectionBesoins() {
     const parsed = Number.parseFloat(v.replace(',', '.').replace(/\s/g, ''));
     return Number.isFinite(parsed) ? parsed : 0;
   };
-  const nullableNum = (value: string): number | null => value.trim() === '' ? null : num(value);
-  const duration = (value: string): number => Math.min(24, Math.max(0, num(value)));
 
   /**
    * Un seul mode pilote le calcul à la fois. Basculer sans le dire ferait croire
@@ -159,34 +106,6 @@ export function SectionBesoins() {
     notify({ kind: 'info', title: t('loads2.sourceDeCalculChangee'), detail: said[next] });
   };
 
-  const addClassic = () =>
-    mutateProfile((p) =>
-      p.classic.push({
-        id: `c-${Date.now()}`,
-        name: t('loads2.nouvelAppareil'),
-        qty: 1,
-        unitPower: 100,
-        yield: 0.9,
-        simultaneity: 1,
-        operatingFractions: defaultOperatingFractions(4),
-        opHours: 4,
-      }),
-    );
-  const addInductive = () =>
-    mutateProfile((p) =>
-      p.inductive.push({
-        id: `i-${Date.now()}`,
-        name: t('loads2.nouveauMoteur'),
-        qty: 1,
-        unitPower: 500,
-        yield: 0.85,
-        simultaneity: 1,
-        startupCoef: 3,
-        operatingFractions: defaultOperatingFractions(2),
-        opHours: 2,
-      }),
-    );
-
   const applyComposition = (composition: LoadCompositionView) => update((draft) => {
     draft.load.activeMode = 'composed';
     draft.load.composition = structuredClone(composition);
@@ -197,81 +116,7 @@ export function SectionBesoins() {
     void saveFile({ suggestedName: filename, data: new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filter: { name: 'Excel', extensions: ['xlsx'] } });
   };
 
-  const exportEquipment = () => downloadWorkbook(exportEquipmentWorkbook([...profile.classic, ...profile.inductive].map((row) => ({
-    id: row.id, label: row.name, quantity: row.qty, usefulPowerW: row.unitPower, efficiencyRatio: row.yield ?? 1,
-    startupPowerMultiplier: 'startupCoef' in row ? (row.startupCoef as number | null) : null, durationHours: row.opHours, hourlyOperatingFractions: row.operatingFractions,
-  }))), 'equipements.xlsx');
-
-  const importEquipment = async (file: File) => {
-    const result = inspectEquipmentWorkbook(await file.arrayBuffer());
-    if (result.status === 'invalid') { notify({ kind: 'error', title: t('loads2.importRefuse'), detail: result.issues.slice(0, 3).map((issue) => `${issue.sheetName || 'Feuille'} ${issue.cellAddress || issue.columnName}: ${issue.message}`).join(' · ') }); return; }
-    update((draft) => {
-      const target = draft.load.profiles.find((item) => item.id === draft.load.activeProfileId); if (!target) return;
-      target.classic = result.candidate.filter((row) => row.startupPowerMultiplier === null).map((row) => ({ id: row.id, name: row.label, qty: row.quantity, unitPower: row.usefulPowerW, yield: row.efficiencyRatio, simultaneity: 1, operatingFractions: [...row.hourlyOperatingFractions] as number[], opHours: row.durationHours }));
-      target.inductive = result.candidate.filter((row) => row.startupPowerMultiplier !== null).map((row) => ({ id: row.id, name: row.label, qty: row.quantity, unitPower: row.usefulPowerW, yield: row.efficiencyRatio, simultaneity: 1, operatingFractions: [...row.hourlyOperatingFractions] as number[], opHours: row.durationHours, startupCoef: row.startupPowerMultiplier }));
-    });
-    notify({ kind: 'success', title: t('loads2.inventaireExcelImporte'), detail: `${fill(t('loads2.rowsValidated'), { count: result.candidate.length })}${result.warnings.length ? ` ${t('loads2.horairesParDefautAppliques')}` : ''}` });
-  };
-
   const exportHourly = () => downloadWorkbook(exportHourlyProfileWorkbook(profile.hourly.map((point) => ({ hourIndex: point.hour, activePowerKw: point.realPower, peakPowerKw: point.peakPower }))), 'profil-horaire.xlsx');
-
-  const CLASSIC_COLS = ['name', 'qty', 'unitPower', 'yield', 'opHours'] as const;
-  const INDUCT_COLS = ['name', 'qty', 'unitPower', 'yield', 'startupCoef', 'opHours'] as const;
-
-  const classicGrid = useGridNav({
-    rowCount: profile.classic.length,
-    colCount: CLASSIC_COLS.length,
-    addRow: addClassic,
-    getCell: (r, c) => String(profile.classic[r]?.[CLASSIC_COLS[c]] ?? ''),
-    setCell: (r, c, v) =>
-      mutateProfile((p) => {
-        const row = p.classic[r];
-        if (!row) return;
-        const key = CLASSIC_COLS[c];
-        if (key === 'name') row.name = v;
-        else if (key === 'yield') row[key] = nullableNum(v);
-        else if (key === 'opHours') {
-          row.opHours = duration(v);
-          row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions);
-        } else (row[key] as number) = num(v);
-      }),
-  });
-
-  const inductGrid = useGridNav({
-    rowCount: profile.inductive.length,
-    colCount: INDUCT_COLS.length,
-    addRow: addInductive,
-    getCell: (r, c) => String(profile.inductive[r]?.[INDUCT_COLS[c]] ?? ''),
-    setCell: (r, c, v) =>
-      mutateProfile((p) => {
-        const row = p.inductive[r];
-        if (!row) return;
-        const key = INDUCT_COLS[c];
-        if (key === 'name') row.name = v;
-        else if (key === 'yield' || key === 'startupCoef') row[key] = nullableNum(v);
-        else if (key === 'opHours') {
-          row.opHours = duration(v);
-          row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions);
-        } else (row[key] as number) = num(v);
-      }),
-  });
-
-  const needle = filter.trim().toLowerCase();
-  const keep = (name: string) => !needle || name.toLowerCase().includes(needle);
-  const visibleClassic = profile.classic
-    .map((e, i) => ({ e, i }))
-    .filter(({ e }) => keep(e.name));
-  const visibleInductive = profile.inductive
-    .map((e, i) => ({ e, i }))
-    .filter(({ e }) => keep(e.name));
-
-  const classicSummary = summarizeRows(profile.classic.map((item) => summarizeEquipmentRow({ id: item.id, label: item.name, quantity: item.qty, usefulPowerW: item.unitPower, efficiencyRatio: item.yield, simultaneityRatio: item.simultaneity, hourlyOperatingFractions: item.operatingFractions, startupPowerMultiplier: null })));
-  const inductiveSummary = summarizeRows(profile.inductive.map((item) => summarizeEquipmentRow({ id: item.id, label: item.name, quantity: item.qty, usefulPowerW: item.unitPower, efficiencyRatio: item.yield, simultaneityRatio: item.simultaneity, hourlyOperatingFractions: item.operatingFractions, startupPowerMultiplier: item.startupCoef })));
-  const allSummary = classicSummary === null || inductiveSummary === null ? null : {
-    installedUsefulPowerW: classicSummary.installedUsefulPowerW + inductiveSummary.installedUsefulPowerW,
-    calledElectricalPowerW: classicSummary.calledElectricalPowerW + inductiveSummary.calledElectricalPowerW,
-    dailyEnergyWh: classicSummary.dailyEnergyWh + inductiveSummary.dailyEnergyWh,
-  };
 
   return (
     <div className="sheet">
@@ -295,227 +140,12 @@ export function SectionBesoins() {
       </section>}
       {!composedActive && <>
       {profile.source === 'equipments' && (
-        <div style={{ display: 'grid', gap: 'var(--sp-4)' }}>
-          <section>
-            <div className="tbl-title">
-              <h2 className="h-sec">{t('loads.classic')}</h2>
-              <span className="label">
-                {fill(t(profile.classic.length === 1 ? 'loads.rowCountOne' : 'loads.rowCount'), { count: profile.classic.length })}
-                {filter && ` · ${fill(t('loads2.filtered'), { count: visibleClassic.length })}`}
-              </span>
-              <input
-                /* Champ de filtre : il attend une frappe, pas un clic. */
-                className="hdr-search"
-                style={{ width: 160 }}
-                placeholder={t('loads2.filtrerParNom')}
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              />
-              <span className="sep" />
-              <span className="label">{t('loads2.colonnesGriseesCalculees')}</span>
-              <button
-                className="btn"
-                onClick={() =>
-                  notify({
-                    kind: 'info',
-                    title: t('loads2.collageDepuisExcel'),
-                    detail:
-                      t('loads2.pasteHelp'),
-                  })
-                }
-              >
-                {t('loads.pasteHelpButton')}
-              </button>
-              <input ref={equipmentImportRef} type="file" accept=".xlsx,.xls" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importEquipment(file); event.target.value = ''; }} />
-              <button className="btn" onClick={() => equipmentImportRef.current?.click()}>{t('loads.importExcel')}</button>
-              <button className="btn" onClick={exportEquipment}>{t('loads.exportExcel')}</button>
-            </div>
-            <div
-              className="tbl-wrap"
-              ref={classicGrid.ref}
-              onKeyDown={classicGrid.onKeyDown}
-              onPaste={classicGrid.onPaste}
-            >
-              <table className="tbl t-classic">
-                <thead>
-                  <tr>
-                    <th>{t('loads.name')}</th>
-                    <th>{t('loads.quantity')}</th>
-                    <th>{t('loads.unitPower')}<span className="unit">W</span></th>
-                    <th>{t('loads.efficiency')}</th>
-                    <th>{t('loads.hours')}</th>
-                    <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
-                    <th className="derived">{t('loads.realPower')}<span className="unit">W</span></th>
-                    <th className="derived">{t('loads.totalEnergy')}<span className="unit">Wh</span></th>
-                    <th aria-label={t('loads2.actions')} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleClassic.map(({ e, i }) => {
-                    const line = summarizeEquipmentRow({ id: e.id, label: e.name, quantity: e.qty, usefulPowerW: e.unitPower, efficiencyRatio: e.yield, simultaneityRatio: e.simultaneity, hourlyOperatingFractions: e.operatingFractions, startupPowerMultiplier: null });
-                    return (
-                      <tr key={e.id}>
-                        <td className="name">
-                          <input className="cell-in" data-r={i} data-c={0} aria-label={t('loads2.nom')} value={e.name}
-                            onChange={(ev) => mutateProfile((p) => { p.classic[i].name = ev.target.value; })} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label={t('loads2.quantite')} value={e.qty}
-                            inputMode="numeric" onCommit={(value) => { if (value !== null && Number.isInteger(value) && value >= 1) mutateProfile((p) => { p.classic[i].qty = value; }); }} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label={t('loads2.puissanceUnitaire')} value={e.unitPower}
-                            onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.classic[i].unitPower = Math.max(0, value); }); }} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label={t('loads2.rendement')} nullable value={e.yield}
-                            format={(value) => fmt(value, 2)} onCommit={(value) => { if (value === null || (value > 0 && value <= 1)) mutateProfile((p) => { p.classic[i].yield = value; }); }} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label={t('loads2.heuresDUsage')} value={e.opHours}
-                            format={(value) => fmt(value, value % 1 ? 2 : 0)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { const row = p.classic[i]; row.opHours = duration(String(value)); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); }); }} />
-                        </td>
-                        <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
-                        <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
-                        <td className="derived num">{line === null ? '—' : fmt(line.dailyEnergyWh, 0)}</td>
-                        <td>
-                          <button className="rowdel" title={t('loads2.supprimerLaLigne')}
-                            onClick={() => mutateProfile((p) => { p.classic.splice(i, 1); })}>
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={5}>{t('loads.classicSubtotal')}</td>
-                    <td className="num">{classicSummary === null ? '—' : fmt(classicSummary.installedUsefulPowerW, 0)}</td>
-                    <td className="num">{classicSummary === null ? '—' : fmt(classicSummary.calledElectricalPowerW, 0)}</td>
-                    <td className="num">{classicSummary === null ? '—' : fmt(classicSummary.dailyEnergyWh, 0)}</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-              <div className="addrow">
-                <button
-                  className="btn"
-                  onClick={addClassic}
-                >
-                  + {t('loads.addRow')}
-                </button>
-                <span className="sep" />
-                <span className="kbd">{t('loads2.entree')}</span> {t('loads.kbd.newRow')} ·{' '}
-                <span className="kbd">Ctrl D</span> {t('loads.kbd.fillDown')} ·{' '}
-                <span className="kbd">Ctrl V</span> {t('loads.kbd.pasteRange')}
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <div className="tbl-title">
-              <h2 className="h-sec">{t('loads.inductive')}</h2>
-              <span className="label">
-                {fill(t(profile.inductive.length === 1 ? 'loads.rowCountOne' : 'loads.rowCount'), { count: profile.inductive.length })}
-                {filter && ` · ${fill(t('loads2.filtered'), { count: visibleInductive.length })}`} · {t('loads.inrushApplied')}
-              </span>
-            </div>
-            <div
-              className="tbl-wrap"
-              ref={inductGrid.ref}
-              onKeyDown={inductGrid.onKeyDown}
-              onPaste={inductGrid.onPaste}
-            >
-              <table className="tbl t-induct">
-                <thead>
-                  <tr>
-                    <th>{t('loads.name')}</th>
-                    <th>{t('loads.quantity')}</th>
-                    <th>{t('loads.unitPower')}<span className="unit">W</span></th>
-                    <th>{t('loads.efficiency')}</th>
-                    <th>{t('loads.startingCoefficient')}</th>
-                    <th>{t('loads.hours')}</th>
-                    <th className="derived">{t('loads.totalPower')}<span className="unit">W</span></th>
-                    <th className="derived">{t('loads.realPower')}<span className="unit">W</span></th>
-                    <th className="derived">{t('loads.totalEnergy')}<span className="unit">Wh</span></th>
-                    <th aria-label={t('loads2.actions')} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleInductive.map(({ e, i }) => {
-                    const line = summarizeEquipmentRow({ id: e.id, label: e.name, quantity: e.qty, usefulPowerW: e.unitPower, efficiencyRatio: e.yield, simultaneityRatio: e.simultaneity, hourlyOperatingFractions: e.operatingFractions, startupPowerMultiplier: e.startupCoef });
-                    return (
-                      <tr key={e.id}>
-                        <td className="name">
-                          <input className="cell-in" data-r={i} data-c={0} aria-label={t('loads2.nom')} value={e.name}
-                            onChange={(ev) => mutateProfile((p) => { p.inductive[i].name = ev.target.value; })} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={1} aria-label={t('loads2.quantite')} value={e.qty}
-                            inputMode="numeric" onCommit={(value) => { if (value !== null && Number.isInteger(value) && value >= 1) mutateProfile((p) => { p.inductive[i].qty = value; }); }} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={2} aria-label={t('loads2.puissanceUnitaire')} value={e.unitPower}
-                            onCommit={(value) => { if (value !== null) mutateProfile((p) => { p.inductive[i].unitPower = Math.max(0, value); }); }} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={3} aria-label={t('loads2.rendement')} nullable value={e.yield}
-                            format={(value) => fmt(value, 2)} onCommit={(value) => { if (value === null || (value > 0 && value <= 1)) mutateProfile((p) => { p.inductive[i].yield = value; }); }} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={4} aria-label={t('loads2.coefficientDeDemarrage')} nullable value={e.startupCoef}
-                            format={(value) => fmt(value, 1)} onCommit={(value) => { if (value === null || value >= 1) mutateProfile((p) => { p.inductive[i].startupCoef = value; }); }} />
-                        </td>
-                        <td>
-                          <DraftNumberInput className="cell-in" data-r={i} data-c={5} aria-label={t('loads2.heuresDUsage')} value={e.opHours}
-                            format={(value) => fmt(value, value % 1 ? 2 : 0)} onCommit={(value) => { if (value !== null) mutateProfile((p) => { const row = p.inductive[i]; row.opHours = duration(String(value)); row.operatingFractions = reconcileOperatingFractions(row.opHours, row.operatingFractions); }); }} />
-                        </td>
-                        <td className="derived num">{line === null ? '—' : fmt(line.installedUsefulPowerW, 0)}</td>
-                        <td className="derived num">{line === null ? '—' : fmt(line.calledElectricalPowerW, 0)}</td>
-                        <td className="derived num">{line === null ? '—' : fmt(line.dailyEnergyWh, 0)}</td>
-                        <td>
-                          <button className="rowdel" title={t('loads2.supprimerLaLigne')}
-                            onClick={() => mutateProfile((p) => { p.inductive.splice(i, 1); })}>
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={6}>{t('loads.inductiveSubtotal')}</td>
-                    <td className="num">{inductiveSummary === null ? '—' : fmt(inductiveSummary.installedUsefulPowerW, 0)}</td>
-                    <td className="num">{inductiveSummary === null ? '—' : fmt(inductiveSummary.calledElectricalPowerW, 0)}</td>
-                    <td className="num">{inductiveSummary === null ? '—' : fmt(inductiveSummary.dailyEnergyWh, 0)}</td>
-                    <td />
-                  </tr>
-                  <tr>
-                    <td colSpan={6}>{t('loads.total')}</td>
-                    <td className="num">{allSummary === null ? '—' : fmt(allSummary.installedUsefulPowerW, 0)}</td>
-                    <td className="num">{allSummary === null ? '—' : fmt(allSummary.calledElectricalPowerW, 0)}</td>
-                    <td className="num">{allSummary === null ? '—' : fmt(allSummary.dailyEnergyWh, 0)}</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-              <div className="addrow">
-                <button
-                  className="btn"
-                  onClick={addInductive}
-                >
-                  + {t('loads.addRow')}
-                </button>
-                <span className="sep" />
-                <button className="btn" disabled={profile.classic.length + profile.inductive.length === 0} onClick={() => setHoursEditor(true)}>
-                  {t('loads.adjustHours')}
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
+        <AppliancesTable
+          profile={profile}
+          mutate={mutateProfile}
+          simultaneityNotice={project.load.simultaneityNotice}
+          onDismissNotice={() => update((draft) => { draft.load.simultaneityNotice = null; })}
+        />
       )}
 
       {profile.source === 'hourly' && (
@@ -608,6 +238,9 @@ export function SectionBesoins() {
       )}
       </>}
 
+      {/* Le bilan du jour se lit ici, sous la saisie : le panneau de droite reste replié tant qu'il n'y a pas de prédimensionnement. */}
+      <section className="loads-balance"><DayBalance project={project} defaultOpen pinned /></section>
+
       <AnnualLoadChart result={annual} />
 
       <ComposedProfilesDialog open={showComposer} initial={project.load.composition} onCancel={() => setShowComposer(false)} onApply={(composition) => { applyComposition(composition); setShowComposer(false); notify({ kind: 'success', title: t('loads2.profilsComposesEnregistres'), detail: t('loads2.leCalendrierAnnuelA') }); }} />
@@ -617,31 +250,9 @@ export function SectionBesoins() {
         <div className="form-rows"><label><span>{t('loads.startHour')}</span><input type="number" min={0} max={23} value={bulkRange.start} onChange={(event) => setBulkRange((current) => ({ ...current, start: clampHour(Number(event.target.value)) }))} /></label><label><span>{t('loads.endHourExcluded')}</span><input type="number" min={0} max={24} value={bulkRange.end} onChange={(event) => setBulkRange((current) => ({ ...current, end: Math.min(24, Math.max(0, Number(event.target.value))) }))} /></label><label><span>{t('loads.averagePower')}</span><span className="uf"><input inputMode="decimal" value={bulkRange.meanKw} onChange={(event) => setBulkRange((current) => ({ ...current, meanKw: num(event.target.value) }))} /><span className="uf-unit">kW</span></span></label><label><span>{t('loads.peakPower')}</span><span className="uf"><input inputMode="decimal" value={bulkRange.peakKw} onChange={(event) => setBulkRange((current) => ({ ...current, peakKw: num(event.target.value) }))} /><span className="uf-unit">kW</span></span></label></div>
       </Dialog>}
 
-      {hoursEditor && <OperatingHoursDialog
-        items={[...profile.classic, ...profile.inductive].map((row) => ({ id: row.id, name: row.name, durationHours: row.opHours, values: row.operatingFractions }))}
-        onClose={() => setHoursEditor(false)}
-        onApply={(valuesById) => {
-          mutateProfile((target) => {
-            [...target.classic, ...target.inductive].forEach((row) => {
-              const values = valuesById.get(row.id);
-              if (values) row.operatingFractions = [...values];
-            });
-          });
-          setHoursEditor(false);
-        }}
-      />}
 
     </div>
   );
-}
-
-function summarizeRows(rows: readonly (EquipmentRowSummary | null)[]): EquipmentRowSummary | null {
-  if (rows.some((row) => row === null)) return null;
-  return rows.reduce<EquipmentRowSummary>((total, row) => ({
-    installedUsefulPowerW: total.installedUsefulPowerW + row!.installedUsefulPowerW,
-    calledElectricalPowerW: total.calledElectricalPowerW + row!.calledElectricalPowerW,
-    dailyEnergyWh: total.dailyEnergyWh + row!.dailyEnergyWh,
-  }), { installedUsefulPowerW: 0, calledElectricalPowerW: 0, dailyEnergyWh: 0 });
 }
 
 /** Index du jour le plus consommateur d'une série annuelle. */

@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { TopBar } from '../../shell/TopBar';
 import { StatusBar } from '../../shell/StatusBar';
@@ -45,9 +45,7 @@ export function WorkshopLayout() {
   const open = useProjects((s) => s.open);
   const validationError = useProjects((s) => (id === undefined ? undefined : s.validationErrors[id]));
   const lang = useUi((s) => s.lang);
-  const verdictCollapsed = useUi((s) => s.verdictCollapsed);
-  const toggleVerdict = useUi((s) => s.toggleVerdict);
-  const { pathname } = useLocation();
+  const verdictPreference = useUi((s) => s.verdictPreference);
   const centerRef = useRef<HTMLElement>(null);
   const { summary } = useCatalog();
   const project = projects.find((p) => p.id === id) ?? null;
@@ -58,12 +56,9 @@ export function WorkshopLayout() {
     if (id) open(id);
   }, [id, open]);
 
-  /* L'étape des besoins se lit avec le profil sous les yeux : arriver là
-     avec le panneau replié rouvre celui-ci. */
-  const onLoads = pathname.endsWith('/besoins');
-  useEffect(() => {
-    if (onLoads && verdictCollapsed) toggleVerdict();
-  }, [onLoads, verdictCollapsed, toggleVerdict]);
+  /* Sans prédimensionnement, le panneau n'a rien à dire : il reste replié.
+     Un choix explicite de l'utilisateur l'emporte et reste mémorisé. */
+  const verdictCollapsed = verdictPreference === null ? project?.lastCalculation == null : verdictPreference === 'collapsed';
 
   if (!project) {
     return (

@@ -12,9 +12,9 @@ describe('Page 1 project to AIO integration', () => {
     const projects = new InMemoryProjects(() => '2026-08-14T04:00:00.000Z', () => '00000000-0000-4000-8000-000000000101');
     const view = projectFileToView(projects.create('standalone-all-in-one', 'fr'));
     view.site.timezoneIana = 'Africa/Lome';
-    view.load.profiles[0]!.classic.push({
-      id: 'lighting', name: 'Éclairage', qty: 4, unitPower: 20, yield: 1,
-      simultaneity: 0.5, operatingFractions: Array.from({ length: 24 }, (_, hour) => hour >= 18 && hour < 22 ? 1 : 0), opHours: 4,
+    view.load.profiles[0]!.appliances.push({
+      id: 'lighting', name: 'Éclairage', qty: 2, unitPower: 20, yield: 1,
+      operatingFractions: Array.from({ length: 24 }, (_, hour) => hour >= 18 && hour < 22 ? 1 : 0), opHours: 4, startupCoef: 1, inductive: false,
     });
     projects.replace(projectViewToFile(view));
     const catalog = new CanonicalCatalog();

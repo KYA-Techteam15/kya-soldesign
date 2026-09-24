@@ -35,10 +35,10 @@ describe('AIO input contracts', () => {
   it('composes DATA-001 equipment schedules and conserves their daily energy', () => {
     const load = normalizeEquipmentScheduleToAioDailyLoad({
       timezoneIana: 'Africa/Lome', startupEvents: [],
-      items: [{ id: 'fan', label: 'Fan', quantity: 2, activePowerW: 50, powerFactor: null, simultaneityRatio: 0.5, hourlyOperatingFractions: Array.from({ length: 24 }, (_, hour) => hour < 4 ? 1 : 0) }],
+      items: [{ id: 'fan', label: 'Fan', quantity: 2, activePowerW: 50, powerFactor: null, hourlyOperatingFractions: Array.from({ length: 24 }, (_, hour) => hour < 4 ? 1 : 0) }],
     });
-    expect(load.hourlyEnergyWh.slice(0, 4)).toEqual([50, 50, 50, 50]);
-    expect(load.hourlyEnergyWh.reduce((total, value) => total + value, 0)).toBe(200);
+    expect(load.hourlyEnergyWh.slice(0, 4)).toEqual([100, 100, 100, 100]);
+    expect(load.hourlyEnergyWh.reduce((total, value) => total + value, 0)).toBe(400);
   });
   it('converts direct hourly W at the explicit one-hour boundary and keeps a sourced meter profile', () => {
     expect(normalizeDirectHourlyPowerToAioDailyLoad({ timezoneIana: 'Africa/Lome', hourlyPowerW: Array.from({ length: 24 }, () => 120), startupEvents: [] }).hourlyEnergyWh[0]).toBe(120);

@@ -1,6 +1,12 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Les tests lisent la source du domaine, jamais `dist/` : une copie compilée
+  // périmée faisait passer ou échouer des tests sur un code qui n'existait plus.
+  resolve: {
+    alias: { '@ksd/domain': fileURLToPath(new URL('./packages/domain/src/index.ts', import.meta.url)) },
+  },
   test: {
     include: ['packages/**/*.test.ts', 'apps/desktop/test/**/*.test.ts', 'apps/desktop/test/**/*.test.tsx'],
     // Les tests d'intégration simulent des années de 8 760 heures ; lancés en

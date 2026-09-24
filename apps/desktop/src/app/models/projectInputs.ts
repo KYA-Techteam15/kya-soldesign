@@ -85,10 +85,13 @@ export const projectLoadItemV1Schema = z.object({
   quantity: z.number().int().positive(),
   usefulPowerW: z.number().finite().min(0),
   powerFactor: z.number().finite().gt(0).max(1).nullable(),
-  simultaneityRatio: nullableRatio,
+  /** Supprimée en 1.1 : lue dans les anciens projets pour les signaler, jamais écrite. */
+  simultaneityRatio: nullableRatio.optional(),
   efficiencyRatio: z.number().finite().gt(0).max(1).nullable(),
   hourlyOperatingFractions: z.array(z.number().finite().min(0).max(1)).length(24),
   startupPowerMultiplier: z.number().finite().min(1).nullable(),
+  /** Déclaré inductif à la main alors que le coefficient vaut encore 1 (« à préciser »). */
+  inductive: z.boolean().optional(),
 }).strict();
 
 export const hourlyLoadPointV1Schema = z.object({
@@ -170,6 +173,7 @@ export const loadInputV1Schema = z.object({
   profiles: z.array(loadProfileInputV1Schema).min(1),
   calendar: loadCalendarInputV2Schema.optional(),
   composed: composedLoadInputV2Schema.nullable().optional(),
+  simultaneityNotice: z.array(z.string()).nullable().optional(),
 }).strict().superRefine((value, context) => {
   if (!value.profiles.some((profile) => profile.id === value.activeProfileId)) {
     context.addIssue({

@@ -33,7 +33,7 @@ function projectWith(load: Partial<ProjectViewModel['load']>): ProjectViewModel 
 function profile(overrides: Record<string, unknown>) {
   return {
     id: 'p', name: 'Base', color: '#000', source: 'equipments',
-    classic: [], inductive: [], hourly: [], meter: null,
+    appliances: [], hourly: [], meter: null,
     ...overrides,
   };
 }
@@ -64,7 +64,7 @@ describe('synthèse des besoins pour les documents', () => {
   it('applique la règle du moteur — le rendement divise, il ne multiplie pas', () => {
     const project = projectWith({
       profiles: [profile({
-        classic: [{ id: 'c1', name: 'Éclairage', qty: 2, unitPower: 500, yield: 0.85, simultaneity: 1, operatingFractions: workday, opHours: 10 }],
+        appliances: [{ id: 'c1', name: 'Éclairage', qty: 2, unitPower: 500, yield: 0.85, operatingFractions: workday, opHours: 10, startupCoef: 1, inductive: false }],
       })] as never,
     });
     const summary = buildReportLoadSummary(project, null);
@@ -78,9 +78,9 @@ describe('synthèse des besoins pour les documents', () => {
   it('n’ampute aucune ligne au-delà de la douzième', () => {
     const project = projectWith({
       profiles: [profile({
-        classic: Array.from({ length: 18 }, (_, index) => ({
+        appliances: Array.from({ length: 18 }, (_, index) => ({
           id: `c${index}`, name: `Poste ${index}`, qty: 1, unitPower: 100,
-          yield: 1, simultaneity: 1, operatingFractions: workday, opHours: 10,
+          yield: 1, operatingFractions: workday, opHours: 10, startupCoef: 1, inductive: false,
         })),
       })] as never,
     });

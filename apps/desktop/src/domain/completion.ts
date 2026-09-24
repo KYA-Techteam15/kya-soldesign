@@ -40,7 +40,7 @@ export function sectionStates(project: ProjectViewModel, lang: Lang = 'fr', fact
   const profile = project.load.profiles.find((item) => item.id === project.load.activeProfileId);
   const lineCount = project.load.activeMode === 'composed'
     ? project.load.composition?.profiles.length ?? 0
-    : (profile?.classic.length ?? 0) + (profile?.inductive.length ?? 0) + (profile?.source === 'hourly' || profile?.source === 'meter' ? 1 : 0);
+    : (profile?.appliances.length ?? 0) + (profile?.source === 'hourly' || profile?.source === 'meter' ? 1 : 0);
   const build = (checks: [boolean, string][], meta: string): SectionState => ({
     level: level(checks.filter(([valid]) => valid).length, checks.length),
     missing: checks.filter(([valid]) => !valid).map(([, key]) => t(key)),

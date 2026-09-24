@@ -10,7 +10,7 @@ export interface EquipmentRowSummary {
 export function summarizeEquipmentRow(row: EquipmentScheduleRow): EquipmentRowSummary | null {
   if (validateRow(row, 0).length > 0) return null;
   const installedUsefulPowerW = row.usefulPowerW * row.quantity;
-  const calledElectricalPowerW = installedUsefulPowerW * row.simultaneityRatio! / row.efficiencyRatio!;
+  const calledElectricalPowerW = installedUsefulPowerW / row.efficiencyRatio!;
   return {
     installedUsefulPowerW,
     calledElectricalPowerW,
@@ -30,9 +30,8 @@ export function normalizeEquipmentRows(input: {
     id: row.id,
     label: row.label,
     quantity: 1,
-    activePowerW: row.usefulPowerW * row.quantity * row.simultaneityRatio! / row.efficiencyRatio!,
+    activePowerW: row.usefulPowerW * row.quantity / row.efficiencyRatio!,
     powerFactor: null,
-    simultaneityRatio: 1,
     hourlyOperatingFractions: [...row.hourlyOperatingFractions],
   }));
   const startupEvents = input.rows.flatMap((row, index) => startupEventsFor(row, items[index]!.activePowerW));
@@ -47,6 +46,32 @@ export function normalizeEquipmentRows(input: {
   }
 }
 
+/**
+ * Puissance appelée heure par heure, démarrages compris : un démarrage inductif ajoute
+ * P. en marche × (coefficient − 1) à l'heure où l'appareil démarre. Même règle pour le tableau
+ * des besoins et pour le dimensionnement.
+ */
+export function hourlyPeakPowerWithStartupsW(
+  hourlyMeanPowerW: readonly number[],
+  startupEvents: readonly { readonly hourIndex: number; readonly runningPowerW: number; readonly startupPowerMultiplier: number | null }[],
+): number[] {
+  const peaks = [...hourlyMeanPowerW];
+  for (const event of startupEvents) {
+    if (event.startupPowerMultiplier === null) continue;
+    peaks[event.hourIndex] = peaks[event.hourIndex]! + event.runningPowerW * (event.startupPowerMultiplier - 1);
+  }
+  return peaks;
+}
+
+/** Pointe au démarrage d'une liste d'appareils ; `null` si une ligne est incomplète. */
+export function equipmentStartupPeakW(rows: readonly EquipmentScheduleRow[]): number | null {
+  if (rows.length === 0) return 0;
+  // La pointe ne dépend pas du fuseau : n'importe quel fuseau valide convient.
+  const normalized = normalizeEquipmentRows({ timezoneIana: 'Etc/UTC', rows });
+  if (normalized.status !== 'ready') return null;
+  return Math.max(...hourlyPeakPowerWithStartupsW(normalized.load.hourlyEnergyWh, normalized.load.startupEvents));
+}
+
 function validateRow(row: EquipmentScheduleRow, index: number): readonly LoadInputIssue[] {
   const base = `rows.${index}`;
   const issues: LoadInputIssue[] = [];
@@ -55,7 +80,6 @@ function validateRow(row: EquipmentScheduleRow, index: number): readonly LoadInp
   if (!Number.isInteger(row.quantity) || row.quantity <= 0) issues.push(issue('LOAD_QUANTITY_INVALID', `${base}.quantity`, 'Quantity must be a positive integer'));
   if (!Number.isFinite(row.usefulPowerW) || row.usefulPowerW < 0) issues.push(issue('LOAD_POWER_INVALID', `${base}.usefulPowerW`, 'Useful power must be finite and non-negative'));
   if (row.efficiencyRatio === null || !Number.isFinite(row.efficiencyRatio) || row.efficiencyRatio <= 0 || row.efficiencyRatio > 1) issues.push(issue('LOAD_EFFICIENCY_MISSING', `${base}.efficiencyRatio`, 'Efficiency must be explicitly declared in (0, 1]'));
-  if (row.simultaneityRatio === null || !Number.isFinite(row.simultaneityRatio) || row.simultaneityRatio < 0 || row.simultaneityRatio > 1) issues.push(issue('LOAD_SIMULTANEITY_MISSING', `${base}.simultaneityRatio`, 'Simultaneity must be explicitly declared in [0, 1]'));
   if (row.hourlyOperatingFractions.length !== 24 || row.hourlyOperatingFractions.some((value) => !Number.isFinite(value) || value < 0 || value > 1)) issues.push(issue('LOAD_SCHEDULE_INVALID', `${base}.hourlyOperatingFractions`, 'The operating schedule must contain 24 fractions in [0, 1]'));
   if (row.startupPowerMultiplier !== null && (!Number.isFinite(row.startupPowerMultiplier) || row.startupPowerMultiplier <= 1)) issues.push(issue('LOAD_STARTUP_MULTIPLIER_INVALID', `${base}.startupPowerMultiplier`, 'An inductive multiplier must be greater than 1'));
   return issues;

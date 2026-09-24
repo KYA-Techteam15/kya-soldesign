@@ -4012,3 +4012,109 @@ table.tbl.t-cables { table-layout: auto; }
 /* Textes légaux affichés dans « À propos ». */
 .legal-text { margin: 0; max-height: 60vh; overflow: auto; white-space: pre-wrap; font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; }
 
+
+/* ============================================================== Appareils et horaires (spec 011) */
+
+.t-appliances td:nth-child(1) { min-width: 180px; }
+.t-appliances td:nth-child(2) .cell-in { width: 52px; }
+.t-appliances td:nth-child(3) .cell-in,
+.t-appliances td:nth-child(4) .cell-in { width: 72px; }
+.t-appliances td:nth-child(6) .cell-in { width: 56px; }
+.t-appliances .hours-cell { white-space: nowrap; }
+.t-appliances .hours-cell .cell-in { width: 52px; }
+.hours-open {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: 2px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.hours-open:hover, .hours-open:focus-visible { border-color: var(--border-strong); color: var(--accent); background: var(--surface); }
+.t-appliances .check-cell { text-align: center; }
+.t-appliances .check-cell input { width: 16px; height: 16px; accent-color: var(--accent); }
+.t-appliances td.to-specify .cell-in { outline: 1px solid var(--accent); background: var(--accent-soft); }
+.t-appliances tfoot .startup-peak td { color: var(--text-muted); font-style: italic; }
+
+/* Frise des 24 heures, en lecture. */
+.hstrip, .hscale { display: grid; grid-template-columns: repeat(24, 10px); gap: 1px; }
+.hstrip span { height: 12px; border-radius: 2px; background: var(--surface-3); }
+.hstrip span.on { background: var(--accent-fill); }
+.hstrip span.part { background: linear-gradient(90deg, var(--accent-fill) 50%, var(--surface-3) 50%); }
+.hscale span { font-size: 9px; color: var(--text-faint); font-family: var(--font-mono); line-height: 1; }
+
+.hover-card {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-sm);
+  pointer-events: none;
+}
+
+/* Horaire d'un appareil. */
+.hpop {
+  position: fixed;
+  z-index: 70;
+  display: grid;
+  gap: var(--sp-2);
+  width: 392px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-sm);
+  user-select: none;
+}
+.hpop header, .hpop footer { display: flex; align-items: center; gap: var(--sp-2); }
+.hpop header b { flex: 1; font-size: var(--fs-md); }
+.hrow { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.hcol { display: grid; gap: 2px; justify-items: center; }
+.hcol small { font-family: var(--font-mono); font-size: 10px; color: var(--text-faint); }
+.hcell {
+  width: 100%;
+  min-width: 14px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface-2);
+  cursor: pointer;
+  touch-action: none;
+}
+.hcell:hover { border-color: var(--accent); }
+.hcell.on { border-color: var(--accent); background: var(--accent-fill); }
+.hcell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hcount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
+.hcount.ok { color: var(--ok); }
+.hcount.warn { color: var(--accent); }
+.hnote { margin: 0; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); }
+.hnote .warn { color: var(--accent); font-family: var(--font-sans); }
+.hpresets { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.hpresets .btn { height: 24px; padding: 0 8px; font-family: var(--font-mono); font-size: var(--fs-xs); }
+
+/* Planning de tous les appareils. */
+.hplanner { display: grid; gap: 2px; user-select: none; }
+.hp-row { display: grid; grid-template-columns: minmax(120px, 180px) 1fr 56px 104px; align-items: center; gap: var(--sp-2); }
+.hp-head { font-size: var(--fs-xs); color: var(--text-faint); }
+.hp-cells { display: grid; grid-template-columns: repeat(24, minmax(14px, 1fr)); gap: 2px; }
+.hp-head .hp-cells span { font-family: var(--font-mono); font-size: 10px; }
+.hp-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.hp-load { display: grid; grid-template-columns: minmax(120px, 180px) 1fr auto; align-items: end; gap: var(--sp-2); margin-top: var(--sp-3); }
+.hp-bars { display: grid; grid-template-columns: repeat(24, minmax(14px, 1fr)); gap: 2px; align-items: end; height: 56px; }
+.hp-bars span { background: var(--ok); border-radius: 2px 2px 0 0; }
+
+/* Bilan du jour sur l'étape Besoins : largeur d'un panneau, pas de toute la page. */
+.loads-balance { max-width: 520px; }
+.loads-balance .dayb { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }

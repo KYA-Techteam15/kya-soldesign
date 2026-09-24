@@ -10,10 +10,10 @@ import { currencyLabel, fmt } from '../domain/format';
 
 export function VerdictPanel({ project }: { readonly project: ProjectViewModel }) {
   const t = useT();
-  const toggleVerdict = useUi((state) => state.toggleVerdict);
+  const setVerdictCollapsed = useUi((state) => state.setVerdictCollapsed);
+  const onLoads = useLocation().pathname.endsWith('/besoins');
   const lang = useUi((state) => state.lang);
   const money = currencyLabel(project.currency, lang);
-  const onLoads = useLocation().pathname.endsWith('/besoins');
   const state = useCalculationState<PresizingOutputV1>(project.id, 'presizing', project.updatedAt);
   const output = state.status === 'ready' ? state.envelope.output : null;
   const candidate = output?.selected ?? null;
@@ -25,7 +25,7 @@ export function VerdictPanel({ project }: { readonly project: ProjectViewModel }
         <div className="verdict-head">
           <h2 className="h-sec" title={t('v.presizedHelp')}>{t('v.viabilityPresized')}</h2>
           <span className="sep" style={{ flex: 1 }} />
-          {!onLoads && <button className="toggle" onClick={toggleVerdict} title={t('v.collapse')} aria-label={t('v.collapse')}>›</button>}
+          <button className="toggle" onClick={() => setVerdictCollapsed(true)} title={t('v.collapse')} aria-label={t('v.collapse')}>›</button>
         </div>
         {output === null ? <CapabilityNotice capability="presizing" state={state} compact /> : <>
           <div className="verdict-val">{fmt(candidate?.svi ?? 0, 2)}</div>
@@ -33,7 +33,8 @@ export function VerdictPanel({ project }: { readonly project: ProjectViewModel }
         </>}
       </div>
 
-      <DayBalance project={project} defaultOpen={onLoads} pinned={onLoads} />
+      {/* Sur l'étape Besoins, le bilan du jour est dans la page : pas de doublon ici. */}
+      {!onLoads && <DayBalance project={project} />}
 
       <div className="kpis kpis-all">
         <div className="kpi kpi-head"><span className="h-sec">{t('v.reliability')}</span></div>

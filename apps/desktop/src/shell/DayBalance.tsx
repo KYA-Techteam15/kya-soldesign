@@ -106,7 +106,7 @@ export function DayBalance({ project, defaultOpen = false, pinned = false }: {
       <span><b>{model.hasLoad ? fmt(model.dailyEnergyKWh, 2) : '—'}</b><i>kWh/j</i></span>
       <span><b>{model.hasLoad ? fmt(model.peakLoadKw, 2) : '—'}</b><i>{t('loads.calledKw')}</i></span>
       <span><b>{model.hasLoad ? fmt(model.peakStartupKw, 2) : '—'}</b><i>{t('loads.peakKw')}</i></span>
-      <span><b>{model.gamma === null ? '—' : fmt(model.gamma, 2)}</b><i>γ</i></span>
+      <span title={t('loads.calendarWeightedYen')}><b>{model.gamma === null ? '—' : `${fmt(model.gamma * 100, 0)} %`}</b><i>{t('loads.yenShort')}</i></span>
     </div>
     {!sizingReady && model.hasLoad && <p className="dayb-none">{t('dayBalance.leProfilEstCalcule')}</p>}
   </div>;

@@ -12,7 +12,7 @@ describe('canonical project/view adapters', () => {
     const view = projectFileToView(file);
     expect(view.name).toBe('Nouveau projet');
     expect(view.details.clientName).toBe('');
-    expect(view.load.profiles[0]?.classic).toEqual([]);
+    expect(view.load.profiles[0]?.appliances).toEqual([]);
     expect(file.inputs).toMatchObject({
       schemaVersion: 1,
       site: { latitudeDeg: null, longitudeDeg: null, arrayTiltDeg: null, arrayAzimuthDeg: null },
@@ -34,9 +34,9 @@ describe('canonical project/view adapters', () => {
     view.site.localityId = 'bombouaka';
     view.site.latitude = 10.703;
     view.site.longitude = 0.2099;
-    view.load.profiles[0]?.classic.push({
+    view.load.profiles[0]?.appliances.push({
       id: 'lighting', name: 'Éclairage', qty: 4,
-      unitPower: 18, yield: 0.9, simultaneity: 1,
+      unitPower: 18, yield: 0.9, startupCoef: 1, inductive: false,
       operatingFractions: Array.from({ length: 24 }, (_, hour) => hour >= 18 ? 1 : 0),
       opHours: 6,
     });
@@ -45,11 +45,11 @@ describe('canonical project/view adapters', () => {
     expect(checked.inputs).toMatchObject({
       details: { clientName: 'District sanitaire' },
       site: { countryCode: 'TG', latitudeDeg: 10.703 },
-      load: { profiles: [{ items: [{ label: 'Éclairage', usefulPowerW: 18, simultaneityRatio: 1 }] }] },
+      load: { profiles: [{ items: [{ label: 'Éclairage', usefulPowerW: 18, startupPowerMultiplier: null }] }] },
     });
     const again = projectFileToView(checked);
     expect(again.details.clientName).toBe(view.details.clientName);
-    expect(again.load.profiles[0]?.classic[0]).toMatchObject({ name: 'Éclairage', opHours: 6 });
+    expect(again.load.profiles[0]?.appliances[0]).toMatchObject({ name: 'Éclairage', opHours: 6 });
   });
 
   it('rejects invalid canonical edits instead of replacing them with defaults', () => {

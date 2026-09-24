@@ -21,7 +21,6 @@ export interface EquipmentScheduleRow {
   readonly quantity: number;
   readonly usefulPowerW: number;
   readonly efficiencyRatio: number | null;
-  readonly simultaneityRatio: number | null;
   readonly hourlyOperatingFractions: readonly number[];
   readonly startupPowerMultiplier: number | null;
 }

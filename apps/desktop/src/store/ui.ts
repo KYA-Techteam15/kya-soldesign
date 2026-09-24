@@ -6,14 +6,14 @@ export type Vibe = 'sober' | 'vivid' | 'radiant';
 export const VIBES: readonly Vibe[] = ['sober', 'vivid', 'radiant'];
 export type Lang = 'fr' | 'en';
 const UI_SETTINGS_KEY = 'kya-sol-design.ui-settings.v1';
-type UiSettings = Pick<UiStore, 'theme' | 'vibe' | 'lang'>;
+type UiSettings = Pick<UiStore, 'theme' | 'vibe' | 'lang' | 'verdictPreference'>;
 
 function readSettings(): UiSettings {
-  if (typeof window === 'undefined') return { theme: 'light', vibe: 'sober', lang: 'fr' };
+  if (typeof window === 'undefined') return { theme: 'light', vibe: 'sober', lang: 'fr', verdictPreference: null };
   try {
     const value = JSON.parse(window.localStorage.getItem(UI_SETTINGS_KEY) ?? 'null') as Partial<UiSettings> | null;
-    return { theme: value?.theme === 'dark' ? 'dark' : 'light', vibe: VIBES.includes(value?.vibe as Vibe) ? value!.vibe as Vibe : 'sober', lang: value?.lang === 'en' ? 'en' : 'fr' };
-  } catch { return { theme: 'light', vibe: 'sober', lang: 'fr' }; }
+    return { theme: value?.theme === 'dark' ? 'dark' : 'light', vibe: VIBES.includes(value?.vibe as Vibe) ? value!.vibe as Vibe : 'sober', lang: value?.lang === 'en' ? 'en' : 'fr', verdictPreference: value?.verdictPreference === 'open' || value?.verdictPreference === 'collapsed' ? value.verdictPreference : null };
+  } catch { return { theme: 'light', vibe: 'sober', lang: 'fr', verdictPreference: null }; }
 }
 
 function saveSettings(settings: UiSettings): void {
@@ -42,7 +42,12 @@ interface UiStore {
   splashSeen: boolean;
   toasts: Toast[];
   confirm: ConfirmRequest | null;
-  verdictCollapsed: boolean;
+  /**
+   * Choix explicite de l'utilisateur pour le panneau de droite ; 
+ull : le panneau suit le projet
+   * (replié tant qu'aucun prédimensionnement n'existe, rien à y lire avant).
+   */
+  verdictPreference: 'open' | 'collapsed' | null;
   verdictTabTop: number;
   /** Palette de commandes ouverte (Ctrl K ou bouton « Rechercher une action »). */
   paletteOpen: boolean;
@@ -57,21 +62,23 @@ interface UiStore {
   dismiss: (id: number) => void;
   ask: (request: ConfirmRequest) => void;
   closeConfirm: () => void;
-  toggleVerdict: () => void;
+  setVerdictCollapsed: (collapsed: boolean) => void;
   setVerdictTabTop: (percent: number) => void;
 }
+
+const pickSettings = (state: UiSettings): UiSettings => ({ theme: state.theme, vibe: state.vibe, lang: state.lang, verdictPreference: state.verdictPreference });
 
 let toastSequence = 0;
 const initialSettings = readSettings();
 export const useUi = create<UiStore>()((set, get) => ({
   ...initialSettings, splashSeen: false, toasts: [],
-  confirm: null, verdictCollapsed: false, verdictTabTop: 42, paletteOpen: false,
+  confirm: null, verdictTabTop: 42, paletteOpen: false,
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
-  setTheme: (theme) => { set({ theme }); saveSettings({ theme, vibe: get().vibe, lang: get().lang }); },
-  setVibe: (vibe) => { set({ vibe }); saveSettings({ theme: get().theme, vibe, lang: get().lang }); },
-  toggleVibe: () => { const vibe = VIBES[(VIBES.indexOf(get().vibe) + 1) % VIBES.length]; set({ vibe }); saveSettings({ theme: get().theme, vibe, lang: get().lang }); },
-  toggleTheme: () => { const theme = get().theme === 'dark' ? 'light' : 'dark'; set({ theme }); saveSettings({ theme, vibe: get().vibe, lang: get().lang }); },
-  setLang: (lang) => { set({ lang }); saveSettings({ theme: get().theme, vibe: get().vibe, lang }); },
+  setTheme: (theme) => { set({ theme }); saveSettings({ ...pickSettings(get()), theme }); },
+  setVibe: (vibe) => { set({ vibe }); saveSettings({ ...pickSettings(get()), vibe }); },
+  toggleVibe: () => { const vibe = VIBES[(VIBES.indexOf(get().vibe) + 1) % VIBES.length]; set({ vibe }); saveSettings({ ...pickSettings(get()), vibe }); },
+  toggleTheme: () => { const theme = get().theme === 'dark' ? 'light' : 'dark'; set({ theme }); saveSettings({ ...pickSettings(get()), theme }); },
+  setLang: (lang) => { set({ lang }); saveSettings({ ...pickSettings(get()), lang }); },
   markSplashSeen: () => set({ splashSeen: true }),
   notify: (toast) => {
     const id = ++toastSequence;
@@ -82,6 +89,6 @@ export const useUi = create<UiStore>()((set, get) => ({
   dismiss: (id) => set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) })),
   ask: (confirm) => set({ confirm }),
   closeConfirm: () => set({ confirm: null }),
-  toggleVerdict: () => set((state) => ({ verdictCollapsed: !state.verdictCollapsed })),
+  setVerdictCollapsed: (collapsed) => { const verdictPreference = collapsed ? 'collapsed' : 'open'; set({ verdictPreference }); saveSettings({ ...pickSettings(get()), verdictPreference }); },
   setVerdictTabTop: (percent) => set({ verdictTabTop: Math.min(88, Math.max(6, percent)) }),
 }));

@@ -108,7 +108,7 @@ export function normalizeEquipmentScheduleToAioDailyLoad(input: {
 }): CanonicalDailyLoadV1 {
   const items = input.items.map((item) => loadItemSchema.parse(item));
   const hourlyEnergyWh = Array.from({ length: 24 }, (_, hour) => items.reduce(
-    (total, item) => total + item.activePowerW * item.quantity * item.simultaneityRatio * item.hourlyOperatingFractions[hour]!,
+    (total, item) => total + item.activePowerW * item.quantity * item.hourlyOperatingFractions[hour]!,
     0,
   ));
   const expectedDailyEnergyWh = items.reduce((total, item) => total + deriveDailyLoadEnergyWh(item), 0);

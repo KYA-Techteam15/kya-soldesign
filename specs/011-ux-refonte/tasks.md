@@ -5,16 +5,16 @@
 
 ## Lot 1 — Navigation, appareils et horaires
 
-- [ ] T001 Libellé « Préparer les documents client → » (FR-001)
-- [ ] T002 Panneau de droite replié sans prédimensionnement, préférence mémorisée (FR-002)
-- [ ] T003 P-1 : retirer versions de méthode, compteurs internes, jargon des écrans de l'atelier (FR-003)
-- [ ] T004 Moteur + domaine : supprimer la simultanéité ; tests (FR-022, D3)
-- [ ] T005 Format : `inductive` facultatif, `simultaneityRatio` en lecture seule, avis de migration (D2, D3)
-- [ ] T006 Vue : `appliances[]` unique ; adaptateurs, rapports, Excel, tests (D2)
-- [ ] T007 Tableau unique, règles Coef. dém. / Inductif, pointe au démarrage (FR-019 → FR-021)
-- [ ] T008 `HoursStrip` au survol, `HoursPopover` au clic, modèles par plages (FR-023 → FR-025)
-- [ ] T009 `HoursPlanner` remplace `OperatingHoursDialog` (FR-026)
-- [ ] T010 Tests E2E appareils et horaires ; `pnpm verify:phase`
+- [x] T001 Libellé « Préparer les documents client → » (FR-001)
+- [x] T002 Panneau de droite replié sans prédimensionnement, préférence mémorisée (FR-002)
+- [x] T003 P-1 : retirer versions de méthode, compteurs internes, jargon des écrans de l'atelier (FR-003)
+- [x] T004 Moteur + domaine : supprimer la simultanéité ; tests (FR-022, D3)
+- [x] T005 Format : `inductive` facultatif, `simultaneityRatio` en lecture seule, avis de migration (D2, D3)
+- [x] T006 Vue : `appliances[]` unique ; adaptateurs, rapports, Excel, tests (D2)
+- [x] T007 Tableau unique, règles Coef. dém. / Inductif, pointe au démarrage (FR-019 → FR-021)
+- [x] T008 `HoursStrip` au survol, `HoursPopover` au clic, modèles par plages (FR-023 → FR-025)
+- [x] T009 `HoursPlanner` remplace `OperatingHoursDialog` (FR-026)
+- [x] T010 Tests E2E appareils et horaires ; `pnpm verify:phase`
 
 ## Lot 2 — Sources de consommation
 

@@ -15,7 +15,7 @@ import { useT } from '../i18n';
 
 export function VerdictTab({ svi, viable }: { svi: number | null; viable: boolean }) {
   const t = useT();
-  const toggleVerdict = useUi((s) => s.toggleVerdict);
+  const setVerdictCollapsed = useUi((s) => s.setVerdictCollapsed);
   const top = useUi((s) => s.verdictTabTop);
   const setTop = useUi((s) => s.setVerdictTabTop);
 
@@ -39,7 +39,7 @@ export function VerdictTab({ svi, viable }: { svi: number | null; viable: boolea
   const onPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.releasePointerCapture(e.pointerId);
     setDragging(false);
-    if (!moved.current) toggleVerdict();
+    if (!moved.current) setVerdictCollapsed(false);
   };
 
   return (

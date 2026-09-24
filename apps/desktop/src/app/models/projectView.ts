@@ -32,13 +32,28 @@ export interface LoadCompositionView {
   profiles: DirectLoadProfileView[];
 }
 
+/**
+ * Un appareil recensé. Coefficient de démarrage 1 : charge classique ; différent de 1 : inductive.
+ * `inductive` peut aussi être coché à la main : avec un coefficient de 1, il reste « à préciser ».
+ */
+export interface ApplianceView {
+  id: string;
+  name: string;
+  qty: number;
+  unitPower: number;
+  yield: number | null;
+  operatingFractions: number[];
+  opHours: number;
+  startupCoef: number;
+  inductive: boolean;
+}
+
 export interface NamedProfile {
   id: string;
   name: string;
   color: string;
   source: LoadSource;
-  classic: { id: string; name: string; qty: number; unitPower: number; yield: number | null; simultaneity: number | null; operatingFractions: number[]; opHours: number }[];
-  inductive: { id: string; name: string; qty: number; unitPower: number; yield: number | null; simultaneity: number | null; operatingFractions: number[]; opHours: number; startupCoef: number | null }[];
+  appliances: ApplianceView[];
   hourly: { hour: number; realPower: number; peakPower: number }[];
   meter: { observedEnergy: number; observedDays: number | null; normalizedProfileId: string | null; forceYEn: boolean; targetYEn: number | null; meterAmperage: number; networkType: 'single_phase' | 'three_phase'; morningPeakStart: string; morningPeakEnd: string; eveningPeakStart: string; eveningPeakEnd: string; peakImportance: number; targetQualityFactor: number } | null;
 }
@@ -54,7 +69,11 @@ export interface ProjectViewModel {
   currency: string;
   details: { clientName: string; clientAddress: string; clientTel: string; clientEmail: string; followerName: string; applicationType: ApplicationType; projectDate: string; projectNumber: string; projectLocation: string; projectImage: string };
   site: { country: string; countryCode: string; localityId: string | null; region: string; latitude: number; longitude: number; tilt: number; azimuth: number; irradiation: number; monthlyIrradiation: (number | null)[]; weatherSourceId: string | null; timezoneIana: string | null; designMonth: number | null; designColdTemperatureC: number | null; irradiationBasis: { tilt: number; azimuth: number } | null; downloadedSource: { name: string; provider: string; versionOrDate: string; locator: string; retrievedAtIso: string; qualityFlags: string[]; weatherFileId?: string; sourceSha256?: string; timezoneOffsetMinutes?: number; albedo?: number; ambientTemperatureMinC?: number; ambientTemperatureMaxC?: number; hourlyIrradiance?: { timestampUtcIso: string; ghiWm2: number; dniWm2: number; dhiWm2: number }[] } | null };
-  load: { granularity: Granularity; activeMode: 'simple' | 'composed'; composition: LoadCompositionView | null; calendar: LoadCalendarView; profiles: NamedProfile[]; activeProfileId: string; irMin: number };
+  load: {
+    granularity: Granularity; activeMode: 'simple' | 'composed'; composition: LoadCompositionView | null; calendar: LoadCalendarView; profiles: NamedProfile[]; activeProfileId: string; irMin: number;
+    /** Appareils dont la simultanéité (supprimée) valait moins de 1 : avis affiché jusqu'à sa fermeture. */
+    simultaneityNotice: string[] | null;
+  };
   assumptions: { lpspMax: number; lolpMax: number; systemPr: number; inverterYield: number; batteryYield: number; batteryVoltage: number; batteryDod: number; pvSpecificCost: number; pvMargin: number; pvCostInputMode: 'specific' | 'component'; pvReferencePowerW: number | null; pvReferencePrice: number | null; batterySpecificCost: number; batteryMargin: number; storageCostInputMode: 'specific' | 'component'; storageReferencePrice: number | null; storageReferenceKwh: number | null; inverterSpecificCost: number; inverterMargin: number; inverterCostInputMode: 'specific' | 'component'; inverterReferencePowerW: number | null; inverterReferencePrice: number | null; projectLifetime: number; pvLifetime: number; batteryLifetime: number; inverterLifetime: number; pvMaintenance: number; batteryMaintenance: number; inverterMaintenance: number; actualizationRate: number; lcoeGrid: number; emissionFactor: number; autoConsumptionRate: number; dieselSpecificCost: number };
   selection: { moduleId: string | null; batteryId: string | null; inverterId: string | null };
   cables: { segment: CableSegment; length: number; material: 'copper' | 'aluminium'; installation: 'buried' | 'not_buried'; maxVoltageDropPercent: number }[];

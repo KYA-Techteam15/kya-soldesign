@@ -14,10 +14,9 @@ describe('load contracts', () => {
       quantity: 2,
       activePowerW: 50,
       powerFactor: null,
-      simultaneityRatio: 0.5,
       hourlyOperatingFractions: Array.from({ length: 24 }, (_, index) => index < 8 ? 1 : 0),
     });
-    expect(deriveDailyLoadEnergyWh(load)).toBe(400);
+    expect(deriveDailyLoadEnergyWh(load)).toBe(800);
   });
 
   it('normalizes legacy weights deterministically', () => {
