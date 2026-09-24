@@ -27,6 +27,16 @@
 - Vitest résolvait `@ksd/domain` vers `dist/` (copie compilée, parfois périmée). Un alias de test
   impose désormais la source ; l'outil Node d'import garde `dist/`, construit par `tsc -b`.
 
+## R5 — Sources de consommation
+
+- L'année importée a son stockage (`annualPoints`) et sa source (`annual`) ; un fichier 1.0 qui
+  rangeait 8 760 points dans la journée type est relu en « Année importée », journée type vide.
+- `effectiveHourlyPoints` est le seul accès du calcul à la série horaire de la source active.
+- La fenêtre de composition est montée à chaque ouverture : elle gardait sinon son premier brouillon
+  et ignorait une composition tirée de l'inventaire.
+- Le profil annuel perd ses réglages de plage et de fréquence (peu utilisés) au profit de trois
+  lectures : carte de chaleur, par mois, journée moyenne ; l'axe porte les mois, sans années.
+
 ## Baselines modifiées
 
 | Test | Avant | Après | Raison |

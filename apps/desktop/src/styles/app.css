@@ -4118,3 +4118,86 @@ table.tbl.t-cables { table-layout: auto; }
 /* Bilan du jour sur l'étape Besoins : largeur d'un panneau, pas de toute la page. */
 .loads-balance { max-width: 520px; }
 .loads-balance .dayb { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+
+/* ============================================================== Sources de consommation (spec 011) */
+
+.source-chooser { display: grid; gap: var(--sp-3); }
+.source-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+.source-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 150px;
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.source-card:hover, .source-card:focus-visible { border-color: var(--accent); box-shadow: var(--shadow-pop); }
+.source-card b { font-size: var(--fs-md); line-height: 1.35; }
+.source-card span { color: var(--text-muted); font-size: var(--fs-sm); }
+.source-card .source-icon { font-size: 20px; color: var(--accent); }
+.source-card .source-go { margin-top: auto; color: var(--accent); font-weight: 600; }
+.source-bar button { white-space: nowrap; }
+.source-empty { display: grid; gap: var(--sp-2); justify-items: start; }
+.alert.bridge { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); }
+.alert.bridge > div { flex: 1; }
+
+/* Journée type. */
+.dayprofile { display: grid; gap: var(--sp-2); }
+.dayprofile-plot { width: 100%; height: 170px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); cursor: ns-resize; touch-action: none; user-select: none; }
+.dp-grid { stroke: var(--border); stroke-width: 1; }
+.dp-tick { font-size: 9px; fill: var(--text-faint); font-family: var(--font-mono); text-anchor: end; }
+.dp-tick.t-hour { text-anchor: middle; }
+.dp-mean { fill: var(--ok); }
+.dp-mean.is-hover { fill: var(--ok-strong); }
+.dp-peak { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 0.6; stroke-dasharray: 2 2; }
+.dayprofile-hint { margin: 0; }
+table.tbl.t-dayprofile { table-layout: fixed; min-width: 900px; }
+.t-dayprofile th, .t-dayprofile td { padding: 2px; text-align: center; }
+.t-dayprofile th:first-child { width: 150px; text-align: left; white-space: nowrap; }
+.t-dayprofile th.is-hover { color: var(--accent); }
+.t-dayprofile .cell-in { width: 100%; min-width: 0; padding: 2px; text-align: center; font-size: var(--fs-xs); }
+.t-dayprofile .cell-in::placeholder { color: var(--text-faint); }
+
+/* Année importée et carte de chaleur. */
+.annual-import { display: grid; gap: var(--sp-3); }
+.annual-import-head { display: flex; align-items: center; gap: var(--sp-2); }
+.heatmap { display: grid; gap: 2px; margin: 0; }
+.heatmap-body { display: grid; grid-template-columns: 22px 1fr; gap: 4px; }
+.heatmap canvas { width: 100%; height: 150px; image-rendering: pixelated; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.heatmap-hours { display: flex; flex-direction: column; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--text-faint); }
+.heatmap-months { position: relative; height: 14px; margin-left: 26px; font-size: 10px; color: var(--text-faint); }
+.heatmap-months span { position: absolute; top: 0; }
+
+/* Année composée. */
+.composed-year { display: grid; gap: var(--sp-3); }
+.year-preview { display: grid; gap: var(--sp-2); }
+.year-strip { display: grid; gap: 3px; }
+.ys-row { display: grid; grid-template-columns: 110px repeat(12, minmax(28px, 1fr)); gap: 3px; align-items: center; }
+.ys-row > span[role='cell'] { height: 20px; border-radius: 3px; }
+.ys-row > span[role='rowheader'] { font-size: var(--fs-sm); color: var(--text-muted); }
+.ys-head span { font-size: 10px; color: var(--text-faint); text-align: center; }
+.ys-gap { background: repeating-linear-gradient(45deg, var(--surface-3), var(--surface-3) 4px, var(--danger-soft) 4px, var(--danger-soft) 8px); outline: 1px solid var(--danger); }
+.ys-legend { display: flex; flex-wrap: wrap; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--text-muted); }
+.ys-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; vertical-align: -1px; }
+.composed-dialog .seg button[aria-checked='true'] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgb(15 35 55 / 0.14); outline: 1px solid var(--accent); }
+
+/* Profil annuel simplifié. */
+.annual-bars-simple { display: grid; gap: 3px; align-items: end; height: 150px; padding: var(--sp-2) 0; }
+.annual-bars-simple.monthly { grid-template-columns: repeat(12, 1fr); }
+.annual-bars-simple.day { grid-template-columns: repeat(24, 1fr); }
+.asb { display: grid; grid-template-rows: 1fr auto; height: 100%; }
+.asb i { align-self: end; background: var(--ok); border-radius: 3px 3px 0 0; }
+.asb small { text-align: center; font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); }
+
+/* Éditeurs denses : composition annuelle, planning horaire. */
+.modal-xl { width: min(1040px, calc(100vw - 32px)); }
+.composed-period input { min-width: 0; width: 100%; }
+/* Journée type : les 24 valeurs se lisent en entier, quitte à défiler. */
+.dayprofile-plot { height: auto; }
+table.tbl.t-dayprofile { min-width: 1150px; }
+.t-dayprofile .cell-in { padding: 2px 0; font-family: var(--font-mono); text-overflow: clip; }

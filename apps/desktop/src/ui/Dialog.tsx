@@ -18,6 +18,7 @@ export function Dialog({
   title,
   lead,
   wide = false,
+  extraWide = false,
   onClose,
   footer,
   children,
@@ -25,6 +26,8 @@ export function Dialog({
   title: string;
   lead?: string;
   wide?: boolean;
+  /** Éditeurs denses (composition annuelle, planning horaire) : jusqu'à 1 040 px. */
+  extraWide?: boolean;
   onClose: () => void;
   footer?: ReactNode;
   children: ReactNode;
@@ -39,7 +42,7 @@ export function Dialog({
     <div className="scrim">
       <div
         ref={ref}
-        className={`modal ${wide ? 'modal-wide' : ''}`}
+        className={`modal ${extraWide ? 'modal-xl' : wide ? 'modal-wide' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

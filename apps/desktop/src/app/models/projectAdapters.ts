@@ -187,14 +187,28 @@ function legacySimultaneityRows(input: ReturnType<typeof parseProjectInputsV1>):
   return rows.length === 0 ? null : rows;
 }
 
+/** Point horaire du fichier (W) vers la vue (kW) ; une pointe absente reste « = moyenne ». */
+function pointToView(point: { hourIndex: number; activePowerW: number; peakPowerW: number | null }) {
+  return { hour: point.hourIndex, realPower: point.activePowerW / 1000, peakPower: point.peakPowerW === null ? null : point.peakPowerW / 1000 };
+}
+
+function pointToInput(point: { hour: number; realPower: number; peakPower: number | null }) {
+  return { hourIndex: point.hour, activePowerW: point.realPower * 1000, peakPowerW: point.peakPower === null ? null : point.peakPower * 1000 };
+}
+
 export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
   const input = parseProjectInputsV1(project.inputs);
   const selected = project.selectedEquipmentIds;
-  const profileViews = input.load.profiles.map((profile) => ({
+  const profileViews = input.load.profiles.map((profile) => {
+    // Fichier 1.0 : une année importée occupait la journée type. Elle retrouve sa place, et la
+    // journée type repart vide au lieu de montrer les 24 premières heures de l'année.
+    const legacyAnnual = profile.source === 'hourly' && profile.hourlyPoints.length === 8_760;
+    const annualPoints = legacyAnnual ? profile.hourlyPoints : profile.annualPoints;
+    return {
     id: profile.id,
     name: profile.name,
     color: profile.displayColor,
-    source: profile.source === 'equipment' ? 'equipments' as const : profile.source,
+    source: legacyAnnual ? 'annual' as const : profile.source === 'equipment' ? 'equipments' as const : profile.source,
     appliances: profile.items.map((item) => ({
       id: item.id, name: item.label, qty: item.quantity,
       unitPower: item.usefulPowerW, yield: item.efficiencyRatio,
@@ -203,11 +217,11 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       startupCoef: item.startupPowerMultiplier ?? 1,
       inductive: item.startupPowerMultiplier !== null || item.inductive === true,
     })),
-    hourly: profile.hourlyPoints.map((point) => ({
-      hour: point.hourIndex,
-      realPower: point.activePowerW / 1000,
-      peakPower: (point.peakPowerW ?? point.activePowerW) / 1000,
-    })),
+    hourly: legacyAnnual
+      ? Array.from({ length: 24 }, (_, hour) => ({ hour, realPower: 0, peakPower: null }))
+      : profile.hourlyPoints.map((point) => pointToView(point)),
+    annual: annualPoints === undefined ? null : annualPoints.map((point) => pointToView(point)),
+    annualSourceName: profile.annualSourceName ?? null,
     meter: profile.meter === null ? null : {
       observedEnergy: valueOrZero(profile.meter.observedEnergyWh) / 1000,
       observedDays: profile.meter.observedDays,
@@ -223,7 +237,8 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       peakImportance: valueOrZero(profile.meter.peakImportanceRatio),
       targetQualityFactor: valueOrZero(profile.meter.targetQualityFactor),
     },
-  }));
+    };
+  });
   const ancillaryAbsolute = input.costing.cabling.mode === 'absolute';
   return {
     id: project.id,
@@ -442,11 +457,9 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
           startupPowerMultiplier: item.startupCoef > 1 ? item.startupCoef : null,
           ...(item.inductive && !(item.startupCoef > 1) ? { inductive: true } : {}),
         })),
-        hourlyPoints: profile.hourly.map((point) => ({
-          hourIndex: point.hour,
-          activePowerW: point.realPower * 1000,
-          peakPowerW: point.peakPower * 1000,
-        })),
+        hourlyPoints: profile.hourly.map((point) => pointToInput(point)),
+        ...(profile.annual === null ? {} : { annualPoints: profile.annual.map((point) => pointToInput(point)) }),
+        ...(profile.annualSourceName === null ? {} : { annualSourceName: profile.annualSourceName }),
         meter: profile.meter === null ? null : {
           observedEnergyWh: profile.meter.observedEnergy * 1000,
           observedDays: profile.meter.observedDays,

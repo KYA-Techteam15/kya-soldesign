@@ -43,6 +43,8 @@ export function buildAnnualLoadPresentationResult(project: ProjectViewModel, sol
       hourlyPeakPowerW: profile.hourly.map((point) => point.peakPower * 1_000),
     }))
     : project.load.profiles.map((profile) => {
+    // Journée type ou année importée : la série de la source, telle quelle.
+    const direct = profile.source === 'annual' ? profile.annual ?? [] : profile.hourly;
     const equipmentProfile = profile.appliances.map((row) => ({
       id: row.id, label: row.name, quantity: row.qty, usefulPowerW: row.unitPower,
       efficiencyRatio: row.yield, hourlyOperatingFractions: row.operatingFractions,
@@ -50,13 +52,13 @@ export function buildAnnualLoadPresentationResult(project: ProjectViewModel, sol
     }));
     const hourlyEnergyWh = profile.source === 'equipments' && equipmentProfile.length > 0
       ? Array.from({ length: 24 }, (_, hour) => equipmentProfile.reduce((total, row) => total + row.usefulPowerW * row.quantity / (row.efficiencyRatio ?? 1) * row.hourlyOperatingFractions[hour]!, 0))
-      : profile.hourly.map((point) => point.realPower * 1_000);
+      : direct.map((point) => point.realPower * 1_000);
     const hourlyPeakPowerW = profile.source === 'equipments' && equipmentProfile.length > 0
       ? Array.from({ length: 24 }, (_, hour) => equipmentProfile.reduce((total, row) => {
         const running = row.usefulPowerW * row.quantity / (row.efficiencyRatio ?? 1) * row.hourlyOperatingFractions[hour]!;
         return Math.max(total, running * (row.startupPowerMultiplier ?? 1));
       }, 0))
-      : profile.hourly.map((point) => point.peakPower * 1_000);
+      : direct.map((point) => (point.peakPower ?? point.realPower) * 1_000);
       return { id: profile.id, hourlyEnergyWh, hourlyPeakPowerW };
     });
   if (annualProfiles.length === 0) return unavailable('loads.annualNeedsProfile');

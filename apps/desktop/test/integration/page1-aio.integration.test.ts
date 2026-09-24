@@ -230,8 +230,9 @@ describe('profil de charge annuel de bout en bout', () => {
       retrievedAtIso: weatherFile.metadata.retrievedAtIso, qualityFlags: ['pvgis-hourly-file-verified'],
       ...payload, timezoneOffsetMinutes: 0,
     };
-    view.load.profiles[0]!.source = 'hourly';
-    view.load.profiles[0]!.hourly = annualProfile(peakDay);
+    // Source « Année importée » : l'année a son propre stockage, la journée type reste intacte.
+    view.load.profiles[0]!.source = 'annual';
+    view.load.profiles[0]!.annual = annualProfile(peakDay);
     projects.replace(projectViewToFile(view));
     return view;
   };

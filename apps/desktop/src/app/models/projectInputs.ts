@@ -129,11 +129,28 @@ export const loadProfileInputV1Schema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   displayColor: z.string().min(1),
-  source: z.enum(['equipment', 'hourly', 'meter']),
+  source: z.enum(['equipment', 'hourly', 'annual', 'meter']),
   items: z.array(projectLoadItemV1Schema),
+  /** Journée type saisie (24 points). Les fichiers 1.0 y rangeaient aussi une année importée. */
   hourlyPoints: hourlySeriesSchema,
+  /** Année importée, conservée à part de la journée type (spec 011, D1). */
+  annualPoints: z.array(hourlyLoadPointV1Schema).length(8_760).optional(),
+  annualSourceName: z.string().optional(),
   meter: meterLoadInputV1Schema.nullable(),
 }).strict();
+
+export type LoadProfileInputV1 = z.infer<typeof loadProfileInputV1Schema>;
+
+/**
+ * Série horaire de la source active : l'année importée pour `annual`, la journée type sinon
+ * (ou l'année d'un fichier 1.0, rangée dans `hourlyPoints`).
+ */
+export function effectiveHourlyPoints(profile: LoadProfileInputV1): LoadProfileInputV1['hourlyPoints'] {
+  return profile.source === 'annual' ? profile.annualPoints ?? [] : profile.hourlyPoints;
+}
+
+/** Une source horaire directe (journée type ou année importée), sans appareils ni facture. */
+export const isDirectHourlySource = (source: LoadProfileInputV1['source']): boolean => source === 'hourly' || source === 'annual';
 
 const loadCalendarInputV2Schema = z.object({
   version: z.literal(2),

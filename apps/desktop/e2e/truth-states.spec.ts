@@ -7,6 +7,7 @@ test('keeps Page 1 active and future calculated surfaces explicitly unavailable'
   await expect(page.locator('.statusbar')).toContainText('Enregistré');
 
   await page.locator('.nav-item').nth(2).click();
+  await page.getByRole('button', { name: /La liste des appareils/ }).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
   await expect(page.locator('.t-appliances tbody td.derived').first()).toHaveText('100');
   await expect(page.locator('.t-appliances tbody td.derived').nth(1)).toHaveText('111');

@@ -19,7 +19,7 @@ export interface ReportLoadRow {
   readonly dailyEnergyWh: number | null;
 }
 
-export type ReportLoadOrigin = 'equipments' | 'hourly' | 'meter' | 'composed';
+export type ReportLoadOrigin = 'equipments' | 'hourly' | 'annual' | 'meter' | 'composed';
 
 export interface ReportLoadSummary {
   readonly origin: ReportLoadOrigin;
@@ -38,6 +38,7 @@ export interface ReportLoadSummary {
 const ORIGIN_KEYS: Record<ReportLoadOrigin, string> = {
   equipments: 'report.loadOrigin.equipments',
   hourly: 'report.loadOrigin.hourly',
+  annual: 'report.loadOrigin.annual',
   meter: 'report.loadOrigin.meter',
   composed: 'report.loadOrigin.composed',
 };

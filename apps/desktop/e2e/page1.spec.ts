@@ -48,6 +48,9 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
   await page.getByRole('button', { name: 'Annuler', exact: true }).click();
 
   await page.locator('.nav-item').nth(2).click();
+  // Étape vide : on part de ce dont on dispose.
+  await expect(page.getByRole('heading', { name: 'De quoi disposez-vous ?' })).toBeVisible();
+  await page.getByRole('button', { name: /La liste des appareils/ }).click();
   const appliances = page.locator('.t-appliances');
   const addRow = page.getByRole('button', { name: '+ Ajouter une ligne', exact: true });
   await addRow.click();
@@ -83,12 +86,18 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
   await expect(page.locator('.loads-balance')).toContainText('1,45');
   await expect(page.locator('.loads-balance')).toContainText('1,88');
 
-  await page.getByRole('tab', { name: 'Saisir heure par heure' }).click();
+  // Changer de source conserve les appareils ; la journée type a ses propres valeurs.
+  await page.getByRole('tab', { name: 'Journée type' }).click();
   await page.getByLabel('Puissance à 0 h').fill('0,2');
-  await expect(page.getByLabel('Puissance de pointe à 0 h')).toHaveValue('0,20');
+  await expect(page.getByLabel('Puissance de pointe à 0 h')).toHaveValue('');
+  await expect(page.getByLabel('Puissance de pointe à 0 h')).toHaveAttribute('placeholder', '=');
+  await page.getByRole('tab', { name: 'Appareils' }).click();
+  await expect(page.locator('.t-appliances tbody tr')).toHaveCount(2);
+  await page.getByRole('tab', { name: 'Journée type' }).click();
+  await expect(page.getByLabel('Puissance à 0 h')).toHaveValue('0,20');
   await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Partir de la facture' }).click();
+  await page.getByRole('tab', { name: 'Facture' }).click();
   await page.getByLabel('Énergie de la période observée').fill('31');
   await page.getByLabel('Nombre exact de jours').fill('31');
   await page.getByLabel('Profil horaire sourcé').selectOption({ index: 1 });

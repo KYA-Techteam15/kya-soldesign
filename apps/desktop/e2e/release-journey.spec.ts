@@ -31,6 +31,7 @@ async function buildProject(page: Page) {
   await expect(page.getByLabel('Température minimale')).toHaveAttribute('placeholder', /^-?\d+$/u);
 
   await step(page, 2);
+  await page.getByRole('button', { name: /La liste des appareils/ }).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
   const classic = page.locator('.t-appliances');
   await classic.getByLabel('Quantité').first().fill('10');

@@ -26,6 +26,7 @@ async function loadBombouakaAndNeeds(page: Page) {
   await page.locator('.proj-row').filter({ hasText: 'Bombouaka' }).click();
   await expect(page.locator('.ro-field').filter({ hasText: 'Irradiation moyenne' })).toContainText('6,15');
   await page.locator('.nav-item').nth(2).click();
+  await page.getByRole('button', { name: /La liste des appareils/ }).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
   await page.getByLabel('Nom').first().fill('Éclairage');
   await page.getByLabel('Quantité').first().fill('1');

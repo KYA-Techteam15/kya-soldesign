@@ -43,7 +43,7 @@ export function HoursPlanner({ appliances, onApply, onClose }: {
   const peakHour = load.indexOf(peak);
 
   return (
-    <Dialog title={t('hours.plannerTitle')} lead={t('hours.paintHint')} wide onClose={onClose}
+    <Dialog title={t('hours.plannerTitle')} lead={t('hours.paintHint')} extraWide onClose={onClose}
       footer={<>
         <button type="button" className="btn btn-ghost" onClick={onClose}>{t('g.cancel')}</button>
         <button type="button" className="btn btn-ok" onClick={() => onApply(schedules)}>{t('g.confirm')}</button>

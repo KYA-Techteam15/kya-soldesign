@@ -1,16 +1,20 @@
 import { saveFile, safeFileName } from '../../app/platform/files';
 import { useMemo, useRef, useState } from 'react';
 import { validateAnnualCalendar } from '@ksd/engine';
-import type { LoadCalendarView, LoadCompositionView } from '../../app/models/projectView';
+import type { ApplianceView, LoadCalendarView, LoadCompositionView } from '../../app/models/projectView';
+import { inventoryDirectProfile } from '../../app/models/loadSources';
+import { YearPreview } from './loads/ComposedSummary';
 import { Dialog } from '../../ui/Dialog';
 import { exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
 import { fill, tr, useT } from '../../i18n';
 
 type Organization = LoadCompositionView['organization'];
 
-export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
+export function ComposedProfilesDialog({ open, initial, inventory = [], onCancel, onApply }: {
   readonly open: boolean;
   readonly initial: LoadCompositionView | null;
+  /** Appareils recensés : « Depuis l'inventaire » en tire un profil de départ. */
+  readonly inventory?: readonly ApplianceView[];
   readonly onCancel: () => void;
   readonly onApply: (composition: LoadCompositionView) => void;
 }) {
@@ -33,8 +37,8 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
     const source = duplicate ? selected : undefined;
     const id = `composed-${Date.now()}`;
     const profile = source === undefined
-      ? { id, name: `Profil ${draft.profiles.length + 1}`, color: '#F99D32', hourly: hours(0) }
-      : { ...structuredClone(source), id, name: `${source.name} — copie` };
+      ? { id, name: fill(tr('composed.profileN'), { n: draft.profiles.length + 1 }), color: '#F99D32', hourly: hours(0) }
+      : { ...structuredClone(source), id, name: `${source.name} — ${tr('composed.copy')}` };
     updateDraft((current) => ({ ...current, profiles: [...current.profiles, profile] }));
     setSelectedProfileId(id);
   };
@@ -68,7 +72,7 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
   return <Dialog
     title={t('composed.composerLesProfilsAnnuels')}
     lead={t('composed.calendrierCombinaisonsEtValeurs')}
-    wide
+    extraWide
     onClose={onCancel}
     footer={<>
       <button className="btn btn-ghost" onClick={() => {
@@ -117,10 +121,11 @@ export function ComposedProfilesDialog({ open, initial, onCancel, onApply }: {
             </div>)}
           </div>
         </div>
+        <YearPreview composition={draft} />
       </section>
 
       <section className="composed-section">
-        <div className="tbl-title"><h2 className="h-sec">{t('loads.composedHourly')}</h2><span className="label">{t('loads.composedHourlyHint')}</span><button className="btn" onClick={() => addProfile(false)}>{t('loads.calendarNewProfile')}</button><button className="btn" disabled={selected === undefined} onClick={() => addProfile(true)}>{t('loads.composedDuplicate')}</button><button className="btn" disabled={selected === undefined || draft.profiles.length <= 1} onClick={removeSelected}>{t('loads.composedDelete')}</button><button className="btn" disabled={selected === undefined} onClick={exportSelected}>{t('loads.composedExport')}</button><button className="btn" disabled={selected === undefined} onClick={() => importRef.current?.click()}>{t('loads.composedImport')}</button></div>
+        <div className="tbl-title"><h2 className="h-sec">{t('loads.composedHourly')}</h2><span className="label">{t('loads.composedHourlyHint')}</span><button className="btn" onClick={() => addProfile(false)}>{t('loads.calendarNewProfile')}</button><button className="btn" disabled={selected === undefined || inventory.length === 0} title={inventory.length === 0 ? t('loads.fromInventoryEmpty') : t('loads.fromInventoryHelp')} onClick={() => updateSelected((profile) => ({ ...profile, hourly: inventoryDirectProfile(inventory, profile).hourly }))}>{t('loads.fromInventory')}</button><button className="btn" disabled={selected === undefined} onClick={() => addProfile(true)}>{t('loads.composedDuplicate')}</button><button className="btn" disabled={selected === undefined || draft.profiles.length <= 1} onClick={removeSelected}>{t('loads.composedDelete')}</button><button className="btn" disabled={selected === undefined} onClick={exportSelected}>{t('loads.composedExport')}</button><button className="btn" disabled={selected === undefined} onClick={() => importRef.current?.click()}>{t('loads.composedImport')}</button></div>
         <div className="composed-profile-layout">
           <div className="composed-profile-list" role="listbox" aria-label={t('composed.profilsDisponibles')}>
             {draft.profiles.map((profile) => <button key={profile.id} className={profile.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedProfileId(profile.id)}>{profile.name}</button>)}
@@ -209,7 +214,7 @@ export function makeExampleComposition(): LoadCompositionView {
 }
 
 function makeDefaultComposition(): LoadCompositionView {
-  const profiles = [{ id: 'composed-workweek', name: tr('composed.joursOuvres'), color: '#F99D32', hourly: hours(0) }, { id: 'composed-weekend', name: 'Week-end', color: '#2B9C8F', hourly: hours(0) }];
+  const profiles = [{ id: 'composed-workweek', name: tr('composed.joursOuvres'), color: '#F99D32', hourly: hours(0) }, { id: 'composed-weekend', name: tr('loads.calendarWeekend'), color: '#2B9C8F', hourly: hours(0) }];
   return { organization: 'workweek-weekend', calendar: calendarForOrganization('workweek-weekend', null, profiles[0]!.id, profiles[1]!.id), profiles };
 }
 

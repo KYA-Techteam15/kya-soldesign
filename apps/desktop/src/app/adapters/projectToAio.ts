@@ -2,7 +2,7 @@ import type { AioSizingRequestV1, SolarResourceAnalysisInputV1, Locality, Normal
 import { hourlyPeakPowerWithStartupsW, DEFAULT_VOC_TEMPERATURE_COEFFICIENT_PER_C, computeLocalHours, type LocalHour, adjustHourlyFractionsToGamma, analyzeSolarGeometry, analyzeSolarResource, type SolarGeometryV1, buildAnnualLoadSeries, calculateAnnualYEn, designDayStartIndex, normalizeDirectHourlyRows, normalizeEquipmentRows, normalizeMeterReading, resolveAnnualAssignment, type AnnualHourlyProfile, type FinanceInputV1, type LoadInputIssue, type LoadWarning, type Page1LoadNormalization, type PresizingInputV1, type SizingInputV1, type SizingOutputV1, type SolarResourceAnalysisEnvelopeV1 } from '@ksd/engine';
 import type { Equipment } from '@ksd/catalog';
 import type { ProjectFileV1 } from '@ksd/project-format';
-import { parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
+import { effectiveHourlyPoints, isDirectHourlySource, parseProjectInputsV1, type ProjectInputsV1 } from '../models/projectInputs.js';
 import { PRESIZING_DEFAULTS } from '../models/projectAdapters.js';
 import { memoize } from '../calculation/memo.js';
 import { effectiveMainLines } from '../models/costingModel.js';
@@ -217,9 +217,11 @@ export function projectToSolarAnalysis(project: ProjectFileV1, references: Page1
 function annualHourlyLoadWh(input: ProjectInputsV1): readonly number[] | null {
   if (input.load.activeMode === 'composed') return null;
   const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId);
-  if (profile === undefined || profile.source !== 'hourly' || profile.hourlyPoints.length !== 8_760) return null;
+  if (profile === undefined || !isDirectHourlySource(profile.source)) return null;
+  const points = effectiveHourlyPoints(profile);
+  if (points.length !== 8_760) return null;
   const series = Array.from({ length: 8_760 }, () => 0);
-  for (const point of profile.hourlyPoints) series[point.hourIndex] = point.activePowerW;
+  for (const point of points) series[point.hourIndex] = point.activePowerW;
   return series;
 }
 
@@ -240,8 +242,8 @@ function normalizeActiveLoad(input: ProjectInputsV1, references: Page1References
       efficiencyRatio: item.efficiencyRatio,
       hourlyOperatingFractions: item.hourlyOperatingFractions, startupPowerMultiplier: item.startupPowerMultiplier,
     })) })
-    : profile.source === 'hourly'
-      ? normalizeDirectHourlyRows({ timezoneIana: input.site.timezoneIana, hourlyPowerW: profile.hourlyPoints.map((point) => point.activePowerW), hourlyPeakPowerW: profile.hourlyPoints.map((point) => point.peakPowerW) })
+    : isDirectHourlySource(profile.source)
+      ? normalizeDirectHourlyRows({ timezoneIana: input.site.timezoneIana, hourlyPowerW: effectiveHourlyPoints(profile).map((point) => point.activePowerW), hourlyPeakPowerW: effectiveHourlyPoints(profile).map((point) => point.peakPowerW) })
       : normalizeMeterLoad(input, references, meanHourlyPoaWm2);
 }
 
@@ -324,8 +326,8 @@ function annualGammaForProject(input: ProjectInputsV1, references: Page1Referenc
       const normalized = normalizeEquipmentRows({ timezoneIana: input.site.timezoneIana, rows: profile.items.map((item) => ({ id: item.id, label: item.label, quantity: item.quantity, usefulPowerW: item.usefulPowerW, efficiencyRatio: item.efficiencyRatio, hourlyOperatingFractions: item.hourlyOperatingFractions, startupPowerMultiplier: item.startupPowerMultiplier })) });
       if (normalized.status === 'blocked') continue;
       hourlyEnergyWh = normalized.load.hourlyEnergyWh;
-    } else if (profile.source === 'hourly') {
-      hourlyEnergyWh = profile.hourlyPoints.map((point) => point.activePowerW);
+    } else if (isDirectHourlySource(profile.source)) {
+      hourlyEnergyWh = effectiveHourlyPoints(profile).map((point) => point.activePowerW);
     } else {
       const normalized = normalizeMeterLoad(input, references, null);
       if (normalized.status === 'blocked') continue;
@@ -339,7 +341,7 @@ function annualGammaForProject(input: ProjectInputsV1, references: Page1Referenc
      * énergies. Le profil partait alors en silence, et le y_En annuel
      * retombait sur celui d'une seule journée.
      */
-    const peaks = profile.hourlyPoints.map((point) => point.peakPowerW ?? point.activePowerW);
+    const peaks = effectiveHourlyPoints(profile).map((point) => point.peakPowerW ?? point.activePowerW);
     const coherentPeaks = peaks.length === hourlyEnergyWh.length
       && peaks.every((value, hour) => Number.isFinite(value) && value >= hourlyEnergyWh[hour]!);
     profiles.push({ id: profile.id, hourlyEnergyWh, ...(coherentPeaks ? { hourlyPeakPowerW: peaks } : {}) });
@@ -371,9 +373,10 @@ function deriveProjectPeakPower(input: ProjectInputsV1, hourlyMeanPowerW: readon
   // annuelle, `normalizeDirectHourlyRows` a déjà retenu le jour le plus chargé :
   // on découpe les pointes sur ce jour-là, avec la règle du moteur et non une
   // seconde règle locale qui pourrait désigner un autre jour.
-  const start = designDayStartIndex(profile.hourlyPoints.map((point) => point.activePowerW));
-  const peaks = profile.hourlyPoints.slice(start, start + 24).map((point) => point.peakPowerW);
-  return deriveHourlyPeakPower(profile.source, peaks, hourlyMeanPowerW, startupEvents);
+  const points = effectiveHourlyPoints(profile);
+  const start = designDayStartIndex(points.map((point) => point.activePowerW));
+  const peaks = points.slice(start, start + 24).map((point) => point.peakPowerW);
+  return deriveHourlyPeakPower(profile.source === 'annual' ? 'hourly' : profile.source, peaks, hourlyMeanPowerW, startupEvents);
 }
 
 const provenanceCache = new WeakMap<object, Promise<Provenance>>();

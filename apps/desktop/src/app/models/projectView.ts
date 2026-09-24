@@ -7,7 +7,8 @@ export type SystemType =
   | 'solar_water_pumping'
   | 'undefined';
 export type ApplicationType = 'residential' | 'commercial' | 'industrial' | 'agricultural';
-export type LoadSource = 'equipments' | 'hourly' | 'meter';
+/** Source de consommation d'un profil ; l'année composée se choisit au niveau de la charge (`activeMode`). */
+export type LoadSource = 'equipments' | 'hourly' | 'annual' | 'meter';
 export type Granularity = 'annual' | 'weekly' | 'daily' | 'monthly' | 'periodic' | 'combined' | 'workweek-weekend' | 'periods' | 'periods-by-day-type';
 export type CableSegment = 'pv_inverter' | 'inverter_battery' | 'inverter_load';
 
@@ -54,7 +55,11 @@ export interface NamedProfile {
   color: string;
   source: LoadSource;
   appliances: ApplianceView[];
-  hourly: { hour: number; realPower: number; peakPower: number }[];
+  /** Journée type, kW ; une pointe `null` vaut la moyenne (« = »). */
+  hourly: { hour: number; realPower: number; peakPower: number | null }[];
+  /** Année importée (8 760 heures, kW), conservée même quand une autre source est active. */
+  annual: { hour: number; realPower: number; peakPower: number | null }[] | null;
+  annualSourceName: string | null;
   meter: { observedEnergy: number; observedDays: number | null; normalizedProfileId: string | null; forceYEn: boolean; targetYEn: number | null; meterAmperage: number; networkType: 'single_phase' | 'three_phase'; morningPeakStart: string; morningPeakEnd: string; eveningPeakStart: string; eveningPeakEnd: string; peakImportance: number; targetQualityFactor: number } | null;
 }
 

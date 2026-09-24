@@ -16,6 +16,7 @@ test('creates and edits a canonical project through the preserved workshop', asy
   await expect(page.locator('.stephead .h-page')).toHaveText('Choix du site');
   await page.locator('.nav-item').nth(2).click();
   await expect(page.locator('.stephead .h-page')).toHaveText('Bilan des consommations');
+  await page.getByRole('button', { name: /La liste des appareils/ }).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
   await expect(page.locator('.t-appliances').getByLabel('Nom').first()).toHaveValue('Nouvel appareil');
   await expect(page.locator('.t-appliances').getByLabel('Quantité').first()).toHaveValue('1');
@@ -31,6 +32,7 @@ test('keeps an invalid transient edit visible without silently coercing it', asy
   await page.goto('/accueil');
   await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
   await page.locator('.nav-item').nth(2).click();
+  await page.getByRole('button', { name: /La liste des appareils/ }).click();
   await page.getByRole('button', { name: '+ Ajouter une ligne', exact: true }).first().click();
   const quantity = page.getByLabel('Quantité').first();
   await quantity.fill('1.5');

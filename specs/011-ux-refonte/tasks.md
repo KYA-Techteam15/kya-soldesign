@@ -18,15 +18,15 @@
 
 ## Lot 2 — Sources de consommation
 
-- [ ] T011 Format + vue : source `annual`, `annualPoints`, migration des séries 8 760 (D1)
-- [ ] T012 `projectToAio` : source `annual` ; tests d'intégration (D1)
-- [ ] T013 Question « De quoi disposez-vous ? » et barre des cinq sources, données conservées (FR-012, FR-013)
-- [ ] T014 Passerelle appareils → année composée (FR-014)
-- [ ] T015 Journée type : histogramme, tableau Moyenne / Pointe, « = », collage (FR-015, D5)
-- [ ] T016 Année composée : résumé, aperçu calendrier, contrôle, « Depuis l'inventaire » (FR-016, D6)
-- [ ] T017 Année importée : carte de chaleur, chiffres clés, Remplacer / Retirer (FR-017)
-- [ ] T018 Profil annuel : vues chaleur / mois / journée, axe en mois (FR-018)
-- [ ] T019 Tests ; `pnpm verify:phase`
+- [x] T011 Format + vue : source `annual`, `annualPoints`, migration des séries 8 760 (D1)
+- [x] T012 `projectToAio` : source `annual` ; tests d'intégration (D1)
+- [x] T013 Question « De quoi disposez-vous ? » et barre des cinq sources, données conservées (FR-012, FR-013)
+- [x] T014 Passerelle appareils → année composée (FR-014)
+- [x] T015 Journée type : histogramme, tableau Moyenne / Pointe, « = », collage (FR-015, D5)
+- [x] T016 Année composée : résumé, aperçu calendrier, contrôle, « Depuis l'inventaire » (FR-016, D6)
+- [x] T017 Année importée : carte de chaleur, chiffres clés, Remplacer / Retirer (FR-017)
+- [x] T018 Profil annuel : vues chaleur / mois / journée, axe en mois (FR-018)
+- [x] T019 Tests ; `pnpm verify:phase`
 
 ## Lot 3 — Optimisation
 
