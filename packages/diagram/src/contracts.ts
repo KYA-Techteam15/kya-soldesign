@@ -14,6 +14,8 @@
 
 /** Nature du conducteur, qui détermine la couleur et le style du trait. */
 export type ConductorKind =
+  /** Liaison continue en représentation unifilaire : un trait, le nombre de conducteurs en tirets obliques. */
+  | 'dc'
   | 'dc-positive'
   | 'dc-negative'
   | 'ac'
@@ -26,6 +28,8 @@ export type SymbolKind =
   | 'series-break'
   | 'parallel-break'
   | 'dc-fuse'
+  /** Sectionneur-fusible : coupure visible et fusible sur le même appareil. */
+  | 'fuse-switch'
   | 'combiner'
   | 'dc-spd'
   | 'dc-switch'
@@ -91,10 +95,16 @@ export interface MpptInputSpec {
   readonly strings: readonly PvStringSpec[];
 }
 
+/** Nature d'un appareil de protection : elle décide du symbole, pas le libellé. */
+export type ProtectionNature = 'fuse' | 'fuse-switch' | 'breaker' | 'switch' | 'spd' | 'rcd' | 'device';
+
 /** Un appareil de protection tel que retenu à l'étape « Protections ». */
 export interface ProtectionSpec {
   readonly reference: string;
   readonly kind: string;
+  readonly nature: ProtectionNature;
+  /** Nombre de pôles coupés (2P en continu et en monophasé). */
+  readonly poles: number;
   /** Calibre retenu en ampères. `null` tant que l'utilisateur n'a pas choisi. */
   readonly ratingA: number | null;
   readonly voltageV: number | null;
@@ -182,6 +192,8 @@ export interface TitleBlock {
   readonly date: string;
   readonly author: string;
   readonly sheet: string;
+  /** Version émise du dossier (« v2 »), vide tant qu'il n'est pas émis. */
+  readonly revision?: string;
 }
 
 /** Écart relevé pendant la construction de la topologie ou de la planche. */
@@ -194,11 +206,8 @@ export interface TopologyIssue {
 export interface DiagramOptions {
   readonly format: SheetRequest;
   readonly detail: DetailLevel;
-  /**
-   * Continu représenté par une paire de conducteurs colorés (+ rouge / − bleu),
-   * ou par un trait unique annoté du nombre de conducteurs.
-   */
-  readonly dcRepresentation: 'pair' | 'single';
+  /** Sections et longueurs de câble portées le long des liaisons. */
+  readonly showCableNotes: boolean;
   readonly maxDrawnModules: number;
   readonly maxDrawnStrings: number;
   readonly maxDrawnBatteries: number;
@@ -249,6 +258,13 @@ export interface PlacedSymbol {
   readonly reference: string | null;
   readonly caption: string | null;
   readonly data: Readonly<Record<string, string | number | boolean>>;
+  /**
+   * −90 : symbole dessiné dans son repère vertical puis tourné, le courant circule de gauche à
+   * droite. width et height décrivent alors l'emprise sur la planche.
+   */
+  readonly rotation?: 0 | -90;
+  /** Faux quand repère et libellé sont posés par le placement (étiquettes sans chevauchement). */
+  readonly showLabels?: boolean;
 }
 
 /** Un conducteur tracé, en polyligne orthogonale. */
@@ -259,6 +275,8 @@ export interface Wire {
   /** Trait discontinu : liaison condensée par le dessin, non réelle. */
   readonly dashed: boolean;
   readonly annotation: string | null;
+  /** Nombre de conducteurs de la liaison, marqué par des tirets obliques (convention unifilaire). */
+  readonly conductors?: number;
 }
 
 /** Un cadre en trait mixte regroupant des symboles. */
@@ -303,7 +321,8 @@ export interface BillOfMaterialRow {
 export interface GridFrame {
   readonly columns: readonly string[];
   readonly rows: readonly string[];
-  readonly cell: number;
+  readonly cellWidth: number;
+  readonly cellHeight: number;
   readonly margin: number;
 }
 
@@ -317,6 +336,13 @@ export interface DiagramPlan {
   readonly frames: readonly Frame[];
   readonly captions: readonly Caption[];
   readonly legend: readonly LegendRow[];
+  /** Points de jonction (piquages en T), marqués d'un point plein. */
+  readonly junctions: readonly Point[];
+  /** Emplacements du bandeau de pied : légende à gauche, cartouche à droite. */
+  readonly footer: {
+    readonly legend: { readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly rows: number } | null;
+    readonly title: { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | null;
+  };
   readonly bom: readonly BillOfMaterialRow[];
   readonly grid: GridFrame | null;
   readonly title: TitleBlock;

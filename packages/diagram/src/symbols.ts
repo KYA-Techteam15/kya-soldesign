@@ -31,6 +31,7 @@ export type AnchorName =
 
 /** Palette des conducteurs. Une couleur par nature, jamais par appareil. */
 export const CONDUCTOR_COLOR: Readonly<Record<ConductorKind, string>> = {
+  dc: '#b3261e',
   'dc-positive': '#c8322a',
   'dc-negative': '#1f4ba3',
   ac: '#16181c',
@@ -39,6 +40,7 @@ export const CONDUCTOR_COLOR: Readonly<Record<ConductorKind, string>> = {
 };
 
 export const CONDUCTOR_WIDTH: Readonly<Record<ConductorKind, number>> = {
+  dc: 2.2,
   'dc-positive': 2,
   'dc-negative': 2,
   ac: 2.2,
@@ -55,6 +57,7 @@ export const SYMBOL_SIZE: Readonly<Record<SymbolKind, SymbolBox>> = {
   'series-break': { width: 46, height: 34 },
   'parallel-break': { width: 40, height: 56 },
   'dc-fuse': { width: 36, height: 46 },
+  'fuse-switch': { width: 36, height: 60 },
   combiner: { width: 130, height: 30 },
   'dc-spd': { width: 34, height: 38 },
   'dc-switch': { width: 36, height: 56 },
@@ -186,6 +189,42 @@ function breaker(symbol: PlacedSymbol, withCross: boolean): string {
     ${withCross ? `<path d="M ${cx - 5} ${h / 2 + 6} l 10 10 M ${cx + 5} ${h / 2 + 6} l -10 10" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>` : ''}`;
 }
 
+/**
+ * Interrupteur-sectionneur CEI : contact ouvert et barre de sectionnement au contact fixe, sans
+ * croix (la croix est réservée au disjoncteur, qui coupe un court-circuit).
+ */
+function switchDisconnector(symbol: PlacedSymbol): string {
+  const { width: w, height: h } = symbol;
+  const cx = w / 2;
+  const pivotY = h / 2 - 9;
+  const contactY = h / 2 + 11;
+  return `n    <line x1="${cx}" y1="0" x2="${cx}" y2="${pivotY}" stroke="${INK}" stroke-width="1.8"/>
+    <line x1="${cx}" y1="${contactY}" x2="${cx}" y2="${h}" stroke="${INK}" stroke-width="1.8"/>
+    <circle cx="${cx}" cy="${pivotY}" r="2.4" fill="${INK}"/>
+    <line x1="${cx}" y1="${pivotY}" x2="${cx + 13}" y2="${pivotY + 17}" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="${cx - 6}" y1="${contactY}" x2="${cx + 6}" y2="${contactY}" stroke="${INK}" stroke-width="1.8"/>`;
+}
+
+/**
+ * Sectionneur-fusible CEI : le fusible est porté par le contact mobile ; la barre de sectionnement
+ * rappelle la coupure visible.
+ */
+function fuseSwitch(symbol: PlacedSymbol): string {
+  const { width: w, height: h } = symbol;
+  const cx = w / 2;
+  const pivotY = h * 0.26;
+  const contactY = h * 0.74;
+  const angle = -28;
+  return `n    <line x1="${cx}" y1="0" x2="${cx}" y2="${pivotY}" stroke="${INK}" stroke-width="1.8"/>
+    <line x1="${cx}" y1="${contactY}" x2="${cx}" y2="${h}" stroke="${INK}" stroke-width="1.8"/>
+    <circle cx="${cx}" cy="${pivotY}" r="2.4" fill="${INK}"/>
+    <g transform="translate(${cx} ${pivotY}) rotate(${angle})">
+      <line x1="0" y1="0" x2="0" y2="${contactY - pivotY + 2}" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>
+      <rect x="-5" y="${(contactY - pivotY) * 0.28}" width="10" height="${(contactY - pivotY) * 0.46}" fill="#ffffff" stroke="${INK}" stroke-width="1.5"/>
+    </g>
+    <line x1="${cx - 6}" y1="${contactY}" x2="${cx + 6}" y2="${contactY}" stroke="${INK}" stroke-width="1.8"/>`;
+}
+
 /** Parafoudre CEI : boîtier traversé, avec la flèche d'écoulement. */
 function spd(symbol: PlacedSymbol): string {
   const { width: w, height: h } = symbol;
@@ -235,8 +274,8 @@ function battery(symbol: PlacedSymbol): string {
     <line x1="0" y1="${midY}" x2="${startX}" y2="${midY}" stroke="${INK}" stroke-width="1.6"/>
     <line x1="${startX + pitch * 3}" y1="${midY}" x2="${w}" y2="${midY}" stroke="${INK}" stroke-width="1.6"/>
     ${bars}
-    ${text(4, midY - 14, '+', 10, 700, 'start', CONDUCTOR_COLOR['dc-positive'])}
-    ${text(w - 4, midY - 14, '−', 10, 700, 'end', CONDUCTOR_COLOR['dc-negative'])}
+    ${symbol.data['bare'] ? '' : text(4, midY - 14, '+', 10, 700, 'start', CONDUCTOR_COLOR['dc-positive'])}
+    ${symbol.data['bare'] ? '' : text(w - 4, midY - 14, '−', 10, 700, 'end', CONDUCTOR_COLOR['dc-negative'])}
     ${label ? text(w / 2, h + 9, label, 7.5, 600, 'middle', '#5f6b7a') : ''}`;
 }
 
@@ -271,7 +310,9 @@ function load(symbol: PlacedSymbol): string {
 /** Bornier principal de terre : barrette percée de ses points de raccordement. */
 function earthBar(symbol: PlacedSymbol): string {
   const { width: w, height: h } = symbol;
-  const holes = Math.max(2, Math.round((h - 16) / 22));
+  // Une borne par raccordement réel quand le placement le précise, sinon selon la longueur.
+  const taps = Number(symbol.data['taps'] ?? 0);
+  const holes = taps > 0 ? Math.max(2, taps) : Math.max(2, Math.round((h - 16) / 22));
   const dots = Array.from(
     { length: holes },
     (_, index) => `<circle cx="${w / 2}" cy="${12 + index * ((h - 24) / Math.max(1, holes - 1))}" r="2.2" fill="#ffffff" stroke="${INK}" stroke-width="1"/>`,
@@ -402,7 +443,8 @@ const DRAWERS: Readonly<Record<SymbolKind, (symbol: PlacedSymbol) => string>> = 
   'dc-fuse': fuse,
   combiner,
   'dc-spd': spd,
-  'dc-switch': (symbol) => breaker(symbol, true),
+  'dc-switch': switchDisconnector,
+  'fuse-switch': fuseSwitch,
   inverter,
   battery,
   'dc-breaker': (symbol) => breaker(symbol, true),
@@ -425,13 +467,21 @@ const DRAWERS: Readonly<Record<SymbolKind, (symbol: PlacedSymbol) => string>> = 
 
 /** Dessine un symbole placé, repère et annotation compris. */
 export function drawSymbol(symbol: PlacedSymbol): string {
+  if (symbol.rotation === -90) {
+    // Dessiné dans son repère vertical (largeur et hauteur locales échangées), puis tourné : le
+    // haut du symbole devient sa gauche, le courant y circule de gauche à droite.
+    const local: PlacedSymbol = { ...symbol, width: symbol.height, height: symbol.width };
+    const body = DRAWERS[symbol.kind](local);
+    return `<g transform="translate(${round(symbol.x)} ${round(symbol.y + symbol.height)}) rotate(-90)" data-symbol="${symbol.kind}" data-id="${esc(symbol.id)}">${body}</g>`;
+  }
   const body = DRAWERS[symbol.kind](symbol);
+  const labelled = symbol.showLabels !== false;
   // Le repère se pose à gauche du symbole : un conducteur descend toujours par
   // son axe, un libellé centré au-dessus serait donc systématiquement barré.
-  const reference = symbol.reference
+  const reference = labelled && symbol.reference
     ? text(-6, 11, symbol.reference, 9, 700, 'end', '#5f6b7a')
     : '';
-  const caption = symbol.caption
+  const caption = labelled && symbol.caption
     ? text(symbol.width + 8, symbol.height / 2 + 3, symbol.caption, 8.5, 600, 'start', '#3d4753')
     : '';
   return `<g transform="translate(${round(symbol.x)} ${round(symbol.y)})" data-symbol="${symbol.kind}" data-id="${esc(symbol.id)}">${reference}${body}${caption}</g>`;

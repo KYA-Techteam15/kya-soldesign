@@ -1,5 +1,6 @@
 import type { CableSizingResult, ProtectionSizingResult, SizingOutputV1 } from '@ksd/engine';
 import type {
+  ProtectionNature,
   AcLineSpec,
   BatteryBankSpec,
   CableSpec,
@@ -67,7 +68,7 @@ export const DEFAULT_OPTIONS: DiagramOptions = {
   // normalisée sur laquelle ce plan-ci reste lisible. Elle se déduit du dessin.
   format: 'auto',
   detail: 'full',
-  dcRepresentation: 'pair',
+  showCableNotes: true,
   maxDrawnModules: 4,
   maxDrawnStrings: 4,
   maxDrawnBatteries: 4,
@@ -76,13 +77,26 @@ export const DEFAULT_OPTIONS: DiagramOptions = {
   showGridFrame: true,
 };
 
-/** Gabarit portrait condensé, pour le rapport et l'offre. */
+/** Planche condensée, pour le rapport et l'offre : une page A4 paysage. */
 export const SYNOPTIC_OPTIONS: DiagramOptions = {
   ...DEFAULT_OPTIONS,
-  format: 'a4-portrait',
+  format: 'a4-landscape',
   detail: 'synoptic',
   showGridFrame: false,
+  // La page du rapport porte déjà la référence et le client : le cartouche ferait doublon.
+  showTitleBlock: false,
 };
+
+/**
+ * Nature d'un appareil d'après le type retenu à l'étape « Protections ». Un fusible gPV en tête de
+ * champ se pose dans un sectionneur-fusible : la coupure visible est exigée pour intervenir.
+ */
+export function protectionNature(type: string | null | undefined): ProtectionNature {
+  const value = (type ?? '').toLowerCase();
+  if (value.includes('fusible') || value.includes('fuse')) return 'fuse-switch';
+  if (value.includes('disjoncteur') || value.includes('breaker')) return 'breaker';
+  return 'switch';
+}
 
 export interface ModuleSnapshot {
   readonly powerW: number | null;
@@ -162,9 +176,12 @@ function toProtectionSpec(
   fallbackKind: string,
 ): ProtectionSpec | null {
   if (!result) return null;
+  const kind = result.selectedType ?? result.kind ?? fallbackKind;
   return {
     reference,
-    kind: result.selectedType ?? result.kind ?? fallbackKind,
+    kind,
+    nature: protectionNature(kind),
+    poles: 2,
     ratingA: positive(result.caliberA),
     voltageV: positive(result.serviceVoltageV),
     quantity: Math.max(1, result.quantity),
@@ -236,6 +253,8 @@ export function buildTopology(source: TopologySource): SingleLineTopology {
         ? {
             reference: `R${index + 1}`,
             kind: labels.chargeController,
+            nature: 'device',
+            poles: 2,
             ratingA: null,
             voltageV: positive(sizing.battery.bankVoltageV),
             quantity: 1,
@@ -246,6 +265,8 @@ export function buildTopology(source: TopologySource): SingleLineTopology {
           ? {
               reference: `F${index + 1}`,
               kind: labels.stringFuse,
+              nature: 'fuse',
+              poles: 2,
               // Le calibre est celui choisi en « Protections » ; sans choix, « à choisir ».
               ratingA: pvProtection?.selectedType === 'Fusible gPV' ? positive(pvProtection.caliberA) : null,
               voltageV: stringVocCold,
@@ -256,6 +277,8 @@ export function buildTopology(source: TopologySource): SingleLineTopology {
       dcSpd: {
         reference: `PF${index + 1}`,
         kind: labels.spdType2,
+        nature: 'spd',
+        poles: 2,
         ratingA: null,
         voltageV: stringVocCold,
         quantity: 1,
@@ -325,6 +348,8 @@ function buildAcLine(
     spd: {
       reference: 'PF10',
       kind: labels.acSpd,
+      nature: 'spd',
+      poles: 2,
       ratingA: null,
       voltageV: acVoltageV,
       quantity: 1,
@@ -335,6 +360,8 @@ function buildAcLine(
         : {
             reference: 'Q11',
             kind: labels.rcd,
+            nature: 'rcd',
+            poles: 2,
             ratingA: positive(loadProtection?.caliberA ?? null),
             voltageV: acVoltageV,
             quantity: 1,
@@ -344,7 +371,7 @@ function buildAcLine(
     meter: gridConnected,
     transferSwitch:
       gridConnected || dieselBacked
-        ? { reference: 'Q12', kind: labels.transferSwitch, ratingA: null, voltageV: acVoltageV, quantity: 1 }
+        ? { reference: 'Q12', kind: labels.transferSwitch, nature: 'switch' as const, poles: 2, ratingA: null, voltageV: acVoltageV, quantity: 1 }
         : null,
     grid: gridConnected ? { label: labels.grid, voltageV: acVoltageV } : null,
     generator: dieselBacked ? { label: labels.generator, powerKw: null } : null,

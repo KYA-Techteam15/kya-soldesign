@@ -7,7 +7,7 @@ import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { translate } from '../../i18n';
 import { useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
-import { buildProjectDiagram } from '../../app/diagram/projectDiagram';
+import { buildProjectDiagram, synopticOptions } from '../../app/diagram/projectDiagram';
 import { buildReportDocument, type Block, type DocSection } from '../../app/export/reportModel';
 import { defaultReportOptions, type DocKind, type ReportOptions } from '../../app/export/documentComposition';
 
@@ -56,9 +56,10 @@ export function ReportA4({ project, kind, sizing, finance, solar, presizing, cat
   // tenait dans une colonne, mais n'y était plus lisible.
   const diagram = useMemo(() => {
     if (!sizing) return null;
-    const built = buildProjectDiagram({ project, sizing, catalog, settings, lang: resolved.lang });
+    // Rapport, offre, proforma : le synoptique, conçu pour une page A4 ; le dossier d'exécution : la planche complète.
+    const built = buildProjectDiagram({ project, sizing, catalog, settings, lang: resolved.lang, ...(kind === 'dossier_exec' ? {} : { options: synopticOptions }) });
     return { svg: built.svg, width: built.plan.width, height: built.plan.height, bom: built.plan.bom };
-  }, [project, sizing, catalog, settings, resolved.lang]);
+  }, [project, sizing, catalog, settings, resolved.lang, kind]);
 
   const document = useMemo(() => buildReportDocument({
     project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram,

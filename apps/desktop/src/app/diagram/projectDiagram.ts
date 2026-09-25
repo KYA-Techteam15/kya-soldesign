@@ -11,6 +11,7 @@ import {
 import type { ApplicationSettingsV2 } from '../models/applicationSettings';
 import type { CableSegment, ProjectViewModel } from '../models/projectView';
 import { dateFr } from '../../domain/format';
+import { latestVersion, nextVersionNumber } from '../models/projectLifecycle';
 
 /**
  * Adaptateur projet → schéma unifilaire.
@@ -136,6 +137,8 @@ export function buildProjectDiagram(input: ProjectDiagramInput): GeneratedDiagra
       date: dateFr(project.details.projectDate),
       author: project.details.followerName,
       sheet: '1/1',
+      // Version émise portée au cartouche ; en révision, la prochaine version à émettre.
+      revision: project.issue.versions.length === 0 ? '' : `v${project.issue.locked ? latestVersion(project)?.number ?? 1 : nextVersionNumber(project)}`,
     },
     labels: lang === 'en' ? EN_LABELS : FR_LABELS,
     options: input.options,

@@ -10,13 +10,36 @@ import type {
 } from '../contracts.js';
 import type { DiagramLabels } from '../labels.js';
 import { SYMBOL_SIZE } from '../symbols.js';
+import { captionBox, inflate, intersects, lineHeight, textWidth, wireBoxes, type Box } from './geometry.js';
+
+export { textWidth };
+
+/** Une ligne d'étiquette : texte, corps, graisse, ton. */
+export interface LabelLine {
+  readonly text: string;
+  readonly size?: number;
+  readonly weight?: Caption['weight'];
+  readonly tone?: Caption['tone'];
+}
+
+export type LabelSide = 'above' | 'below' | 'left' | 'right';
+
+interface LabelRequest {
+  readonly lines: readonly LabelLine[];
+  readonly anchor: Box;
+  readonly sides: readonly LabelSide[];
+  readonly gap: number;
+}
+
+/** Espace laissé entre une étiquette et ce qu'elle désigne, ou ce qu'elle évite. */
+const CLEARANCE = 3;
 
 /**
  * Accumulateur de planche.
  *
- * Les bandes n'écrivent jamais dans des tableaux nus : elles passent par ces
- * quelques primitives, ce qui garantit l'unicité des identifiants et rend le
- * placement reproductible d'un appel à l'autre.
+ * Les symboles et les conducteurs sont posés d'abord ; les étiquettes sont demandées au fil du
+ * placement puis posées toutes à la fin, chacune à la première position libre autour de ce
+ * qu'elle désigne. Une étiquette ne peut donc jamais être posée sur un trait tracé après elle.
  */
 export class Builder {
   readonly symbols: PlacedSymbol[] = [];
@@ -24,6 +47,8 @@ export class Builder {
   readonly frames: Frame[] = [];
   readonly captions: Caption[] = [];
   readonly bom: BillOfMaterialRow[] = [];
+  readonly junctions: Point[] = [];
+  private readonly requests: LabelRequest[] = [];
   private sequence = 0;
 
   constructor(readonly labels: DiagramLabels) {}
@@ -43,20 +68,25 @@ export class Builder {
       caption?: string | null;
       width?: number;
       height?: number;
+      rotation?: 0 | -90;
       data?: Record<string, string | number | boolean>;
     } = {},
   ): PlacedSymbol {
     const size = SYMBOL_SIZE[kind];
+    const rotated = extra.rotation === -90;
     const symbol: PlacedSymbol = {
       id: extra.id ?? this.nextId(kind),
       kind,
       x,
       y,
-      width: extra.width ?? size.width,
-      height: extra.height ?? size.height,
+      width: extra.width ?? (rotated ? size.height : size.width),
+      height: extra.height ?? (rotated ? size.width : size.height),
       reference: extra.reference ?? null,
       caption: extra.caption ?? null,
       data: extra.data ?? {},
+      rotation: extra.rotation ?? 0,
+      // Repère et libellé sont posés par `label()`, jamais par le dessin du symbole.
+      showLabels: false,
     };
     this.symbols.push(symbol);
     return symbol;
@@ -65,7 +95,7 @@ export class Builder {
   wire(
     conductor: ConductorKind,
     points: readonly Point[],
-    options: { dashed?: boolean; annotation?: string | null } = {},
+    options: { dashed?: boolean; conductors?: number } = {},
   ): void {
     if (points.length < 2) return;
     this.wires.push({
@@ -73,36 +103,17 @@ export class Builder {
       conductor,
       points,
       dashed: options.dashed ?? false,
-      annotation: options.annotation ?? null,
+      annotation: null,
+      ...(options.conductors === undefined ? {} : { conductors: options.conductors }),
     });
   }
 
-  caption(
-    x: number,
-    y: number,
-    value: string,
-    options: {
-      anchor?: Caption['anchor'];
-      size?: number;
-      weight?: Caption['weight'];
-      tone?: Caption['tone'];
-    } = {},
-  ): void {
-    if (!value) return;
-    this.captions.push({
-      id: this.nextId('c'),
-      x,
-      y,
-      text: value,
-      anchor: options.anchor ?? 'middle',
-      size: options.size ?? 9,
-      weight: options.weight ?? 600,
-      tone: options.tone ?? 'ink',
-    });
+  junction(point: Point): void {
+    this.junctions.push(point);
   }
 
-  frame(id: string, label: string, x: number, y: number, width: number, height: number): void {
-    this.frames.push({ id, label, x, y, width, height });
+  frame(id: string, x: number, y: number, width: number, height: number): void {
+    this.frames.push({ id, label: '', x, y, width, height });
   }
 
   /** Inscrit un appareil à la nomenclature. Le repérage est complété plus tard. */
@@ -111,64 +122,121 @@ export class Builder {
     this.bom.push({ reference, designation, characteristic, quantity, gridRef: '' });
   }
 
-  /**
-   * Abscisse maximale réellement occupée, annotations comprises.
-   *
-   * Le collecteur de terre et le bord de planche se placent d'après cette
-   * mesure, et non d'après la largeur des seuls symboles : un libellé posé à
-   * droite d'un appareil occupe la planche autant que l'appareil lui-même.
-   */
-  rightExtent(): number {
-    let right = 0;
-    for (const symbol of this.symbols) {
-      const caption = symbol.caption ? CAPTION_GAP + textWidth(symbol.caption, CAPTION_SIZE) : 0;
-      right = Math.max(right, symbol.x + symbol.width + caption);
+  /** Demande une étiquette : posée à la fin, du premier côté libre dans l'ordre donné. */
+  label(lines: readonly (LabelLine | string | null | undefined | false)[], anchor: Box, sides: readonly LabelSide[], gap = 6): void {
+    const kept = lines
+      .filter((line): line is LabelLine | string => Boolean(line))
+      .map((line) => (typeof line === 'string' ? { text: line } : line))
+      .filter((line) => line.text.length > 0);
+    if (kept.length > 0) this.requests.push({ lines: kept, anchor, sides, gap });
+  }
+
+  /** Largeur d'un bloc d'étiquette, pour réserver la place avant de le poser. */
+  static blockWidth(lines: readonly (LabelLine | string | null | undefined | false)[]): number {
+    return Math.max(0, ...lines.filter((line): line is LabelLine | string => Boolean(line)).map((line) => (typeof line === 'string' ? textWidth(line, 8) : textWidth(line.text, line.size ?? 8))));
+  }
+
+  /** Pose toutes les étiquettes demandées, dans l'ordre des demandes. */
+  placeLabels(): void {
+    for (const request of this.requests) this.placeOne(request);
+    this.requests.length = 0;
+  }
+
+  private obstacles(): Box[] {
+    return [
+      ...this.symbols.map((symbol) => inflate(symbol, 1)),
+      ...this.wires.flatMap((wire) => wireBoxes(wire)),
+      ...this.captions.map((caption) => captionBox(caption)),
+      ...this.frames.flatMap((frame) => [
+        { x: frame.x, y: frame.y, width: frame.width, height: 1 },
+        { x: frame.x, y: frame.y + frame.height, width: frame.width, height: 1 },
+        { x: frame.x, y: frame.y, width: 1, height: frame.height },
+        { x: frame.x + frame.width, y: frame.y, width: 1, height: frame.height },
+      ]),
+    ];
+  }
+
+  private layoutBlock(request: LabelRequest, side: LabelSide, shift: number): Caption[] {
+    const { lines, anchor, gap } = request;
+    const sizes = lines.map((line) => line.size ?? 8);
+    const height = sizes.reduce((sum, size) => sum + lineHeight(size), 0);
+    const width = Math.max(...lines.map((line, index) => textWidth(line.text, sizes[index]!)));
+    let left: number;
+    let top: number;
+    let anchorMode: Caption['anchor'];
+    if (side === 'above' || side === 'below') {
+      anchorMode = 'middle';
+      left = anchor.x + anchor.width / 2 + shift;
+      top = side === 'above' ? anchor.y - gap - height : anchor.y + anchor.height + gap;
+    } else {
+      anchorMode = side === 'right' ? 'start' : 'end';
+      left = side === 'right' ? anchor.x + anchor.width + gap : anchor.x - gap;
+      top = anchor.y + anchor.height / 2 - height / 2 + shift;
     }
-    for (const caption of this.captions) {
-      right = Math.max(right, captionRight(caption));
+    void width;
+    let cursor = top;
+    return lines.map((line, index) => {
+      const size = sizes[index]!;
+      const caption: Caption = {
+        id: this.nextId('c'),
+        x: left,
+        y: cursor + size * 0.82,
+        text: line.text,
+        anchor: anchorMode,
+        size,
+        weight: line.weight ?? 600,
+        tone: line.tone ?? 'muted',
+      };
+      cursor += lineHeight(size);
+      return caption;
+    });
+  }
+
+  private placeOne(request: LabelRequest): void {
+    const obstacles = this.obstacles();
+    const free = (captions: readonly Caption[]) => captions.every((caption) => {
+      const box = inflate(captionBox(caption), CLEARANCE);
+      return !obstacles.some((other) => intersects(box, other));
+    });
+    const shifts = [0, 10, -10, 20, -20, 32, -32, 46, -46];
+    for (const shift of shifts) {
+      for (const side of request.sides) {
+        const block = this.layoutBlock(request, side, shift);
+        if (free(block)) {
+          this.captions.push(...block);
+          return;
+        }
+      }
     }
-    for (const frame of this.frames) right = Math.max(right, frame.x + frame.width);
-    for (const wire of this.wires) {
-      for (const point of wire.points) right = Math.max(right, point.x);
-    }
-    return right;
+    // Aucune place libre : l'étiquette est posée au premier choix ; le contrôle des tests le signale.
+    this.captions.push(...this.layoutBlock(request, request.sides[0] ?? 'above', 0));
+  }
+
+  /** Emprise réelle du dessin, étiquettes comprises. */
+  extents(): Box {
+    const boxes: Box[] = [
+      ...this.symbols,
+      ...this.frames,
+      ...this.captions.map((caption) => captionBox(caption)),
+      ...this.wires.flatMap((wire) => wireBoxes(wire)),
+    ];
+    const minX = Math.min(...boxes.map((box) => box.x));
+    const minY = Math.min(...boxes.map((box) => box.y));
+    const maxX = Math.max(...boxes.map((box) => box.x + box.width));
+    const maxY = Math.max(...boxes.map((box) => box.y + box.height));
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  }
+
+  /** Translate tout le dessin : le placement travaille à l'origine, la planche le centre ensuite. */
+  shift(dx: number, dy: number): void {
+    const move = <T extends { x: number; y: number }>(item: T): T => ({ ...item, x: item.x + dx, y: item.y + dy });
+    this.symbols.splice(0, this.symbols.length, ...this.symbols.map(move));
+    this.frames.splice(0, this.frames.length, ...this.frames.map(move));
+    this.captions.splice(0, this.captions.length, ...this.captions.map(move));
+    this.junctions.splice(0, this.junctions.length, ...this.junctions.map(move));
+    this.wires.splice(0, this.wires.length, ...this.wires.map((wire) => ({ ...wire, points: wire.points.map(move) })));
   }
 }
-
-/** Corps des libellés accolés aux symboles, en pixels planche. */
-const CAPTION_SIZE = 8.5;
-/** Écart entre le bord droit d'un symbole et son libellé. */
-const CAPTION_GAP = 8;
-
-/**
- * Largeur approchée d'un texte.
- *
- * Le rendu n'ayant pas de moteur de fontes, la mesure est estimée à partir de
- * la chasse moyenne de la fonte de planche. Elle sert à réserver de la place,
- * jamais à positionner : une surestimation coûte quelques pixels de marge,
- * une sous-estimation ferait passer un trait sur un texte.
- */
-export const textWidth = (value: string, size: number): number => value.length * size * 0.56;
-
-/** Abscisse du bord droit d'un texte, selon son point d'ancrage. */
-function captionRight(caption: Caption): number {
-  const width = textWidth(caption.text, caption.size);
-  if (caption.anchor === 'start') return caption.x + width;
-  if (caption.anchor === 'middle') return caption.x + width / 2;
-  return caption.x;
-}
-
-/** Trajet en L : on descend, puis on translate. */
-export const vh = (from: Point, to: Point): Point[] => [from, { x: from.x, y: to.y }, to];
-/** Trajet en L : on translate, puis on descend. */
-export const hv = (from: Point, to: Point): Point[] => [from, { x: to.x, y: from.y }, to];
-/** Trajet en Z : descente, translation à mi-hauteur, descente. */
-export const vhv = (from: Point, to: Point, midY: number): Point[] => [
-  from,
-  { x: from.x, y: midY },
-  { x: to.x, y: midY },
-  to,
-];
 
 /**
  * Décide combien d'éléments d'une série sont réellement dessinés.
@@ -184,6 +252,10 @@ export function collapse(count: number, max: number): { head: number; tail: numb
 export const num = (value: number, decimals: number, labels: DiagramLabels): string =>
   value.toFixed(decimals).replace('.', labels.decimal);
 
+/** Section ou longueur : sans zéros inutiles, au séparateur de la langue (« 2,5 », « 35 »). */
+export const quantity = (value: number, labels: DiagramLabels): string =>
+  String(Math.round(value * 100) / 100).replace('.', labels.decimal);
+
 /** Calibre, ou mention explicite quand l'utilisateur n'a rien retenu. */
 export const amps = (value: number | null, labels: DiagramLabels): string =>
   value === null ? labels.toBeDefined : `${num(value, 0, labels)} A`;
@@ -191,8 +263,10 @@ export const amps = (value: number | null, labels: DiagramLabels): string =>
 /** Section de câble en notation « n × section », comme sur un plan d'exécution. */
 export function cableNote(
   cable: { conductors: number; sectionMm2: number | null; lengthM: number | null } | null,
+  labels?: DiagramLabels,
 ): string | null {
   if (!cable || cable.sectionMm2 === null) return null;
-  const section = `${cable.conductors} × ${cable.sectionMm2} mm²`;
-  return cable.lengthM === null ? section : `${section} · ${cable.lengthM} m`;
+  const format = (value: number) => (labels ? quantity(value, labels) : String(value));
+  const section = `${cable.conductors} × ${format(cable.sectionMm2)} mm²`;
+  return cable.lengthM === null ? section : `${section} · ${format(cable.lengthM)} m`;
 }

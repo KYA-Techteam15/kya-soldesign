@@ -9,13 +9,13 @@
 - [x] T006 Tests, captures, `pnpm verify:phase`
 
 ## Lot B — Schéma unifilaire
-- [ ] T010 Nature des protections dans la topologie ; parafoudres en dérivation (FR-B3)
-- [ ] T011 Rotation des symboles au rendu
-- [ ] T012 Placement paysage gauche → droite, stockage, terre en pied (FR-B1, FR-B5)
-- [ ] T013 Formats A4/A3 paysage (FR-B2)
-- [ ] T014 Couloirs d'étiquettes et test géométrique anti-chevauchement (FR-B4)
-- [ ] T015 Cartouche, décimales, libellés (FR-B6) ; options (FR-B7)
-- [ ] T016 Intégration écran et rapport, tests, captures
+- [x] T010 Nature des protections dans la topologie ; parafoudres en dérivation (FR-B3)
+- [x] T011 Rotation des symboles au rendu
+- [x] T012 Placement paysage gauche → droite, stockage, terre en pied (FR-B1, FR-B5)
+- [x] T013 Formats A4/A3 paysage (FR-B2)
+- [x] T014 Couloirs d'étiquettes et test géométrique anti-chevauchement (FR-B4)
+- [x] T015 Cartouche, décimales, libellés (FR-B6) ; options (FR-B7)
+- [x] T016 Intégration écran et rapport, tests, captures
 
 ## Lot D — Licences
 - [ ] T020 Catalogue de fonctions, éditions, durées (FR-D1, FR-D3)

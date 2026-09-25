@@ -33,6 +33,9 @@ export function SynopticView({
   const settings = useSettings();
   const lang = useUi((state) => state.lang);
   const [format, setFormat] = useState<'sheet' | 'synoptic'>('sheet');
+  // Réglages de représentation (FR-B7) : format imposé ou automatique, cotes de câble.
+  const [sheet, setSheet] = useState<'auto' | 'a4-landscape' | 'a3-landscape'>('auto');
+  const [cableNotes, setCableNotes] = useState(true);
 
   const built = useMemo(() => {
     if (!sizing) return null;
@@ -42,9 +45,9 @@ export function SynopticView({
       catalog,
       settings,
       lang,
-      options: format === 'synoptic' ? SYNOPTIC_OPTIONS : undefined,
+      options: { ...(format === 'synoptic' ? SYNOPTIC_OPTIONS : {}), ...(sheet === 'auto' ? {} : { format: sheet }), showCableNotes: cableNotes },
     });
-  }, [project, sizing, catalog, settings, lang, format]);
+  }, [project, sizing, catalog, settings, lang, format, sheet, cableNotes]);
 
   /**
    * Toute modification du projet relance la lecture du dimensionnement, qui
@@ -91,6 +94,14 @@ export function SynopticView({
             {t('synoptic.synoptic')}
           </button>
         </div>
+        <label className="synoptic-option no-print"><span>{t('synoptic.format')}</span>
+          <select value={sheet} onChange={(event) => setSheet(event.target.value as typeof sheet)}>
+            <option value="auto">{t('synoptic.formatAuto')}</option>
+            <option value="a4-landscape">{t('synoptic.sheetFormat.a4-landscape')}</option>
+            <option value="a3-landscape">{t('synoptic.sheetFormat.a3-landscape')}</option>
+          </select>
+        </label>
+        <label className="synoptic-option no-print"><input type="checkbox" checked={cableNotes} onChange={(event) => setCableNotes(event.target.checked)} /><span>{t('synoptic.cableNotes')}</span></label>
         <button className="btn no-print" onClick={download}>
           {t('synoptic.downloadSvg')}
         </button>
@@ -98,14 +109,8 @@ export function SynopticView({
 
       <div className={'synoptic-sheet' + (stale ? ' is-stale' : '')} dangerouslySetInnerHTML={{ __html: svg }} />
 
-      <div className="synoptic-facts">
-        <span>
-          {plan.width} × {plan.height}
-        </span>
-        <span>{plan.symbols.length} symboles</span>
-        <span>{plan.wires.length} conducteurs</span>
-        <span>{fmt(plan.smallestTextPt, 1)} pt</span>
-      </div>
+      {/* Ce qui sert à imprimer : le format de la planche et la taille du plus petit texte. */}
+      <p className="synoptic-facts label">{t('synoptic.printOn').replace('{format}', t(`synoptic.sheetFormat.${plan.format}`)).replace('{pt}', fmt(plan.smallestTextPt, 1))}</p>
 
       {plan.issues.length > 0 && (
         <div className="synoptic-issues">

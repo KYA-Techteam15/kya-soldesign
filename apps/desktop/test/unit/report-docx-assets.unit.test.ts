@@ -63,6 +63,7 @@ const project = {
   load: { granularity: 'annual', activeMode: 'simple', composition: null, calendar: { version: 2, mode: 'annual', dayGroups: [], periods: [], assignments: [] }, profiles: [], activeProfileId: '', irMin: 10 },
   assumptions: { projectLifetime: 20, actualizationRate: 8, lcoeGrid: 90, emissionFactor: 0.6, lpspMax: 5, lolpMax: 5, systemPr: 80, inverterYield: 95, batteryYield: 90 },
   selection: { moduleId: 'm', batteryId: 'b', inverterId: 'i' },
+  issue: { locked: false, versions: [] },
   cables: [], protections: [],
   costing: { tvaPercent: 18, downPaymentPercent: 40, offerValidity: 30, deliveryTime: 45, productWarranty: 24 },
 } as unknown as ProjectViewModel;

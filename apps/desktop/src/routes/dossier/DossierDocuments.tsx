@@ -12,7 +12,7 @@ import { translate, useT } from '../../i18n';
 import { useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
 import { buildReportDocument } from '../../app/export/reportModel';
 import { downloadDocx } from '../../app/export/docxWriter';
-import { buildProjectDiagram } from '../../app/diagram/projectDiagram';
+import { buildProjectDiagram, synopticOptions } from '../../app/diagram/projectDiagram';
 import { defaultReportOptions, type DocKind, type ReportOptions } from '../../app/export/documentComposition';
 
 const DOCS: { key: DocKind; labelKey: string; noteKey: string }[] = [
@@ -97,7 +97,7 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
     setBusy(true);
     setError(null);
     try {
-      const generated = sizing ? buildProjectDiagram({ project, sizing, catalog, settings, lang: options.lang }) : null;
+      const generated = sizing ? buildProjectDiagram({ project, sizing, catalog, settings, lang: options.lang, ...(kind === 'dossier_exec' ? {} : { options: synopticOptions }) }) : null;
       await downloadDocx(buildReportDocument({
         project, kind, sizing, finance, solar, presizing, catalog, settings,
         t: (key: string) => translate(key, options.lang),

@@ -56,6 +56,21 @@ export interface DiagramLabels {
   readonly bomCharacteristic: string;
   readonly bomQuantity: string;
   readonly bomLocation: string;
+  readonly fuseSwitch: string;
+  readonly dcBreaker: string;
+  readonly unit: string;
+  readonly inSeries: string;
+  readonly inParallel: string;
+  readonly strings: string;
+  readonly stringOf: string;
+  readonly stringsOf: string;
+  readonly modules: string;
+  readonly inParallelUnits: string;
+  readonly acBoard: string;
+  readonly mainEarthTerminal: string;
+  readonly conductorDc: string;
+  readonly titleRevision: string;
+  readonly moreStrings: string;
 }
 
 export const FR_LABELS: DiagramLabels = {
@@ -85,14 +100,14 @@ export const FR_LABELS: DiagramLabels = {
   loadPump: 'Pompe',
   loadStreetLight: 'Luminaire',
   earthBar: 'Bornier de terre',
-  earthCutoff: 'Barrette de coupure',
+  earthCutoff: 'Barrette de mesure',
   earthElectrode: 'Prise de terre',
   toBeDefined: 'à définir',
   legend: 'Légende',
   conductorPlus: 'Conducteur continu +',
   conductorMinus: 'Conducteur continu −',
-  conductorAc: 'Conducteur alternatif',
-  conductorEarth: 'Conducteur de protection',
+  conductorAc: 'Liaison alternative',
+  conductorEarth: 'Conducteur de protection (PE)',
   titleSheet: 'SCHÉMA UNIFILAIRE',
   titleCompany: 'Société',
   titleProject: 'Projet',
@@ -107,6 +122,21 @@ export const FR_LABELS: DiagramLabels = {
   bomCharacteristic: 'Caractéristique',
   bomQuantity: 'Qté',
   bomLocation: 'Repérage',
+  fuseSwitch: 'Sectionneur-fusible',
+  dcBreaker: 'Disjoncteur DC',
+  unit: 'unité',
+  inSeries: 'en série',
+  inParallel: 'en parallèle',
+  strings: 'chaînes',
+  stringOf: 'chaîne de',
+  stringsOf: 'chaînes de',
+  modules: 'modules',
+  inParallelUnits: 'en parallèle',
+  acBoard: 'Tableau AC',
+  mainEarthTerminal: 'Borne principale de terre',
+  conductorDc: 'Liaison continue',
+  titleRevision: 'Version',
+  moreStrings: 'chaînes identiques',
 };
 
 export const EN_LABELS: DiagramLabels = {
@@ -142,8 +172,8 @@ export const EN_LABELS: DiagramLabels = {
   legend: 'Legend',
   conductorPlus: 'DC conductor +',
   conductorMinus: 'DC conductor −',
-  conductorAc: 'AC conductor',
-  conductorEarth: 'Protective conductor',
+  conductorAc: 'AC link',
+  conductorEarth: 'Protective conductor (PE)',
   titleSheet: 'SINGLE-LINE DIAGRAM',
   titleCompany: 'Company',
   titleProject: 'Project',
@@ -158,4 +188,19 @@ export const EN_LABELS: DiagramLabels = {
   bomCharacteristic: 'Rating',
   bomQuantity: 'Qty',
   bomLocation: 'Grid ref.',
+  fuseSwitch: 'Fuse switch-disconnector',
+  dcBreaker: 'DC breaker',
+  unit: 'unit',
+  inSeries: 'in series',
+  inParallel: 'in parallel',
+  strings: 'strings',
+  stringOf: 'string of',
+  stringsOf: 'strings of',
+  modules: 'modules',
+  inParallelUnits: 'in parallel',
+  acBoard: 'AC board',
+  mainEarthTerminal: 'Main earthing terminal',
+  conductorDc: 'DC link',
+  titleRevision: 'Revision',
+  moreStrings: 'identical strings',
 };

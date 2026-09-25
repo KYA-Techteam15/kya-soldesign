@@ -46,6 +46,7 @@ const project = {
   load: { granularity: 'annual', activeMode: 'simple', composition: null, calendar: { version: 2, mode: 'annual', dayGroups: [], periods: [], assignments: [] }, profiles: [], activeProfileId: '', irMin: 10 },
   assumptions: { projectLifetime: 20, actualizationRate: 8, lcoeGrid: 90, emissionFactor: 0.6 },
   selection: { moduleId: 'm', batteryId: 'b', inverterId: 'i' },
+  issue: { locked: false, versions: [] },
   cables: [
     { segment: 'pv_inverter', length: 25, material: 'copper', installation: 'not_buried', maxVoltageDropPercent: 3 },
     { segment: 'inverter_battery', length: 4, material: 'copper', installation: 'not_buried', maxVoltageDropPercent: 1 },
