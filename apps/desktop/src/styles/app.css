@@ -3469,3 +3469,20 @@ select option { background: var(--surface); color: var(--text); }
 .license-demo summary { cursor: pointer; font-weight: 600; }
 .license-demo-keys { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .license-demo-keys .btn { gap: 8px; }
+
+/* --- Avis et usage (spec 012, lot F) --- */
+.usage-consent { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-3) 0; }
+.usage-consent > div { flex: 1; }
+.usage-consent-actions { display: flex; gap: 8px; flex: none; }
+.feedback-form { display: grid; gap: var(--sp-3); }
+.feedback-form textarea { width: 100%; resize: vertical; font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); color: var(--text); }
+.feedback-threads { display: grid; gap: 8px; }
+.feedback-threads ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.feedback-thread { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; }
+.feedback-thread p { margin: 6px 0; white-space: pre-wrap; }
+.feedback-thread-head { display: flex; align-items: center; gap: 10px; }
+.feedback-thread-head .badge { margin-left: auto; }
+.feedback-reply { margin: 6px 0 0; padding: 8px 10px; background: var(--surface-2); border-radius: var(--r-sm); }
+.feedback-reply small { display: block; margin-bottom: 2px; }
+.update-notes { white-space: pre-wrap; font: inherit; margin: 0; max-height: 50vh; overflow: auto; }
+.usage-consent a { color: var(--ok-strong); text-underline-offset: 2px; }

@@ -4,6 +4,7 @@ import { FEATURES } from '../../app/licensing/features';
 import { DEMO_KEYS } from '../../app/licensing/adminApi';
 import { useLicense } from '../../app/licensing/licenseStore';
 import type { LicenseStatus } from '../../app/licensing/licenseService';
+import { track } from '../../app/feedback/usage';
 import { dateLong } from '../../domain/format';
 import { fill, useT } from '../../i18n';
 import { useUi } from '../../store/ui';
@@ -34,6 +35,7 @@ export function LicenseSection() {
     if (key.trim() === '') return;
     const error = await activate(key);
     report(error, 'license.activated');
+    if (error === null) track('license.activate', { edition: useLicense.getState().view?.payload?.edition ?? 'unknown' });
     if (error === null) setKey('');
   };
   const confirmRelease = () => ask({

@@ -4,7 +4,8 @@ import { useProjectSession } from '../../app/ProjectSessionProvider';
 import { planRestore, serializeBackup } from '../../app/services/projectBackup';
 import { saveFile } from '../../app/platform/files';
 import { fileTransfer } from '../../app/platform/fileTransfer';
-import { openLogFolder, reportProblem } from '../../app/platform/support';
+import { openLogFolder } from '../../app/platform/support';
+import { useUsage } from '../../app/feedback/usage';
 import { readUpdateChannel, updateChannels, writeUpdateChannel, type UpdateChannel } from '../../app/platform/updates';
 import { copyDiagnostics } from '../../app/platform/diagnostics';
 import { useUpdates } from '../../shell/UpdateNotice';
@@ -79,11 +80,7 @@ export function AboutSection() {
       setLegal({ kind, text: response.ok ? await response.text() : t('about.legalMissing') });
     } catch { setLegal({ kind, text: t('about.legalMissing') }); }
   };
-  const report = async () => {
-    const outcome = await reportProblem({ projectCount, lang });
-    if (outcome === 'copied') notify({ kind: 'info', title: t('support.reportCopied') });
-    if (outcome === 'failed') notify({ kind: 'error', title: t('support.reportFailed') });
-  };
+  const compose = useUsage((state) => state.compose);
   const copyDiagnosticInfo = async () => {
     const copied = await copyDiagnostics({ projectCount, lang });
     notify(copied ? { kind: 'success', title: t('support.diagnosticsCopied') } : { kind: 'error', title: t('support.reportFailed') });
@@ -109,7 +106,7 @@ export function AboutSection() {
       </span></div>
       <details className="kpi"><summary>{t('settings.changelog')}</summary>{info.changelogEntries.map((entry) => <div key={entry.version}><b>{entry.version}</b> · {dateLong(entry.dateIso, lang)}<br /><span className="label">{entry.message[lang]}</span></div>)}</details>
       <div className="kpi"><span>{t('about.support')}<small className="label asset-help">{t('about.supportHelp')}</small></span><span className="asset-actions">
-        <button type="button" className="btn" onClick={() => { void report(); }}>{t('support.report')}</button>
+        <button type="button" className="btn" onClick={() => compose('problem')}>{t('support.report')}</button>
         <button type="button" className="btn" onClick={() => { void copyDiagnosticInfo(); }}>{t('support.copyDiagnostics')}</button>
         {isTauri() && <button type="button" className="btn" onClick={() => { void openLogFolder(); }}>{t('support.openLogs')}</button>}
       </span></div>

@@ -14,6 +14,8 @@ import { useUi } from './store/ui';
 import { browserStore, useLicense } from './app/licensing/licenseStore';
 import { evaluateLicense, LicenseService } from './app/licensing/licenseService';
 import { LICENSE_PUBLIC_KEY, SimulatedAdminApi } from './app/licensing/adminApi';
+import { startUsage } from './app/feedback/usage';
+import { SimulatedUsageApi } from './app/feedback/usageApi';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/vivid.css';
@@ -30,6 +32,8 @@ installGlobalErrorHandlers((message) => useUi.getState().notify({ kind: 'error',
 async function start(): Promise<void> {
   await installPlatform();
   await startLicensing();
+  // Usage anonyme et avis : l'API de la plateforme est simulée tant qu'elle n'est pas publiée.
+  startUsage(new SimulatedUsageApi(), () => useUi.getState().lang);
   const service = await openProjectService();
   root.render(
     <StrictMode>

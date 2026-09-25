@@ -8,7 +8,7 @@ import { isTauri } from './runtime.js';
  */
 export type MenuCommand =
   | 'new' | 'open' | 'export' | 'projects' | 'settings' | 'quit'
-  | 'checkUpdates' | 'openLogs' | 'copyDiagnostics' | 'report' | 'about';
+  | 'checkUpdates' | 'openLogs' | 'copyDiagnostics' | 'feedback' | 'report' | 'about';
 
 export type MenuEntry =
   | { readonly id: string; readonly text: string; readonly accelerator?: string; readonly enabled?: boolean }
@@ -46,6 +46,7 @@ export function menuTemplate(t: (key: string) => string, recent: readonly Recent
       items: [
         { id: 'checkUpdates', text: t('about.updateCheck') },
         { item: 'Separator' },
+        { id: 'feedback', text: t('feedback.title') },
         { id: 'report', text: t('support.report') },
         { id: 'copyDiagnostics', text: t('support.copyDiagnostics') },
         { id: 'openLogs', text: t('support.openLogs') },
@@ -59,7 +60,7 @@ export function menuTemplate(t: (key: string) => string, recent: readonly Recent
 /** Commande ou projet récent désigné par l'identifiant d'une entrée. */
 export function parseMenuId(id: string): { readonly command: MenuCommand } | { readonly recent: string } | null {
   if (id.startsWith(RECENT_PREFIX)) return { recent: id.slice(RECENT_PREFIX.length) };
-  const commands: readonly MenuCommand[] = ['new', 'open', 'export', 'projects', 'settings', 'quit', 'checkUpdates', 'openLogs', 'copyDiagnostics', 'report', 'about'];
+  const commands: readonly MenuCommand[] = ['new', 'open', 'export', 'projects', 'settings', 'quit', 'checkUpdates', 'openLogs', 'copyDiagnostics', 'feedback', 'report', 'about'];
   return (commands as readonly string[]).includes(id) ? { command: id as MenuCommand } : null;
 }
 

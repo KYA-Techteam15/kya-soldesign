@@ -14,6 +14,7 @@ import { issueProject, reviseProject } from './models/projectLifecycle.js';
 import { readNavigationSession, writeNavigationSession } from './navigationSession.js';
 import { useSettings } from '../store/settings.js';
 import { licenseAllows, licenseReadOnly } from './licensing/licenseStore.js';
+import { track } from './feedback/usage.js';
 
 type ProjectMutation = (draft: ProjectViewModel) => void;
 
@@ -160,6 +161,7 @@ export function ProjectSessionProvider({
     persist(view);
     setProjects((current) => [view, ...current]);
     setCurrentId(file.id);
+    track('project.create');
     return file.id;
   }, [locale, persist, service]);
 

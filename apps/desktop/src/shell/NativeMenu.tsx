@@ -5,7 +5,8 @@ import { useUi } from '../store/ui';
 import { useT } from '../i18n';
 import { closeMainWindow, installNativeMenu, menuTemplate, parseMenuId, RECENT_LIMIT, type MenuCommand } from '../app/platform/nativeMenu';
 import { copyDiagnostics } from '../app/platform/diagnostics';
-import { openLogFolder, reportProblem } from '../app/platform/support';
+import { openLogFolder } from '../app/platform/support';
+import { useUsage } from '../app/feedback/usage';
 import { isTauri } from '../app/platform/runtime';
 import { useProjectTransfer } from '../routes/ImportProjectButton';
 import { useProjectCreationGuard } from './licenseGuard';
@@ -26,6 +27,7 @@ export function NativeMenu() {
   const guard = useProjectCreationGuard();
   const guardImport = useProjectCreationGuard({ readOnlyAllowed: true });
   const runUpdateCheck = useUpdates((state) => state.run);
+  const compose = useUsage((state) => state.compose);
   const currentId = location.pathname.match(/^\/projet\/([^/]+)/u)?.[1] ?? null;
 
   const recent = useMemo(() => [...projects]
@@ -52,12 +54,8 @@ export function NativeMenu() {
       case 'copyDiagnostics':
         void copyDiagnostics({ projectCount: projects.length, lang }).then((copied) => notify(copied ? { kind: 'success', title: t('support.diagnosticsCopied') } : { kind: 'error', title: t('support.reportFailed') }));
         break;
-      case 'report':
-        void reportProblem({ projectCount: projects.length, lang }).then((outcome) => {
-          if (outcome === 'copied') notify({ kind: 'info', title: t('support.reportCopied') });
-          if (outcome === 'failed') notify({ kind: 'error', title: t('support.reportFailed') });
-        });
-        break;
+      case 'report': compose('problem'); break;
+      case 'feedback': compose('idea'); break;
       case 'about': void nav('/reglages#apropos'); break;
     }
   };

@@ -15,6 +15,7 @@ import { downloadDocx } from '../../app/export/docxWriter';
 import { buildProjectDiagram, synopticOptions } from '../../app/diagram/projectDiagram';
 import { defaultReportOptions, type DocKind, type ReportOptions } from '../../app/export/documentComposition';
 import { useEntitlement, useLicense } from '../../app/licensing/licenseStore';
+import { track } from '../../app/feedback/usage';
 
 const DOCS: { key: DocKind; labelKey: string; noteKey: string }[] = [
   { key: 'rapport', labelKey: 'documents.report', noteKey: 'documents.reportNote' },
@@ -163,8 +164,8 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
         locks={{ word: !wordAllowed, pricing: !pricing, watermark: forcedWatermark !== null }}
         onKind={setKind}
         onOptions={(next) => setComposition((current) => ({ ...current, [kind]: next }))}
-        onPrint={() => guarded(() => window.setTimeout(() => window.print(), 120))}
-        onWord={() => { if (wordAllowed) guarded(() => { void word(); }); }}
+        onPrint={() => guarded(() => { track('document.print', { kind }); window.setTimeout(() => window.print(), 120); })}
+        onWord={() => { if (wordAllowed) guarded(() => { track('document.word', { kind }); void word(); }); }}
       />
     </div>
   );

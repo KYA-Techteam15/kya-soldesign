@@ -37,8 +37,8 @@
 - [x] T042 Menu natif Fichier / Aide (Ctrl+N, Ctrl+O, Ctrl+S, projets récents, journaux), « Copier les infos de diagnostic » (FR-E3)
 
 ## Lot F — Usage et avis
-- [ ] T050 Consentement, file d'événements, API simulée (FR-F1, FR-F2)
-- [ ] T051 Avis et signalements (FR-F3)
+- [x] T050 Consentement (accueil, non bloquant ; Réglages), file bornée envoyée par lots à `SimulatedUsageApi`, identifiant d'installation anonyme (FR-F1, FR-F2)
+- [x] T051 « Donner un avis » / « Signaler un problème » vers l'API (diagnostic joint au choix), réponses dans Réglages → Avis et assistance, signalement direct depuis l'écran de plantage (FR-F3)
 
 ## Fermeture
 - [ ] T060 CHANGELOG, README, ROADMAP `PROD-001`, version 1.2.0, `pnpm verify`, installateur

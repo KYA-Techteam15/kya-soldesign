@@ -15,6 +15,7 @@ import { CanonicalCatalog } from '../app/adapters/canonicalCatalog';
 import { createExampleProject } from '../app/services/exampleProject';
 import { ImportProjectButton } from './ImportProjectButton';
 import { useProjectCreationGuard } from '../shell/licenseGuard';
+import { UsageConsentNotice } from './home/UsageConsentNotice';
 import { SystemsShowcase } from './home/SystemsShowcase';
 
 const STEP_ORDER: readonly string[] = [...WORKSHOP_STEPS, 'dossier'];
@@ -81,6 +82,7 @@ export function Home() {
         <div className="page-body"><div className="page-inner">
           <h1 className="page-title">{t('home.firstTitle')}</h1>
           <p className="page-lead">{t('home.firstLead')}</p>
+          <UsageConsentNotice />
           <div className="home-start">
             <article className="home-start-card">
               <span className="home-start-rank">1</span>
@@ -126,6 +128,7 @@ export function Home() {
       <TopBar secondary={{ label: t('home.recent'), badge: String(projects.length), onClick: () => nav('/accueil/projets'), title: t('home.allProjects') }} primary={{ label: t('home.newProject'), onClick: newProject }} />
       <div className="page-body"><div className="page-inner">
         <h1 className="page-title">{t('home.dashboardTitle')}</h1>
+        <UsageConsentNotice />
         {!companyName.trim() && (
           <div className="alert info home-identity" role="note">
             <div><b>{t('home.identityTitle')}</b> {t('home.identityLead')}</div>
