@@ -49,6 +49,9 @@ pnpm verify                                 # porte complète (golden, intégrat
 Installateur local : `pnpm --filter @ksd/desktop exec tauri build`
 (sortie : `apps/desktop/src-tauri/target/release/bundle/nsis/`).
 
+Publier une version : `RELEASING.md`. Mises à jour automatiques, clés de signature et leur
+emplacement : `docs/mises-a-jour.md`.
+
 ### Organisation
 
 | Dossier | Rôle |

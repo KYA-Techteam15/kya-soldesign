@@ -30,6 +30,9 @@ la version est construite sans la capacité, et l'application l'indique.
 
 ### Mises à jour : état au 2026-09-25
 
+Guide complet (fonctionnement, clés, publication, perte de clé, dépannage) :
+[`docs/mises-a-jour.md`](docs/mises-a-jour.md).
+
 **Configurées.** Les variables et secrets ci-dessus sont posés sur le dépôt ; la paire de clés a
 été générée le 2026-09-25 (identifiant de clé publique `60F017B785D96C13`).
 
