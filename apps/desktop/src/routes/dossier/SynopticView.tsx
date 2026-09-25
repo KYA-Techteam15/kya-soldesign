@@ -10,6 +10,7 @@ import { useUi } from '../../store/ui';
 import { useT } from '../../i18n';
 import { fmt } from '../../domain/format';
 import { rasterizeSvg } from '../../app/export/rasterize';
+import { MenuButton } from '../../ui/MenuButton';
 import type { SheetFormat } from '@ksd/diagram';
 
 /** Largeur de chaque planche, en millimètres : la base du PNG à 300 dpi. */
@@ -125,12 +126,17 @@ export function SynopticView({
           </select>
         </label>
         <label className="synoptic-option no-print"><input type="checkbox" checked={cableNotes} onChange={(event) => setCableNotes(event.target.checked)} /><span>{t('synoptic.cableNotes')}</span></label>
-        <button className="btn btn-primary no-print" disabled={exporting} onClick={() => { void downloadPng(); }}>
-          {exporting ? t('synoptic.pngExporting') : t('synoptic.downloadPng')}
-        </button>
-        <button className="btn no-print" onClick={download}>
-          {t('synoptic.downloadSvg')}
-        </button>
+        <span className="no-print">
+          <MenuButton
+            primary
+            disabled={exporting}
+            label={exporting ? t('synoptic.pngExporting') : t('synoptic.export')}
+            items={[
+              { id: 'png', label: t('synoptic.exportPng'), hint: t('synoptic.exportPngHint'), onSelect: () => { void downloadPng(); } },
+              { id: 'svg', label: t('synoptic.exportSvg'), hint: t('synoptic.exportSvgHint'), onSelect: download },
+            ]}
+          />
+        </span>
       </div>
 
       <div className={'synoptic-sheet' + (stale ? ' is-stale' : '')} dangerouslySetInnerHTML={{ __html: svg }} />

@@ -312,14 +312,34 @@ function analyzeProjectSolar(input: ProjectInputsV1, normalization: Page1LoadNor
   return { ...analysis, output: { ...analysis.output, ...(annualGamma === null ? {} : { annualGamma }) } };
 }
 
+/** Calendrier d'une seule source : le même profil tous les jours de l'année. */
+function everyDayCalendar(profileId: string): NonNullable<ProjectInputsV1['load']['calendar']> {
+  return {
+    version: 2,
+    mode: 'annual',
+    dayGroups: [{ id: 'all-days', kind: 'all-days', weekdaysIso: [1, 2, 3, 4, 5, 6, 7] }],
+    periods: [{ id: 'annual', name: 'Année', startMonthDay: '01-01', endMonthDay: '12-31' }],
+    assignments: [{ periodId: 'annual', dayGroupId: 'all-days', profileId }],
+  };
+}
+
 function annualGammaForProject(input: ProjectInputsV1, references: Page1References, hourlyPoaWm2: readonly number[]) {
   const resource = input.site.solarResource;
-  const calendar = input.load.activeMode === 'composed' ? input.load.composed?.calendar : input.load.calendar;
-  if (resource?.hourlyIrradiance === undefined || resource.hourlyIrradiance.length !== hourlyPoaWm2.length || input.site.timezoneIana === null || calendar === undefined) return null;
+  /*
+   * y_En se calcule toujours sur l'année, avec la météo réelle heure par heure : c'est la formule
+   * générique (énergie consommée quand l'éclairement dépasse le seuil ÷ énergie de l'année).
+   * - Année composée : son calendrier répartit ses profils sur les 365 jours.
+   * - Mode simple : seule la source active alimente les calculs ; ses mêmes données se répètent
+   *   chaque jour. Le calendrier enregistré n'entre pas en compte : il pouvait désigner un autre
+   *   profil, la série échouait et y_En retombait sans bruit sur la journée moyenne.
+   */
+  const composed = input.load.activeMode === 'composed' && input.load.composed !== undefined && input.load.composed !== null ? input.load.composed : null;
+  const calendar = composed?.calendar ?? everyDayCalendar(input.load.activeProfileId);
+  if (resource?.hourlyIrradiance === undefined || resource.hourlyIrradiance.length !== hourlyPoaWm2.length || input.site.timezoneIana === null) return null;
   const profiles: AnnualHourlyProfile[] = [];
-  const sourceProfiles = input.load.activeMode === 'composed' && input.load.composed !== undefined && input.load.composed !== null
-    ? input.load.composed.profiles.map((profile) => ({ ...profile, source: 'hourly' as const, items: [], meter: null }))
-    : input.load.profiles;
+  const sourceProfiles = composed !== null
+    ? composed.profiles.map((profile) => ({ ...profile, source: 'hourly' as const, items: [], meter: null }))
+    : input.load.profiles.filter((profile) => profile.id === input.load.activeProfileId);
   for (const profile of sourceProfiles) {
     let hourlyEnergyWh: readonly number[];
     if (profile.source === 'equipment') {
@@ -363,9 +383,19 @@ function annualGammaForProject(input: ProjectInputsV1, references: Page1Referenc
 
 function deriveProjectPeakPower(input: ProjectInputsV1, hourlyMeanPowerW: readonly number[], startupEvents: readonly { readonly hourIndex: number; readonly runningPowerW: number; readonly startupPowerMultiplier: number | null }[]): number[] | null {
   if (input.load.activeMode === 'composed' && input.load.composed !== undefined && input.load.composed !== null) {
-    const profileId = input.load.composed.calendar.assignments[0]?.profileId;
-    const profile = input.load.composed.profiles.find((candidate) => candidate.id === profileId) ?? input.load.composed.profiles[0];
-    return profile?.hourlyPoints.map((point, hour) => point.peakPowerW ?? hourlyMeanPowerW[hour]!) ?? null;
+    // L'onduleur tient la plus forte pointe de l'année : heure par heure, le maximum de tous les
+    // profils que le calendrier emploie (et non ceux du seul premier profil, parfois le week-end).
+    const used = new Set(input.load.composed.calendar.assignments.map((assignment) => assignment.profileId));
+    const profiles = input.load.composed.profiles.filter((profile) => used.has(profile.id));
+    const candidates = profiles.length > 0 ? profiles : input.load.composed.profiles;
+    if (candidates.length === 0) return null;
+    return Array.from({ length: 24 }, (_, hour) => Math.max(
+      hourlyMeanPowerW[hour] ?? 0,
+      ...candidates.map((profile) => {
+        const point = profile.hourlyPoints.find((item) => item.hourIndex === hour);
+        return point === undefined ? 0 : point.peakPowerW ?? point.activePowerW;
+      }),
+    ));
   }
   const profile = input.load.profiles.find((candidate) => candidate.id === input.load.activeProfileId);
   if (profile === undefined) return null;
