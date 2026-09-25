@@ -10,6 +10,8 @@ import { EquipmentEditor } from './catalog/EquipmentEditor';
 import { useUi } from '../store/ui';
 import { useSettings } from '../store/settings';
 import type { EquipmentFamily } from '../app/models/applicationSettings';
+import { useEntitlement } from '../app/licensing/licenseStore';
+import { LockMark } from '../ui/LockMark';
 
 type Tab = 'modules' | 'batteries' | 'inverters';
 type PvModule = Extract<Equipment, { readonly kind: 'pv-module' }>;
@@ -30,6 +32,7 @@ export function CatalogRoute() {
   const [page, setPage] = useState(1);
   const [editor, setEditor] = useState<{ readonly kind: Equipment['kind']; readonly source?: EquipmentRecordV2 } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const canEditCatalog = useEntitlement('catalog.userEquipment');
   const pageSize = 60;
   const modules = useMemo(
     () => equipment.filter((item): item is PvModule => item.kind === 'pv-module'),
@@ -99,7 +102,7 @@ export function CatalogRoute() {
               </button>
             </div>
             <span className="sep" />
-            <button className="btn" onClick={() => setEditor({ kind: activeKind })}>+ {t('equipment.actions.add')}</button>
+            <button className="btn" disabled={!canEditCatalog} title={canEditCatalog ? undefined : t('license.locked.userEquipment')} onClick={() => setEditor({ kind: activeKind })}>+ {t('equipment.actions.add')}{!canEditCatalog && <LockMark />}</button>
             <input
               className="hdr-search"
               style={{ width: 260 }}
@@ -287,5 +290,8 @@ export function CatalogRoute() {
 function CatalogActions({ item, onDuplicate, onEdit, onArchive }: { readonly item: Equipment; readonly onDuplicate: () => void; readonly onEdit: () => void; readonly onArchive: () => void }) {
   const t = useT();
   const userOwned = item.origin === 'user';
+  // Sans la fonction « matériel utilisateur », le catalogue se consulte et se met en favori, sans plus.
+  const allowed = useEntitlement('catalog.userEquipment');
+  if (!allowed) return null;
   return <div className="catalog-actions"><button type="button" className="btn btn-ghost" onClick={onDuplicate}>{t('equipment.actions.duplicate')}</button>{userOwned && <><button type="button" className="btn btn-ghost" onClick={onEdit}>{t('equipment.actions.edit')}</button><button type="button" className="btn btn-ghost" onClick={onArchive}>{t('equipment.actions.archive')}</button></>}</div>;
 }

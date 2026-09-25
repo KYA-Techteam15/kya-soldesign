@@ -7,6 +7,8 @@ import { useProjects } from '../../store/project';
 import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { useT } from '../../i18n';
+import { useEntitlement } from '../../app/licensing/licenseStore';
+import { LockMark } from '../../ui/LockMark';
 
 /** Ce qui empêche d'émettre : les blocages du rapport et de la facture proforma, sans doublon. */
 export function issueBlockers(project: ProjectViewModel, facts: CalculationFacts, companyName: string): readonly DocumentIssue[] {
@@ -30,6 +32,7 @@ export function IssuePanel({ project, facts, onShowVersion }: {
   const revise = useProjects((session) => session.revise);
   const companyName = useSettings((state) => state.company.name);
   const locked = project.issue.locked;
+  const canIssue = useEntitlement('lifecycle.issue');
   const next = nextVersionNumber(project);
   const blockers = locked ? [] : issueBlockers(project, facts, companyName);
   const latest = latestVersion(project);
@@ -51,13 +54,15 @@ export function IssuePanel({ project, facts, onShowVersion }: {
         <h2 className="h-sec">{locked && latest ? t('issue.issuedTitle').replace('{n}', String(latest.number)) : latest ? t('issue.revisionTitle').replace('{n}', String(next)) : t('issue.neverIssued')}</h2>
         <span className="sep" />
         {locked
-          ? <button className="btn" onClick={() => revise(project.id)}>{t('issue.revise').replace('{n}', String(next))}</button>
-          : <button className="btn btn-primary" disabled={blockers.length > 0} onClick={confirmIssue}>{t('issue.action').replace('{n}', String(next))}</button>}
+          ? <button className="btn" disabled={!canIssue} onClick={() => revise(project.id)}>{t('issue.revise').replace('{n}', String(next))}</button>
+          : <button className="btn btn-primary" disabled={blockers.length > 0 || !canIssue} onClick={confirmIssue}>{t('issue.action').replace('{n}', String(next))}{!canIssue && <LockMark />}</button>}
       </div>
       <p className="issue-lead">
         {locked && latest
           ? t('issue.lockedLead').replace('{date}', dateLong(latest.issuedAt, lang))
-          : blockers.length > 0
+          : !canIssue
+            ? t('license.locked.issue')
+            : blockers.length > 0
             ? <>{t('issue.blockedLead')} <span className="issue-blockers">{blockers.map((item) => t(item.messageKey)).join(' · ')}</span></>
             : t('issue.readyLead')}
       </p>

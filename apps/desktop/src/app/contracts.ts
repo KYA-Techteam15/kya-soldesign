@@ -2,7 +2,6 @@ import type { Equipment, EquipmentRecordV2, PvgisTmyJson, WeatherFileRecord } fr
 import type { CalculationEnvelope, Locality, NormalizedHourlyProfile, SystemKind, WeatherSource } from '@ksd/domain';
 import type { CompatibleInverterCandidate, PresizingEnvelopeV1, PresizingProgress, RetainedSystemSimulationV1, SizingEnvelopeV1, SizingProgress } from '@ksd/engine';
 import type { ProjectFileV1 } from '@ksd/project-format';
-import type { LicenseState } from './models/license.js';
 import type { ApplicationReleaseInfo } from './models/releaseInfo.js';
 
 export type UiLocale = 'fr' | 'en';
@@ -27,12 +26,6 @@ export interface ProjectFileTransferPort {
 export interface ExchangeRatePort {
   readonly status: 'unconfigured' | 'available';
   fetchRate(request: { readonly baseCurrencyCode: string; readonly quoteCurrencyCode: string }): Promise<unknown>;
-}
-
-export interface LicensePort {
-  readState(): Promise<LicenseState>;
-  activate?(): Promise<LicenseState>;
-  deactivate?(): Promise<LicenseState>;
 }
 
 export interface ReleaseInfoPort { read(): Promise<ApplicationReleaseInfo>; }

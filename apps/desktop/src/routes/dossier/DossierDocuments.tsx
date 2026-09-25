@@ -14,6 +14,7 @@ import { buildReportDocument } from '../../app/export/reportModel';
 import { downloadDocx } from '../../app/export/docxWriter';
 import { buildProjectDiagram, synopticOptions } from '../../app/diagram/projectDiagram';
 import { defaultReportOptions, type DocKind, type ReportOptions } from '../../app/export/documentComposition';
+import { useEntitlement, useLicense } from '../../app/licensing/licenseStore';
 
 const DOCS: { key: DocKind; labelKey: string; noteKey: string }[] = [
   { key: 'rapport', labelKey: 'documents.report', noteKey: 'documents.reportNote' },
@@ -29,7 +30,8 @@ const DOCS: { key: DocKind; labelKey: string; noteKey: string }[] = [
  * présentables : remettre leur clé dans cette liste suffira à les rouvrir.
  */
 const PUBLISHED: readonly DocKind[] = ['rapport', 'proforma'];
-const SHOWN = DOCS.filter((doc) => PUBLISHED.includes(doc.key));
+/** Pièces qui n'ont pas de sens sans les prix : fermées aux éditions sans `documents.pricing`. */
+const PRICED: readonly DocKind[] = ['proforma', 'offre'];
 /** Largeur de la page A4 à l'écran, en pixels CSS : la référence de la réduction d'aperçu. */
 const PAGE_WIDTH_PX = 820;
 
@@ -48,7 +50,12 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
   const { ask, notify } = useUi();
   const settings = useSettings();
   const lang = useUi((state) => state.lang);
-  const [kind, setKind] = useState<DocKind>('rapport');
+  const [requestedKind, setKind] = useState<DocKind>('rapport');
+  const pricing = useEntitlement('documents.pricing');
+  const wordAllowed = useEntitlement('documents.word');
+  const forcedWatermark = useLicense((state) => state.view?.payload?.watermark ?? null);
+  const shown = DOCS.filter((doc) => PUBLISHED.includes(doc.key) && (pricing || !PRICED.includes(doc.key)));
+  const kind: DocKind = shown.some((doc) => doc.key === requestedKind) ? requestedKind : 'rapport';
   const logoUrl = useReportAssetUrl(settings.reports.logoAssetId);
   const coverUrl = useReportAssetUrl(settings.reports.coverAssetId);
   const signatureUrl = useReportAssetUrl(settings.reports.signatureAssetId);
@@ -65,7 +72,14 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
    * de pièce, elle serait à refaire à chaque tirage.
    */
   const [composition, setComposition] = useState<Partial<Record<DocKind, ReportOptions>>>({});
-  const options = composition[kind] ?? defaultReportOptions(kind, lang);
+  const chosen = composition[kind] ?? defaultReportOptions(kind, lang);
+  /* Ce que la licence impose l'emporte sur la composition : prix retirés sans `documents.pricing`,
+     filigrane de l'édition (académique, étudiant) dans la langue du document. */
+  const options: ReportOptions = {
+    ...chosen,
+    withPrices: pricing && chosen.withPrices,
+    watermark: forcedWatermark === null ? chosen.watermark : translate(`license.watermark.${forcedWatermark}`, chosen.lang),
+  };
   const readinessFor = (target: DocKind, chosen: ReportOptions): DocumentReadiness =>
     assessDocumentReadiness({ project, kind: target, facts, withPrices: chosen.withPrices, companyName: settings.company.name });
   const readiness = readinessFor(kind, options);
@@ -139,13 +153,14 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
       <DocumentPanel
         project={project}
         kind={kind}
-        kinds={SHOWN}
+        kinds={shown}
         options={options}
         busy={busy}
+        locks={{ word: !wordAllowed, pricing: !pricing, watermark: forcedWatermark !== null }}
         onKind={setKind}
         onOptions={(next) => setComposition((current) => ({ ...current, [kind]: next }))}
         onPrint={() => guarded(() => window.setTimeout(() => window.print(), 120))}
-        onWord={() => guarded(() => { void word(); })}
+        onWord={() => { if (wordAllowed) guarded(() => { void word(); }); }}
       />
     </div>
   );

@@ -3454,3 +3454,18 @@ select option { background: var(--surface); color: var(--text); }
 /* Schéma unifilaire : réglages de représentation (spec 012, FR-B7). */
 .synoptic-option { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--text-muted); }
 .synoptic-option select { min-height: 28px; }
+
+/* --- Licence (spec 012, lot D) --- */
+.license-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 8px; border-radius: 999px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--text-muted); background: var(--surface-2); }
+.license-badge:hover { color: var(--text); border-color: var(--border-strong, var(--border)); }
+.license-badge.tone-ok { color: var(--ok-strong); background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 35%, var(--border)); }
+.license-badge.tone-soon { color: var(--accent); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.license-badge.tone-urgent, .license-badge.tone-off { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
+.lock-mark { margin-left: 6px; vertical-align: -1px; opacity: 0.75; }
+.license-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; font-size: 12.5px; }
+.license-features li.is-open span { color: var(--ok-strong); font-weight: 700; }
+.license-features li.is-closed { color: var(--text-muted); }
+.license-key { width: 220px; font-family: var(--font-mono, ui-monospace, monospace); text-transform: uppercase; }
+.license-demo summary { cursor: pointer; font-weight: 600; }
+.license-demo-keys { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.license-demo-keys .btn { gap: 8px; }

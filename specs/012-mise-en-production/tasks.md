@@ -18,12 +18,12 @@
 - [x] T016 Intégration écran et rapport, tests, captures
 
 ## Lot D — Licences
-- [ ] T020 Catalogue de fonctions, éditions, durées (FR-D1, FR-D3)
-- [ ] T021 API d'admin simulée, jetons signés (FR-D2)
-- [ ] T022 Service de licence : états, grâce, anti-recul, rafraîchissement (FR-D4, FR-D5)
-- [ ] T023 `useEntitlement`, `<Gate>`, contrôles de service
-- [ ] T024 Écrans : activation, badge, alertes, Réglages → Licence, lecture seule (FR-D4 → FR-D6)
-- [ ] T025 Tests (matrice édition × fonctions, expiration, horloge), E2E
+- [x] T020 Catalogue de fonctions, éditions, durées (FR-D1, FR-D3)
+- [x] T021 API d'admin simulée, jetons signés (FR-D2)
+- [x] T022 Service de licence : états, grâce, anti-recul, rafraîchissement (FR-D4, FR-D5)
+- [x] T023 `useEntitlement`, verrous d'interface (`LockMark`), contrôles de service (mise à jour, émission, création de projet)
+- [x] T024 Écrans : activation, badge, alertes, Réglages → Licence, lecture seule (FR-D4 → FR-D6)
+- [x] T025 Tests (matrice édition × fonctions, expiration, horloge), E2E
 
 ## Lot C — Rapport
 - [ ] T030 Pagination A4 de l'aperçu (FR-C1)
@@ -41,3 +41,4 @@
 
 ## Fermeture
 - [ ] T060 CHANGELOG, README, ROADMAP `PROD-001`, version 1.2.0, `pnpm verify`, installateur
+- [ ] T061 **Bloquant avant vente réelle** : brancher `HttpAdminApi` sur la plateforme, remplacer `LICENSE_PUBLIC_KEY` par la clé publique de la plateforme, retirer `SimulatedAdminApi`, `DEMO_SIGNING_KEY`, `DEMO_KEYS` et la licence de démonstration automatique (la clé privée de démonstration est publique : tant qu'elle signe, n'importe qui peut forger une licence)

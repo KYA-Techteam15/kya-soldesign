@@ -18,6 +18,7 @@ import { useCatalog } from '../../app/CatalogProvider';
 import { useCalculationState } from '../../app/CalculationProvider';
 import type { PresizingOutputV1 } from '@ksd/engine';
 import { useCalculationFacts } from '../../app/calculation/useCalculationFacts';
+import { useLicense, useLicenseReadOnly } from '../../app/licensing/licenseStore';
 import { createEmptyProjectFile, projectFileToView } from '../../app/models/projectAdapters';
 
 /** Projet neutre : les hooks de faits s'appellent avant de savoir si le projet existe. */
@@ -69,6 +70,19 @@ function LifecycleBanner({ project, onDossier }: { readonly project: ProjectView
   );
 }
 
+/** Licence échue, absente ou à revérifier : tout se consulte et s'imprime, rien ne se modifie (P-7). */
+function LicenseReadOnlyBanner() {
+  const t = useT();
+  const nav = useNavigate();
+  const status = useLicense((state) => state.view?.status ?? 'none');
+  return (
+    <div className="alert warn lifecycle-banner" role="note">
+      <div><b>{t('license.banner.readOnly')}</b> {t(`license.readOnly.${status}`)}</div>
+      <button className="btn" onClick={() => nav('/reglages#licence')}>{t('license.open')}</button>
+    </div>
+  );
+}
+
 export function WorkshopLayout() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -84,6 +98,7 @@ export function WorkshopLayout() {
   const { facts } = useCalculationFacts(project ?? PLACEHOLDER_PROJECT);
   const presizing = useCalculationState<PresizingOutputV1>(project?.id ?? '', 'presizing', project?.updatedAt ?? '');
   const onDossier = useLocation().pathname.endsWith('/dossier');
+  const licenseReadOnly = useLicenseReadOnly();
 
   useEffect(() => {
     if (id) open(id);
@@ -115,7 +130,7 @@ export function WorkshopLayout() {
   }
 
   const states = sectionStates(project, lang, facts);
-  const hasNotices = Boolean(validationError) || project.issue.versions.length > 0;
+  const hasNotices = Boolean(validationError) || project.issue.versions.length > 0 || licenseReadOnly;
   return (
     <div className={`app ${verdictCollapsed ? 'verdict-off' : ''}`}>
       {/* Plus de bouton « Dossier client » : le dossier est la huitième étape
@@ -182,12 +197,13 @@ export function WorkshopLayout() {
           {hasNotices && (
             <div className="pane-notices">
               {validationError && <div className="alert warn" role="alert"><div><b>{t('workshop.notSaved')}</b> {t('workshop.notSavedHelp')} <code>{validationError}</code></div></div>}
+              {licenseReadOnly && <LicenseReadOnlyBanner />}
               <LifecycleBanner project={project} onDossier={onDossier} />
             </div>
           )}
           {/* Dossier émis : chaque étape se lit, rien ne se modifie. L'étape 8 reste active pour
               consulter et réimprimer les documents. */}
-          {project.issue.locked && !onDossier
+          {(project.issue.locked || licenseReadOnly) && !onDossier
             ? <fieldset className="ro-lock" disabled><Outlet context={project} /></fieldset>
             : <Outlet context={project} />}
           <MoreBelow containerRef={centerRef} />

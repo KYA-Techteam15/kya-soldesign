@@ -13,6 +13,8 @@ import { OptimizationDialog } from './OptimizationDialog';
 import { candidateSelection } from '../../app/services/sizingOptimization';
 import { resolveDesignColdTemperatureC } from '../../app/adapters/projectToAio';
 import { useT } from '../../i18n';
+import { useEntitlement } from '../../app/licensing/licenseStore';
+import { LockMark } from '../../ui/LockMark';
 import { calculationErrorKey } from '../../app/models/calculationErrors';
 
 type Inverter = Extract<Equipment, { kind: 'inverter' }>;
@@ -68,6 +70,7 @@ export function SectionMateriel() {
   const update = useProjects((state) => state.update);
   const { equipment } = useCatalog();
   const [showOptimization, setShowOptimization] = useState(false);
+  const canOptimize = useEntitlement('sizing.optimize');
   const service = useCalculationService();
   const presizing = useCalculationState<PresizingOutputV1>(project.id, 'presizing', project.updatedAt);
   const sizing = useCalculationState<SizingOutputV1>(project.id, 'sizing', project.updatedAt);
@@ -137,7 +140,7 @@ export function SectionMateriel() {
     {!pre && <div className="alert warn"><div><b>{t('equipment.minimumsUnavailable')}</b> {t('equipment.minimumsUnavailableHelp')}</div></div>}
     {pre && coldTemperatureC === null && <div className="alert warn"><div><b>{t('equipment.coldMissing')}</b> {t('site.temperatureRequiredHelp')}</div></div>}
     <section>
-      <div className="tbl-title"><h2 className="h-sec">{t('equipment.catalogComponents')}</h2><span className="sep" />{pre && coldTemperatureC !== null && <button className="btn" onClick={() => setShowOptimization(true)}>{t('optimization.entryButton')}</button>}</div>
+      <div className="tbl-title"><h2 className="h-sec">{t('equipment.catalogComponents')}</h2><span className="sep" />{pre && coldTemperatureC !== null && <button className="btn" disabled={!canOptimize} title={canOptimize ? undefined : t('license.locked.optimize')} onClick={() => setShowOptimization(true)}>{t('optimization.entryButton')}{!canOptimize && <LockMark />}</button>}</div>
       <div className="picklist"><PickRow index={1} role={t('equipment.module')} equipment={selected.module} onPick={() => setPicker('module')} /><PickRow index={2} role={t('equipment.battery')} equipment={selected.battery} onPick={() => setPicker('battery')} /></div>
     </section>
     <section>

@@ -13,6 +13,7 @@ import { applyProjectDefaults } from './services/createProject.js';
 import { issueProject, reviseProject } from './models/projectLifecycle.js';
 import { readNavigationSession, writeNavigationSession } from './navigationSession.js';
 import { useSettings } from '../store/settings.js';
+import { licenseAllows, licenseReadOnly } from './licensing/licenseStore.js';
 
 type ProjectMutation = (draft: ProjectViewModel) => void;
 
@@ -180,8 +181,8 @@ export function ProjectSessionProvider({
   const update = useCallback((mutate: ProjectMutation) => {
     if (currentId === null) return;
     const present = projectsRef.current.find((project) => project.id === currentId);
-    // Un dossier émis ne change plus : on crée une révision pour le modifier.
-    if (!present || present.issue.locked) return;
+    // Un dossier émis ne change plus : on crée une révision pour le modifier. Licence en lecture seule : rien ne change.
+    if (!present || present.issue.locked || licenseReadOnly()) return;
     const draft = cloneProject(present);
     mutate(draft);
     draft.updatedAt = new Date().toISOString();
@@ -228,8 +229,8 @@ export function ProjectSessionProvider({
     create,
     remove,
     update,
-    issue: (id) => transition(id, (file) => issueProject(file)),
-    revise: (id) => transition(id, (file) => reviseProject(file)),
+    issue: (id) => { if (licenseAllows('lifecycle.issue')) transition(id, (file) => issueProject(file)); },
+    revise: (id) => { if (licenseAllows('lifecycle.issue')) transition(id, (file) => reviseProject(file)); },
     replaceCanonical: (project) => {
       service.replace(project);
       setCanonicalProjects(service.list());

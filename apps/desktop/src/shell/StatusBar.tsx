@@ -4,6 +4,7 @@ import { useUi } from '../store/ui';
 import { useProjectSession } from '../app/ProjectSessionProvider';
 import { applicationReleaseInfo } from '../app/models/releaseInfo';
 import { currencyLabel } from '../domain/format';
+import { LicenseBadge } from './LicenseBadge';
 
 function useOnline(): boolean {
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
@@ -40,6 +41,7 @@ export function StatusBar({ currency }: { currency?: string }) {
       <span>·</span>
       <span className={online ? '' : 'offline'} title={online ? undefined : t('status.offlineHelp')}>{online ? t('status.online') : t('status.offline')}</span>
       <span className="sep" />
+      <LicenseBadge />
       {currency && <><span>{currencyLabel(currency, lang)} ({currency})</span><span>·</span></>}
       <span>{lang === 'fr' ? 'Français' : 'English'}</span>
       <span>·</span>

@@ -6,6 +6,7 @@ import { useProjects } from '../../store/project';
 import { useSettings } from '../../store/settings';
 import { useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
 import { imageFileToEmbedded } from '../../app/models/documentVisuals';
+import { LockMark } from '../../ui/LockMark';
 import {
   defaultReportOptions,
   offeredSections,
@@ -17,6 +18,14 @@ import {
 
 const GROUPS: readonly SectionGroup[] = ['base', 'technical', 'commercial', 'annex'];
 
+export interface DocumentLocks {
+  readonly word: boolean;
+  readonly pricing: boolean;
+  /** Filigrane imposé par l'édition : affiché, non modifiable. */
+  readonly watermark: boolean;
+}
+const NO_LOCKS: DocumentLocks = { word: false, pricing: false, watermark: false };
+
 /**
  * Composition d'un document, à côté de son aperçu (spec 012, FR-A4).
  *
@@ -24,12 +33,14 @@ const GROUPS: readonly SectionGroup[] = ['base', 'technical', 'commercial', 'ann
  * visuels viennent des réglages de la société, sauf si ce dossier a les siens (co-marquage,
  * photo du site) ; ceux-là voyagent avec le projet.
  */
-export function DocumentPanel({ project, kind, kinds, options, busy, onKind, onOptions, onPrint, onWord }: {
+export function DocumentPanel({ project, kind, kinds, options, busy, locks = NO_LOCKS, onKind, onOptions, onPrint, onWord }: {
   readonly project: ProjectViewModel;
   readonly kind: DocKind;
   readonly kinds: readonly { readonly key: DocKind; readonly labelKey: string; readonly noteKey: string }[];
   readonly options: ReportOptions;
   readonly busy: boolean;
+  /** Ce que l'édition active ferme ou impose. */
+  readonly locks?: DocumentLocks;
   readonly onKind: (kind: DocKind) => void;
   readonly onOptions: (options: ReportOptions) => void;
   readonly onPrint: () => void;
@@ -57,8 +68,8 @@ export function DocumentPanel({ project, kind, kinds, options, busy, onKind, onO
       {current && <p className="label">{t(current.noteKey)}</p>}
       <div className="docs-actions">
         <button className="btn btn-primary" onClick={onPrint}>{t('documents.printPdf')}</button>
-        <button className="btn" disabled={busy} onClick={onWord} aria-label={`${t('documents.exportWord')} ${current ? t(current.labelKey) : ''}`}>
-          {busy ? t('documents.exporting') : t('documents.word')}
+        <button className="btn" disabled={busy || locks.word} title={locks.word ? t('license.locked.word') : undefined} onClick={onWord} aria-label={`${t('documents.exportWord')} ${current ? t(current.labelKey) : ''}`}>
+          {busy ? t('documents.exporting') : t('documents.word')}{locks.word && <LockMark />}
         </button>
       </div>
       {confidential && <p className="generate-warning" role="status">{t('generate.confidentialWarning')}</p>}
@@ -86,8 +97,8 @@ export function DocumentPanel({ project, kind, kinds, options, busy, onKind, onO
       <details className="docs-block">
         <summary>{t('generate.options')}</summary>
         <label className="generate-switch">
-          <input type="checkbox" checked={options.withPrices} onChange={(event) => onOptions({ ...options, withPrices: event.target.checked })} />
-          <span>{t('generate.withPrices')}<small className="label">{t('generate.withPricesHelp')}</small></span>
+          <input type="checkbox" checked={options.withPrices} disabled={locks.pricing} onChange={(event) => onOptions({ ...options, withPrices: event.target.checked })} />
+          <span>{t('generate.withPrices')}<small className="label">{locks.pricing ? t('license.locked.pricing') : t('generate.withPricesHelp')}</small></span>
         </label>
         <label className="docs-field"><span>{t('generate.language')}</span>
           <select value={options.lang} onChange={(event) => onOptions({ ...options, lang: event.target.value as 'fr' | 'en' })}>
@@ -96,7 +107,8 @@ export function DocumentPanel({ project, kind, kinds, options, busy, onKind, onO
           </select>
         </label>
         <label className="docs-field"><span>{t('generate.watermark')}</span>
-          <input value={options.watermark} placeholder={t('generate.watermarkPlaceholder')} maxLength={24} onChange={(event) => onOptions({ ...options, watermark: event.target.value })} />
+          <input value={options.watermark} placeholder={t('generate.watermarkPlaceholder')} maxLength={24} readOnly={locks.watermark} aria-describedby={locks.watermark ? 'watermark-forced' : undefined} onChange={(event) => onOptions({ ...options, watermark: event.target.value })} />
+          {locks.watermark && <small id="watermark-forced" className="label">{t('license.watermarkForced')}</small>}
         </label>
         <label className="docs-field"><span>{t('generate.fileName')}</span>
           <input value={options.fileName} placeholder={t('generate.fileNameHelp')} onChange={(event) => onOptions({ ...options, fileName: event.target.value })} />

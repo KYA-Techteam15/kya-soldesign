@@ -6,6 +6,7 @@ import { fileTransfer } from '../app/platform/fileTransfer';
 import { applicationReleaseInfo } from '../app/models/releaseInfo';
 import { ProjectTransferService } from '../app/services/projectTransfer';
 import type { ImportInspection } from '../app/models/projectTransfer';
+import { useProjectCreationGuard } from '../shell/licenseGuard';
 
 /** Import d'un fichier .ksd, avec le choix remplacer / copier quand le projet existe déjà. */
 export function useProjectTransfer() {
@@ -18,6 +19,7 @@ export function ImportProjectButton({ label, className = 'btn' }: { readonly lab
   const { notify } = useUi();
   const transfer = useProjectTransfer();
   const [pending, setPending] = useState<ImportInspection | null>(null);
+  const guard = useProjectCreationGuard({ readOnlyAllowed: true });
 
   const importProject = async () => {
     try {
@@ -32,7 +34,7 @@ export function ImportProjectButton({ label, className = 'btn' }: { readonly lab
   };
 
   return <>
-    <button className={className} onClick={() => { void importProject(); }}>{label ?? t('projects.import')}</button>
+    <button className={className} onClick={() => guard(() => { void importProject(); })}>{label ?? t('projects.import')}</button>
     {pending?.status === 'valid-conflict' && <div className="confirm-inline" role="dialog" aria-labelledby="project-conflict-title"><b id="project-conflict-title">{t('projects.conflictTitle')}</b><p>{t('projects.conflictMessage')}</p><div className="rowline"><button className="btn btn-primary" onClick={() => { transfer.commitImport(pending, 'replace'); setPending(null); notify({ kind: 'success', title: t('projects.imported') }); }}>{t('projects.replace')}</button><button className="btn" onClick={() => { transfer.commitImport(pending, 'copy'); setPending(null); notify({ kind: 'success', title: t('projects.copied') }); }}>{t('projects.copy')}</button><button className="btn" onClick={() => setPending(null)}>{t('g.cancel')}</button></div></div>}
   </>;
 }

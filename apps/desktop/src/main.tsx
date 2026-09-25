@@ -11,6 +11,9 @@ import { installPlatform } from './app/platform/install';
 import { ErrorBoundary } from './shell/ErrorBoundary';
 import { translate } from './i18n';
 import { useUi } from './store/ui';
+import { browserStore, useLicense } from './app/licensing/licenseStore';
+import { evaluateLicense, LicenseService } from './app/licensing/licenseService';
+import { LICENSE_PUBLIC_KEY, SimulatedAdminApi } from './app/licensing/adminApi';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/vivid.css';
@@ -26,6 +29,7 @@ installGlobalErrorHandlers((message) => useUi.getState().notify({ kind: 'error',
    écran ne lit jamais une liste vide qui se remplirait ensuite. */
 async function start(): Promise<void> {
   await installPlatform();
+  await startLicensing();
   const service = await openProjectService();
   root.render(
     <StrictMode>
@@ -42,6 +46,31 @@ async function start(): Promise<void> {
       </ErrorBoundary>
     </StrictMode>,
   );
+}
+
+/**
+ * Licence évaluée avant le premier rendu. Tant que la plateforme d'administration n'expose pas son
+ * API, `SimulatedAdminApi` la joue et délivre au premier lancement une licence commerciale de
+ * démonstration. L'état se recalcule chaque heure (jours restants) et se rafraîchit en ligne une
+ * fois par jour.
+ */
+async function startLicensing(): Promise<void> {
+  const license = useLicense.getState();
+  try {
+    await license.start(new LicenseService(new SimulatedAdminApi(), LICENSE_PUBLIC_KEY, browserStore(), () => Date.now(), 'KYA-COM-12M-DEMO'));
+  } catch (error) {
+    // Licence illisible (stockage, cryptographie indisponible) : lecture seule, jamais tout ouvert.
+    logger.error('license.start.failed', error);
+    useLicense.setState({ view: { ...evaluateLicense(null, Date.now(), null, null), status: 'invalid' } });
+    return;
+  }
+  const refreshIfDue = () => {
+    const verified = useLicense.getState().view?.lastVerifiedAt;
+    if (navigator.onLine && (verified == null || Date.now() - Date.parse(verified) > 86_400_000)) void useLicense.getState().refresh();
+  };
+  refreshIfDue();
+  window.setInterval(() => { void useLicense.getState().reevaluate(); refreshIfDue(); }, 3_600_000);
+  window.addEventListener('online', refreshIfDue);
 }
 
 start().catch((error: unknown) => {

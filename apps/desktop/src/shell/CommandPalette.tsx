@@ -4,6 +4,7 @@ import { useProjects } from '../store/project';
 import { useUi, VIBES, type Vibe } from '../store/ui';
 import { SECTIONS } from '../routes/workshop/WorkshopLayout';
 import { useT } from '../i18n';
+import { useProjectCreationGuard } from './licenseGuard';
 
 const VIBE_NAME: Record<Vibe, string> = {
   sober: 'settings.vibe.sober',
@@ -35,6 +36,7 @@ export function CommandPalette() {
 
   const ui = useUi();
   const { undo, redo, canUndo, canRedo, projects, create } = useProjects();
+  const guard = useProjectCreationGuard();
 
   const projectId = loc.pathname.match(/\/projet\/([^/]+)/)?.[1] ?? null;
 
@@ -61,10 +63,10 @@ export function CommandPalette() {
       { id: 'go-projects', label: t('palette.ouvrirLaListeDes'), run: () => nav('/accueil/projets') },
       { id: 'go-catalog', label: t('palette.ouvrirLeCatalogueMateriel'), run: () => nav('/catalogue') },
       { id: 'go-settings', label: t('palette.ouvrirLesReglages'), run: () => nav('/reglages') },
-      { id: 'new', label: t('palette.nouveauProjetAutonomeTout'), run: () => {
+      { id: 'new', label: t('palette.nouveauProjetAutonomeTout'), run: () => guard(() => {
           const id = create('standalone_all_in_one');
           void nav(`/projet/${id}/atelier/projet`);
-        } },
+        }) },
       { id: 'theme', label: ui.theme === 'dark' ? t('palette.passerEnModeClair') : t('palette.passerEnModeSombre'), run: ui.toggleTheme },
       ...VIBES.filter((v) => v !== ui.vibe).map((v) => ({
         id: `vibe-${v}`,
@@ -87,7 +89,7 @@ export function CommandPalette() {
       });
     }
     return list;
-  }, [projectId, nav, t, ui, canUndo, canRedo, undo, redo, projects, create]);
+  }, [projectId, nav, t, ui, canUndo, canRedo, undo, redo, projects, create, guard]);
 
   const needle = q.trim().toLowerCase();
   const shown = needle

@@ -14,6 +14,7 @@ import { useStaleProjects, type Staleness } from '../app/calculation/useStalePro
 import { CanonicalCatalog } from '../app/adapters/canonicalCatalog';
 import { createExampleProject } from '../app/services/exampleProject';
 import { ImportProjectButton } from './ImportProjectButton';
+import { useProjectCreationGuard } from '../shell/licenseGuard';
 import { SystemsShowcase } from './home/SystemsShowcase';
 
 const STEP_ORDER: readonly string[] = [...WORKSHOP_STEPS, 'dossier'];
@@ -52,8 +53,10 @@ export function Home() {
       return { project, progress, status: projectStatus(project, progress), stale: stale.get(project.id) ?? null };
     }), [lang, projects, stale]);
 
-  const newProject = () => { void nav(`/projet/${create('standalone_all_in_one')}/atelier/projet`); };
-  const openExample = async () => {
+  const guard = useProjectCreationGuard();
+  const newProject = () => guard(() => { void nav(`/projet/${create('standalone_all_in_one')}/atelier/projet`); });
+  const openExample = () => guard(() => { void prepareExample(); });
+  const prepareExample = async () => {
     setPreparingExample(true);
     try {
       const catalog = new CanonicalCatalog();
@@ -68,7 +71,7 @@ export function Home() {
     }
   };
   const exampleButton = (className: string, label: string) => (
-    <button className={className} disabled={preparingExample} onClick={() => { void openExample(); }}>{preparingExample ? t('home.examplePreparing') : label}</button>
+    <button className={className} disabled={preparingExample} onClick={openExample}>{preparingExample ? t('home.examplePreparing') : label}</button>
   );
 
   if (projects.length === 0) {
