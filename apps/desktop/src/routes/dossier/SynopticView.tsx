@@ -9,6 +9,13 @@ import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { useT } from '../../i18n';
 import { fmt } from '../../domain/format';
+import { rasterizeSvg } from '../../app/export/rasterize';
+import type { SheetFormat } from '@ksd/diagram';
+
+/** Largeur de chaque planche, en millimètres : la base du PNG à 300 dpi. */
+const SHEET_WIDTH_MM: Record<SheetFormat, number> = {
+  'a4-portrait': 210, 'a4-landscape': 297, 'a3-portrait': 297, 'a3-landscape': 420, 'a2-portrait': 420, 'a2-landscape': 594,
+};
 
 /**
  * Vue synoptique.
@@ -36,6 +43,8 @@ export function SynopticView({
   // Réglages de représentation (FR-B7) : format imposé ou automatique, cotes de câble.
   const [sheet, setSheet] = useState<'auto' | 'a4-landscape' | 'a3-landscape'>('auto');
   const [cableNotes, setCableNotes] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const notify = useUi((state) => state.notify);
 
   const built = useMemo(() => {
     if (!sizing) return null;
@@ -75,8 +84,22 @@ export function SynopticView({
   }
 
   const { plan, svg } = diagram;
+  const baseName = `${safeFileName(project.details.projectNumber || project.name, 'schema')}-unifilaire`;
   const download = () => {
-    void saveFile({ suggestedName: `${safeFileName(project.details.projectNumber || project.name, 'schema')}-unifilaire.svg`, data: svg, mimeType: 'image/svg+xml', filter: { name: 'SVG', extensions: ['svg'] } });
+    void saveFile({ suggestedName: `${baseName}.svg`, data: svg, mimeType: 'image/svg+xml', filter: { name: 'SVG', extensions: ['svg'] }, openAfterSave: true });
+  };
+  /* PNG à 300 dpi à la taille réelle de la planche : il s'imprime ou se colle dans un courriel tel
+     quel, là où le SVG demande un logiciel de dessin. */
+  const downloadPng = async () => {
+    setExporting(true);
+    try {
+      const raster = await rasterizeSvg(svg, plan.width, plan.height, SHEET_WIDTH_MM[plan.format]);
+      await saveFile({ suggestedName: `${baseName}.png`, data: new Blob([raster.png.slice().buffer as ArrayBuffer], { type: 'image/png' }), mimeType: 'image/png', filter: { name: 'PNG', extensions: ['png'] }, openAfterSave: true });
+    } catch (error) {
+      notify({ kind: 'error', title: t('synoptic.pngFailed'), detail: error instanceof Error ? error.message : '' });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -102,6 +125,9 @@ export function SynopticView({
           </select>
         </label>
         <label className="synoptic-option no-print"><input type="checkbox" checked={cableNotes} onChange={(event) => setCableNotes(event.target.checked)} /><span>{t('synoptic.cableNotes')}</span></label>
+        <button className="btn btn-primary no-print" disabled={exporting} onClick={() => { void downloadPng(); }}>
+          {exporting ? t('synoptic.pngExporting') : t('synoptic.downloadPng')}
+        </button>
         <button className="btn no-print" onClick={download}>
           {t('synoptic.downloadSvg')}
         </button>

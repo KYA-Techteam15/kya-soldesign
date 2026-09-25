@@ -61,7 +61,7 @@ export function ComposedProfilesDialog({ open, initial, inventory = [], onCancel
   const exportSelected = () => {
     if (selected === undefined) return;
     const bytes = exportHourlyProfileWorkbook(selected.hourly.map((point) => ({ hourIndex: point.hour, activePowerKw: point.realPower, peakPowerKw: point.peakPower })));
-    void saveFile({ suggestedName: `${safeFileName(selected.name, 'profil')}.xlsx`, data: new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filter: { name: 'Excel', extensions: ['xlsx'] } });
+    void saveFile({ suggestedName: `${safeFileName(selected.name, 'profil')}.xlsx`, data: new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filter: { name: 'Excel', extensions: ['xlsx'] }, openAfterSave: true });
   };
   const importSelected = async (file: File) => {
     const result = inspectHourlyProfileWorkbook(await file.arrayBuffer());

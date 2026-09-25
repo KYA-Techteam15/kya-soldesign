@@ -51,6 +51,30 @@ fn read_project_file(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|error| error.to_string())
 }
 
+/// Extensions des documents que l'application exporte et peut ouvrir ensuite.
+const EXPORTED_EXTENSIONS: [&str; 5] = ["docx", "pdf", "png", "svg", "xlsx"];
+
+/// Ouvre, avec l'application par défaut, un document que l'utilisateur vient d'exporter.
+///
+/// La permission générique d'ouverture resterait trop large (tout le disque) : cette commande
+/// n'accepte que les extensions de documents exportés et un fichier existant.
+#[tauri::command]
+fn open_exported_file(app: AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let target = PathBuf::from(&path);
+    let allowed = target
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| EXPORTED_EXTENSIONS.iter().any(|known| ext.eq_ignore_ascii_case(known)));
+    if !allowed {
+        return Err("EXPORTED_FILE_EXTENSION".into());
+    }
+    if !target.is_file() {
+        return Err("EXPORTED_FILE_MISSING".into());
+    }
+    app.opener().open_path(path, None::<&str>).map_err(|error| error.to_string())
+}
+
 /// Copie la base de projets avant toute ouverture et garde les `BACKUPS_KEPT`
 /// dernières copies. Un échec est journalisé sans empêcher le démarrage.
 fn backup_database(app: &AppHandle) {
@@ -119,6 +143,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             startup_project_file,
             read_project_file,
+            open_exported_file,
             updates::update_channels,
             updates::check_update,
             updates::install_update
@@ -127,7 +152,7 @@ pub fn run() {
     // Sans le module de mise à jour, les commandes n'existent pas : l'interface affiche
     // « mises à jour non configurées », jamais une fausse absence de mise à jour.
     #[cfg(not(feature = "updater"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![startup_project_file, read_project_file]);
+    let builder = builder.invoke_handler(tauri::generate_handler![startup_project_file, read_project_file, open_exported_file]);
 
     builder
         .setup(|app| {

@@ -9,6 +9,11 @@ export interface SaveFileRequest {
   readonly mimeType: string;
   /** Filtre de la boîte de dialogue : libellé et extensions sans point. */
   readonly filter?: { readonly name: string; readonly extensions: readonly string[] };
+  /**
+   * Document destiné à être lu (Word, schéma, profil Excel) : il s'ouvre dans l'application par
+   * défaut dès qu'il est enregistré. Les sauvegardes et exports de données restent fermés.
+   */
+  readonly openAfterSave?: boolean;
 }
 
 export type SaveOutcome = { readonly status: 'saved'; readonly path: string | null } | { readonly status: 'cancelled' };
@@ -73,5 +78,22 @@ export async function saveFile(request: SaveFileRequest): Promise<SaveOutcome> {
   await writeFile(path, bytes);
   rememberDirectory(path);
   logger.info('file.saved', path);
+  if (request.openAfterSave) await openExportedFile(path);
   return { status: 'saved', path };
+}
+
+/**
+ * Ouvre un document exporté avec l'application par défaut (Word, visionneuse d'images…). Un échec
+ * ne remet pas l'export en cause : le fichier est enregistré, seule l'ouverture n'a pas eu lieu.
+ */
+export async function openExportedFile(path: string): Promise<boolean> {
+  if (!isTauri()) return false;
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('open_exported_file', { path });
+    return true;
+  } catch (error) {
+    logger.warn('file.open', error);
+    return false;
+  }
 }

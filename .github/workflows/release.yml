@@ -26,7 +26,6 @@ jobs:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       VITE_OPEN_METEO_API_KEY: ${{ secrets.OPEN_METEO_API_KEY }}
-      VITE_SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
       VITE_RELEASE_CHANNEL: stable
       HAS_WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
     steps:
@@ -69,6 +68,16 @@ jobs:
           $args = node tools/release/prepare-config.mjs
           "args=$args" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
+      # Notes de la version : la section de CHANGELOG.md, affichée dans la boîte « Nouvelle version ».
+      - name: Notes de version
+        id: notes
+        shell: pwsh
+        run: |
+          $body = node tools/release/changelog-section.mjs "${{ github.ref_name }}"
+          "body<<KSD_NOTES`n$($body -join "`n")`nKSD_NOTES" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      # Canal : une étiquette avec suffixe (v1.3.0-beta.1) est une bêta, publiée aussitôt en
+      # préversion ; une version stable part en brouillon, relue avant d'être rendue visible.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,7 +87,7 @@ jobs:
           args: ${{ steps.config.outputs.args }}
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: KYA-SolDesign ${{ github.ref_name }}
-          releaseBody: Voir CHANGELOG.md pour le détail de cette version.
-          releaseDraft: true
-          prerelease: false
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: ${{ !contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           includeUpdaterJson: ${{ vars.TAURI_UPDATER_ENDPOINT != '' }}

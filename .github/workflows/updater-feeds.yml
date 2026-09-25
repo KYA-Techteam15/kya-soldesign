@@ -1,0 +1,41 @@
+name: updater-feeds
+
+# Flux de mise à jour du canal bêta (spec 012, FR-E1).
+#
+# Le canal stable lit `releases/latest/download/latest.json` : GitHub y sert la dernière version
+# publiée hors préversions, rien à faire. Le canal bêta lit un `latest.json` à adresse fixe, dans la
+# publication `updater-beta` : à chaque publication (bêta ou stable), on y recopie son `latest.json`.
+# Un poste en bêta reçoit donc les bêtas et les versions stables ; un poste en stable, les stables.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  beta-feed:
+    if: github.event.release.tag_name != 'updater-beta'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Récupérer latest.json de la publication
+        run: |
+          if ! gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p latest.json -D feed; then
+            echo "Pas de latest.json sur $TAG (mises à jour non configurées pour cette version) : rien à publier."
+            exit 0
+          fi
+          echo "FEED_READY=1" >> "$GITHUB_ENV"
+
+      - name: Publier le flux bêta
+        if: env.FEED_READY == '1'
+        run: |
+          if ! gh release view updater-beta -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create updater-beta -R "$GITHUB_REPOSITORY" --prerelease --target "${{ github.event.repository.default_branch }}" \
+              --title "Flux de mise à jour — canal bêta" \
+              --notes "Publication technique : son latest.json est lu par les postes réglés sur le canal bêta. Ne pas supprimer."
+          fi
+          gh release upload updater-beta feed/latest.json -R "$GITHUB_REPOSITORY" --clobber
+          echo "Canal bêta → $TAG"

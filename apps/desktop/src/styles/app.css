@@ -708,45 +708,6 @@ table.tbl td .cell-in:focus {
 }
 
 /* Grille horaire */
-.hourgrid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  overflow: hidden;
-}
-.hourgrid > div {
-  background: var(--surface);
-  padding: 4px 3px;
-  text-align: center;
-}
-.hourgrid > div > span {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-faint);
-}
-.hourgrid .cell-in {
-  width: 100%;
-  height: 20px;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  background: none;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-sm);
-}
-.hourgrid .cell-in:hover {
-  border-color: var(--border);
-  background: var(--bg);
-}
-.hourgrid .cell-in:focus {
-  border-color: var(--accent);
-  outline: none;
-}
 
 /* Sélecteur des plages de fonctionnement, repris du dialogue historique :
    journée et nuit restent lisibles comme deux périodes, et chaque heure est
@@ -1099,22 +1060,6 @@ table.tbl td .cell-in:focus {
 }
 
 /* Largeurs fixes : une valeur rognée est un défaut bloquant (critère B5) */
-table.tbl.t-classic,
-table.tbl.t-induct {
-  table-layout: fixed;
-}
-.t-classic th:nth-child(2), .t-classic td:nth-child(2) { width: 46px; }
-.t-classic th:nth-child(3), .t-classic td:nth-child(3) { width: 68px; }
-.t-classic th:nth-child(6), .t-classic td:nth-child(6) { width: 70px; }
-.t-classic th:nth-child(7), .t-classic td:nth-child(7) { width: 70px; }
-.t-classic th:nth-child(8), .t-classic td:nth-child(8) { width: 82px; }
-.t-classic th:nth-child(9), .t-classic td:nth-child(9) { width: 26px; }
-.t-induct th:nth-child(2), .t-induct td:nth-child(2) { width: 42px; }
-.t-induct th:nth-child(3), .t-induct td:nth-child(3) { width: 64px; }
-.t-induct th:nth-child(7), .t-induct td:nth-child(7) { width: 64px; }
-.t-induct th:nth-child(8), .t-induct td:nth-child(8) { width: 64px; }
-.t-induct th:nth-child(9), .t-induct td:nth-child(9) { width: 96px; }
-.t-induct th:nth-child(10), .t-induct td:nth-child(10) { width: 26px; }
 
 /* En-tête de tableau : le séparateur doit pousser les actions à droite */
 .tbl-title {
@@ -1140,16 +1085,6 @@ table.tbl.t-induct {
 
 /* Les cellules éditables respirent moins que les cellules de lecture :
    c'est ce qui permet aux valeurs numériques de tenir sans être rognées (B5). */
-table.tbl.t-classic td,
-table.tbl.t-induct td {
-  padding-left: 4px;
-  padding-right: 4px;
-}
-.t-classic th:nth-child(4), .t-classic td:nth-child(4) { width: 66px; }
-.t-classic th:nth-child(5), .t-classic td:nth-child(5) { width: 64px; }
-.t-induct th:nth-child(4), .t-induct td:nth-child(4) { width: 64px; }
-.t-induct th:nth-child(5), .t-induct td:nth-child(5) { width: 64px; }
-.t-induct th:nth-child(6), .t-induct td:nth-child(6) { width: 58px; }
 
 /* Les libellés de champ portent l'unité, pas la valeur */
 .form-rows label > span:first-child {
@@ -1319,8 +1254,7 @@ table.tbl select.cell-in {
 }
 /* `.cell-in` n'avait width:100% que dans les tableaux : hors tableau l'input
    garde sa largeur intrinsèque et déborde de sa colonne. */
-.month-grid .cell-in,
-.hourgrid .cell-in {
+.month-grid .cell-in {
   width: 100%;
 }
 
@@ -1371,24 +1305,6 @@ table.tbl select.cell-in {
 
 /* Page 1 — même langage graphique que la journée solaire du design validé,
    avec les trois séries calculées sur un seul axe temporel. */
-.load-chart-wrap {
-  padding: var(--sp-3) var(--sp-4);
-}
-.load-chart {
-  display: block;
-  width: 100%;
-  min-height: 190px;
-}
-.load-chart polyline {
-  fill: none;
-  vector-effect: non-scaling-stroke;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.load-chart text {
-  fill: var(--text-faint);
-  font: 10px var(--font-mono);
-}
 .daily-note {
   display: flex;
   align-items: baseline;
@@ -2521,53 +2437,22 @@ table.tbl select.cell-in {
 .report-asset-preview { display: block; width: auto; max-width: 220px; max-height: 72px; margin: 0 0 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; object-fit: contain; }
 /* Annual profile composition: the calendar is an input map, while the hourly
    values remain owned by the selected profile editor below. */
-.calendar-editor { margin: var(--sp-5) 0; }
-.calendar-matrix { border: 1px solid var(--border); border-radius: var(--r-md); overflow: auto; background: var(--surface); }
-.calendar-matrix-head, .calendar-matrix-row { display: grid; grid-template-columns: minmax(190px, 1.3fr) repeat(2, minmax(150px, 1fr)); gap: var(--sp-2); align-items: center; min-width: 620px; padding: var(--sp-2) var(--sp-3); }
-.calendar-matrix-head { color: var(--text-muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; background: var(--surface-2); }
-.calendar-matrix-row { border-top: 1px solid var(--border); }
-.calendar-period { display: grid; gap: 6px; }
-.calendar-period > div { display: flex; align-items: center; gap: 6px; }
-.calendar-period input { min-width: 0; }
-.calendar-period > div input { width: 82px; }
-.calendar-matrix-row select { width: 100%; }
 .annual-load-view { margin: var(--sp-5) 0; }
 .metric-inline { font-size: .85rem; color: var(--text-muted); }
 .metric-inline b { color: var(--text); margin-left: 6px; }
 .annual-chart-controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 .annual-chart-controls label { display: grid; gap: 4px; color: var(--text-muted); font-size: var(--fs-xs); }
 .annual-chart-controls select, .annual-chart-controls input { min-width: 120px; height: 34px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--text); }
-.composed-summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); margin: var(--sp-4) 0; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
-.composed-summary > div { display: grid; gap: 2px; }
-.composed-summary > div span, .composed-summary p { color: var(--text-muted); font-size: var(--fs-sm); }
-.composed-summary p { flex: 1 1 280px; margin: 0; }
 .composed-dialog { display: grid; gap: var(--sp-4); }
-.composed-section { display: grid; gap: var(--sp-3); }
-.composed-section + .composed-section { padding-top: var(--sp-3); border-top: 1px solid var(--border); }
 .composed-calendar { display: grid; gap: var(--sp-3); }
 .composed-periods { display: grid; gap: 6px; }
 .composed-period { display: grid; grid-template-columns: minmax(130px, 1fr) 96px 20px 96px; gap: 6px; align-items: center; }
-.composed-matrix { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-md); }
-.composed-matrix-head, .composed-matrix-row { display: grid; grid-template-columns: minmax(130px, 1fr) repeat(2, minmax(145px, 1fr)); gap: var(--sp-2); align-items: center; min-width: 480px; padding: 8px 10px; }
-.composed-matrix-head { color: var(--text-muted); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .05em; background: var(--surface-2); }
-.composed-matrix-row { border-top: 1px solid var(--border); }
-.composed-matrix-row select { width: 100%; }
-.composed-profile-layout { display: grid; grid-template-columns: minmax(145px, .32fr) minmax(0, 1fr); gap: var(--sp-3); }
-.composed-profile-list { display: grid; align-content: start; gap: 4px; }
-.composed-profile-list button { padding: 9px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
-.composed-profile-list button.selected { border-color: var(--accent); background: var(--accent-soft); }
 .composed-profile-editor { min-width: 0; }
 .composed-profile-meta { grid-template-columns: minmax(0, 1fr) 110px; }
 .composed-profile-meta input[type=color] { min-height: 36px; padding: 3px; }
-.composed-hourgrid { grid-template-columns: repeat(4, minmax(76px, 1fr)); gap: 6px; }
-.composed-hourgrid label { display: grid; gap: 3px; }
-.composed-hourgrid label span { color: var(--text-muted); font-size: var(--fs-xs); }
-.composed-hourgrid input { width: 100%; min-width: 0; }
 .composed-errors { padding: var(--sp-3); border: 1px solid var(--danger); border-radius: var(--r-md); background: var(--danger-soft); color: var(--text); }
 .composed-errors ul { margin: 6px 0 0; padding-left: 20px; }
 @media (max-width: 760px) {
-  .composed-profile-layout { grid-template-columns: 1fr; }
-  .composed-hourgrid { grid-template-columns: repeat(3, minmax(76px, 1fr)); }
   .composed-period { grid-template-columns: 1fr 82px 16px 82px; }
 }
 
@@ -2859,66 +2744,8 @@ table.tbl select.cell-in {
 /* --- Dialogue de génération ---
    Les sections d'un côté, les options de l'autre : on lit la composition
    comme un sommaire, et on règle le tirage à côté sans perdre la liste. */
-.generate-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: var(--sp-5);
-  align-items: start;
-}
-@media (max-width: 720px) {
-  .generate-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.generate-sections {
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  margin: 0;
-  min-width: 0;
-}
-.generate-sections legend {
-  padding: 0 var(--sp-2);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-muted);
-}
-.generate-sections label {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: var(--sp-2);
-  align-items: center;
-  padding: 5px 0;
-  cursor: pointer;
-}
-.generate-sections label:has(input:disabled) {
-  cursor: default;
-  color: var(--text-faint);
-}
 /* Une section confidentielle se signale dans la liste, pas seulement dans un
    avertissement en bas : c'est en la cochant qu'on prend le risque. */
-.generate-sections label.is-confidential span {
-  color: var(--danger);
-  font-weight: 600;
-}
-.generate-options {
-  display: grid;
-  gap: var(--sp-3);
-  min-width: 0;
-}
-.generate-options label {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.generate-options label > span {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-.generate-options label small {
-  display: block;
-  font-weight: 400;
-}
 .generate-switch {
   grid-template-columns: auto 1fr;
   align-items: start;
@@ -2942,31 +2769,12 @@ table.tbl select.cell-in {
 /* --- Visuels dans le dialogue de génération ---
    L'utilisateur doit voir ce qui sera imprimé avant de l'imprimer : le cadre
    montre le fichier réel, pas son nom. */
-.generate-visuals {
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  margin: 0;
-  display: grid;
-  gap: var(--sp-3);
-}
-.generate-visuals legend {
-  padding: 0 var(--sp-2);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-muted);
-}
 .visual-slot {
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas: 'label actions' 'frame actions' 'error error';
   align-items: center;
   gap: 6px var(--sp-3);
-}
-.visual-slot-label {
-  grid-area: label;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
 }
 .visual-slot-frame {
   grid-area: frame;
@@ -2982,8 +2790,6 @@ table.tbl select.cell-in {
 }
 /* Le logo garde sa hauteur de bandeau ; la couverture, plus grande, se réduit
    à une vignette qui laisse juger du cadrage. */
-.visual-slot-logo .visual-slot-frame img { max-height: 34px; max-width: 100%; }
-.visual-slot-cover .visual-slot-frame img { max-height: 72px; max-width: 100%; }
 .visual-slot-actions {
   grid-area: actions;
   display: flex;

@@ -25,7 +25,8 @@
     "test:visual": "playwright test --grep @visual",
     "check:ui": "node tools/ui/check-production-boundaries.mjs && node tools/ui/check-i18n.mjs && node tools/ui/check-hardcoded-copy.mjs && node tools/ui/check-ui-copy.mjs",
     "verify:phase": "node tools/verify-phase.mjs",
-    "verify": "node tools/verify.mjs"
+    "verify": "node tools/verify.mjs",
+    "release:local": "node tools/release/build-local.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.0",

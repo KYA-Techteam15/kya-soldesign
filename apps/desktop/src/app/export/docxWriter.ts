@@ -638,8 +638,8 @@ export async function writeDocx(document: ReportDocument): Promise<Blob> {
   return Packer.toBlob(file);
 }
 
-/** Écrit le document, puis l'enregistre (boîte native sous Tauri). */
+/** Écrit le document, l'enregistre (boîte native sous Tauri) puis l'ouvre dans Word. */
 export async function downloadDocx(document: ReportDocument): Promise<SaveOutcome> {
   const blob = await writeDocx(document);
-  return saveFile({ suggestedName: document.fileName, data: blob, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', filter: { name: 'Word', extensions: ['docx'] } });
+  return saveFile({ suggestedName: document.fileName, data: blob, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', filter: { name: 'Word', extensions: ['docx'] }, openAfterSave: true });
 }
