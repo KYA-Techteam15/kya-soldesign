@@ -68,7 +68,7 @@ restent les mêmes.
   produit, comme la CI, l'installateur et sa signature (`.exe.sig`).
 
 L'installation se fait en mode `passive` : barre de progression, sans question, puis relance.
-Au démarrage, l'application vérifie au plus une fois par jour et annonce une version disponible
+À chaque démarrage (en ligne), l'application vérifie et annonce une version disponible
 dans une boîte avec ses notes (le corps de la publication).
 
 ## 4. Installateur

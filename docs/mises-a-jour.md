@@ -27,7 +27,8 @@ problème. Mis en place le 2026-09-25 (spec 012, FR-E1).
   compilée dans l'application. Un installateur modifié ou venu d'ailleurs est refusé.
 - L'installation est en mode `passive` : barre de progression, aucune question, puis relance. Les
   projets, réglages et licence sont conservés.
-- La vérification a lieu au démarrage, **au plus une fois par jour**, et seulement en ligne ; on peut
+- La vérification a lieu **à chaque démarrage** (depuis la 1.2.1 ; une fois par jour en 1.2.0), et
+  seulement en ligne ; on peut
   aussi la lancer depuis **Aide → Rechercher une mise à jour** ou **Réglages → À propos**.
 
 ## 2. Les deux canaux

@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 1.2.1 — 2026-09-25
+
+- **Mises à jour** : KYA-SolDesign cherche une nouvelle version à chaque démarrage, et non plus une
+  fois par jour. Une version publiée le jour même vous est proposée dès le prochain lancement.
+- Première mise à jour livrée automatiquement : si vous lisez ces lignes dans la fenêtre
+  « Nouvelle version », la chaîne de mise à jour fonctionne.
+
 ## 1.2.0 — 2026-09-25
 
 Mise en production (spécification `specs/012-mise-en-production`, `PROD-001`).

@@ -13,7 +13,7 @@ interface UpdateInfo { readonly version: string; readonly currentVersion: string
 
 const CHANNEL_KEY = 'ksd.update.channel';
 const LAST_CHECK_KEY = 'ksd.update.lastCheck';
-const DAY = 86_400_000;
+const MIN_GAP = 10 * 60_000;
 
 async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   const { invoke: call } = await import('@tauri-apps/api/core');
@@ -68,8 +68,12 @@ export async function checkForUpdate(channel: UpdateChannel = readUpdateChannel(
   }
 }
 
-/** Vérification automatique : au plus une fois par jour, et seulement en ligne. */
+/**
+ * Vérification automatique : à chaque démarrage, en ligne. Une fois par jour laissait passer une
+ * version publiée juste après l'installation jusqu'au lendemain. L'écart minimal évite seulement
+ * d'interroger le serveur en boucle si l'interface redémarre.
+ */
 export function automaticCheckDue(now = Date.now()): boolean {
   if (!isTauri() || (typeof navigator !== 'undefined' && !navigator.onLine)) return false;
-  try { return now - Number(localStorage.getItem(LAST_CHECK_KEY) ?? 0) > DAY; } catch { return true; }
+  try { return now - Number(localStorage.getItem(LAST_CHECK_KEY) ?? 0) > MIN_GAP; } catch { return true; }
 }

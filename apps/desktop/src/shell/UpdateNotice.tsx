@@ -5,7 +5,7 @@ import { Dialog } from '../ui/Dialog';
 import { fill, useT } from '../i18n';
 
 /**
- * Recherche de mise à jour partagée : au démarrage (une fois par jour), depuis le menu ou depuis
+ * Recherche de mise à jour partagée : à chaque démarrage, depuis le menu ou depuis
  * Réglages. Une version disponible s'annonce dans une boîte avec ses notes (spec 012, FR-E1).
  */
 interface UpdateStore {

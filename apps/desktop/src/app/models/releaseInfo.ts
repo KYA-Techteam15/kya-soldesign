@@ -14,6 +14,14 @@ export const applicationReleaseInfo: ApplicationReleaseInfo = {
   builtAtIso: env.VITE_BUILD_TIME ?? null,
   changelogEntries: [
     {
+      version: '1.2.1',
+      dateIso: '2026-09-25',
+      message: {
+        fr: 'Les mises à jour sont recherchées à chaque démarrage : une version publiée le jour même est proposée dès le prochain lancement.',
+        en: 'Updates are checked at every launch: a version published the same day is offered at the next start.',
+      },
+    },
+    {
       version: '1.2.0',
       dateIso: '2026-09-25',
       message: {
