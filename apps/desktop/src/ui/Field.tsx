@@ -70,21 +70,33 @@ export function TextField({
   value,
   onChange,
   placeholder,
+  type = 'text',
+  wide = false,
+  invalid,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** `date` ouvre le calendrier du système, affiché au format local. */
+  type?: 'text' | 'date' | 'email' | 'tel';
+  /** Occupe toute la largeur du groupe : un nom long se lit en entier. */
+  wide?: boolean;
+  /** Message affiché sous le champ quand la saisie est incomplète. */
+  invalid?: string | null;
 }) {
   return (
-    <label>
+    <label className={wide ? 'field-wide' : undefined}>
       <span>{label}</span>
       <input
+        type={type}
         style={{ textAlign: 'left', fontFamily: 'var(--font-sans)' }}
         value={value}
         placeholder={placeholder}
+        aria-invalid={invalid ? true : undefined}
         onChange={(e) => onChange(e.target.value)}
       />
+      {invalid && <span className="ro-note field-hint is-invalid">{invalid}</span>}
     </label>
   );
 }

@@ -261,6 +261,7 @@ export function projectFileToView(project: ProjectFileV1): ProjectViewModel {
       projectNumber: input.details.projectNumber,
       projectLocation: input.details.projectLocationLabel,
       projectImage: input.details.projectImageRef ?? '',
+      documentLogo: input.details.documentLogoRef ?? '',
     },
     site: {
       country: '', countryCode: input.site.countryCode ?? '',
@@ -400,6 +401,7 @@ export function projectViewToFile(view: ProjectViewModel): ProjectFileV1 {
       projectNumber: view.details.projectNumber,
       projectLocationLabel: view.details.projectLocation,
       projectImageRef: view.details.projectImage || null,
+      documentLogoRef: view.details.documentLogo || null,
     },
     site: {
       countryCode: view.site.countryCode || null,

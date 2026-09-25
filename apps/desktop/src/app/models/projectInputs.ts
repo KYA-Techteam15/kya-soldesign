@@ -42,7 +42,10 @@ export const projectDetailsInputV1Schema = z.object({
   projectDate: calendarDate.nullable(),
   projectNumber: z.string(),
   projectLocationLabel: z.string(),
+  /** Couverture propre au dossier (image embarquée), sinon celle de la société. */
   projectImageRef: z.string().nullable(),
+  /** Logo propre au dossier (co-marquage), sinon celui de la société. */
+  documentLogoRef: z.string().nullable().optional(),
 }).strict();
 
 export const siteInputV1Schema = z.object({

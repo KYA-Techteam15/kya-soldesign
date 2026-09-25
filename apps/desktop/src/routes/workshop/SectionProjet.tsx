@@ -35,6 +35,7 @@ export function SectionProjet() {
             label={t('project2.nomDuProjet')}
             value={project.name}
             placeholder={t('project2.exInstallationSolaireA')}
+            wide
             onChange={(v) => update((p) => { p.name = v; })}
           />
           <TextField
@@ -45,6 +46,7 @@ export function SectionProjet() {
           />
           <TextField
             label={t('project2.date')}
+            type="date"
             value={d.projectDate}
             onChange={(v) => update((p) => { p.details.projectDate = v; })}
           />
@@ -74,6 +76,7 @@ export function SectionProjet() {
             label={t('project2.nomDuClient')}
             value={d.clientName}
             placeholder={t('project2.nomCompletDuClient')}
+            wide
             onChange={(v) => update((p) => { p.details.clientName = v; })}
           />
           <TextField
@@ -83,12 +86,15 @@ export function SectionProjet() {
           />
           <TextField
             label={t('project2.telephone')}
+            type="tel"
             value={d.clientTel}
             placeholder="+228 90 12 34 56"
             onChange={(v) => update((p) => { p.details.clientTel = v; })}
           />
           <TextField
             label={t('project2.eMail')}
+            type="email"
+            invalid={d.clientEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u.test(d.clientEmail.trim()) ? t('project.emailInvalid') : null}
             value={d.clientEmail}
             onChange={(v) => update((p) => { p.details.clientEmail = v; })}
           />

@@ -3,7 +3,7 @@ import type { Equipment } from '@ksd/catalog';
 import type { FinanceOutputV1, PresizingOutputV1, SizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import type { ProjectViewModel } from '../../app/models/projectView';
 import { ReportA4 } from './ReportA4';
-import { GenerateDialog } from './GenerateDialog';
+import { DocumentPanel } from './DocumentPanel';
 import { assessDocumentReadiness, type DocumentReadiness } from '../../app/models/documentReadiness';
 import type { CalculationFacts } from '../../domain/completion';
 import { useUi } from '../../store/ui';
@@ -25,91 +25,83 @@ const DOCS: { key: DocKind; labelKey: string; noteKey: string }[] = [
 /**
  * Pièces proposées à l'écran.
  *
- * L'offre interne et le dossier d'exécution restent construits et testés —
- * leur composition, leurs sections et leurs garde-fous sont en place — mais ils
- * ne sont pas encore présentables. On retire les boutons plutôt que de livrer
- * une pièce qu'on ne veut pas voir sortir ; remettre la clé dans cette liste
- * suffira à les rouvrir.
+ * L'offre interne et le dossier d'exécution restent construits et testés, mais ne sont pas encore
+ * présentables : remettre leur clé dans cette liste suffira à les rouvrir.
  */
 const PUBLISHED: readonly DocKind[] = ['rapport', 'proforma'];
 const SHOWN = DOCS.filter((doc) => PUBLISHED.includes(doc.key));
-
-/** Ce que le dialogue de génération produira une fois validé. */
-type PendingAction = { readonly kind: DocKind; readonly action: 'word' | 'print' };
+/** Largeur de la page A4 à l'écran, en pixels CSS : la référence de la réduction d'aperçu. */
+const PAGE_WIDTH_PX = 820;
 
 export function DossierDocuments({ project, sizing, finance, solar, presizing, catalog, facts, version = null }: {
   project: ProjectViewModel;
-  /** Version émise affichée : numéro et date portés par les documents. */
-  version?: { readonly number: number; readonly issuedAtIso: string } | null;
   facts: CalculationFacts;
   sizing: SizingOutputV1 | null;
   finance: FinanceOutputV1 | null;
   solar: SolarResourceAnalysisOutputV1 | null;
   presizing: PresizingOutputV1 | null;
   catalog: readonly Equipment[];
+  /** Version émise affichée : numéro et date portés par les documents. */
+  version?: { readonly number: number; readonly issuedAtIso: string } | null;
 }) {
   const t = useT();
   const { ask, notify } = useUi();
   const settings = useSettings();
   const lang = useUi((state) => state.lang);
-  const [preview, setPreview] = useState<DocKind>('rapport');
-  const paperRef = useRef<HTMLDivElement>(null);
-  const first = useRef<DocKind | null>(null);
+  const [kind, setKind] = useState<DocKind>('rapport');
   const logoUrl = useReportAssetUrl(settings.reports.logoAssetId);
   const coverUrl = useReportAssetUrl(settings.reports.coverAssetId);
   const signatureUrl = useReportAssetUrl(settings.reports.signatureAssetId);
-  const [busy, setBusy] = useState<DocKind | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingAction | null>(null);
-  /* Le Word doit recevoir le même visuel que l'aperçu, repli compris. */
-  const effectiveLogoUrl = logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png';
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  /* Visuels effectifs : ceux du dossier s'il en a, sinon ceux de la société ; le Word reçoit les mêmes que l'aperçu. */
+  const effectiveLogoUrl = project.details.documentLogo || logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png';
+  const effectiveCoverUrl = project.details.projectImage || coverUrl;
 
   /**
-   * Composition retenue par pièce, pour la durée de la séance. Une composition
-   * réglée puis perdue au changement d'onglet obligerait à la refaire à chaque
-   * tirage ; elle ne va pas pour autant dans les réglages, qui décrivent
-   * l'entreprise et pas le document du jour.
+   * Composition retenue par pièce, pour la durée de la séance : réglée puis perdue au changement
+   * de pièce, elle serait à refaire à chaque tirage.
    */
   const [composition, setComposition] = useState<Partial<Record<DocKind, ReportOptions>>>({});
-  const optionsFor = (kind: DocKind): ReportOptions => composition[kind] ?? defaultReportOptions(kind, lang);
-  const readinessFor = (kind: DocKind, options: ReportOptions): DocumentReadiness =>
-    assessDocumentReadiness({ project, kind, facts, withPrices: options.withPrices, companyName: settings.company.name });
-  // Recalculé à chaque rendu : le bandeau suit les données, pas le dernier clic.
-  const readiness = readinessFor(preview, optionsFor(preview));
+  const options = composition[kind] ?? defaultReportOptions(kind, lang);
+  const readinessFor = (target: DocKind, chosen: ReportOptions): DocumentReadiness =>
+    assessDocumentReadiness({ project, kind: target, facts, withPrices: chosen.withPrices, companyName: settings.company.name });
+  const readiness = readinessFor(kind, options);
 
-  /**
-   * Garde commune au Word et à l'impression : un bloquant arrête l'action et
-   * s'affiche sur l'aperçu ; un avertissement demande confirmation.
-   */
-  const guarded = (kind: DocKind, options: ReportOptions, run: () => void) => {
-    setPreview(kind);
-    const next = readinessFor(kind, options);
-    if (next.blockers.length > 0) {
-      notify({ kind: 'error', title: t('documents.readiness.blocked'), detail: next.blockers.map((item) => t(item.messageKey)).join(' · ') });
+  // L'aperçu se réduit à la largeur de sa colonne ; l'impression, elle, reste à 100 %.
+  useEffect(() => {
+    const node = previewRef.current;
+    if (!node) return undefined;
+    const observer = new ResizeObserver(([entry]) => setZoom(Math.min(1, Math.max(0.45, (entry?.contentRect.width ?? PAGE_WIDTH_PX) / PAGE_WIDTH_PX))));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  /** Garde commune au Word et à l'impression : un bloquant arrête l'action, un avertissement demande confirmation. */
+  const guarded = (run: () => void) => {
+    if (readiness.blockers.length > 0) {
+      notify({ kind: 'error', title: t('documents.readiness.blocked'), detail: readiness.blockers.map((item) => t(item.messageKey)).join(' · ') });
       return;
     }
-    if (next.warnings.length > 0) {
-      ask({ title: t('documents.readiness.warningTitle'), message: next.warnings.map((warning) => t(warning.messageKey)).join(' · '), confirmLabel: t('documents.readiness.continue'), onConfirm: run });
+    if (readiness.warnings.length > 0) {
+      ask({ title: t('documents.readiness.warningTitle'), message: readiness.warnings.map((warning) => t(warning.messageKey)).join(' · '), confirmLabel: t('documents.readiness.continue'), onConfirm: run });
       return;
     }
     run();
   };
 
-  /**
-   * Export Word. Le document reprend l'aperçu section pour section ; seule la
-   * planche change de nature, Word ne posant pas de SVG.
-   */
-  const word = async (kind: DocKind, options: ReportOptions) => {
-    setBusy(kind);
+  /** Export Word : il reprend l'aperçu section pour section ; seule la planche change de nature. */
+  const word = async () => {
+    setBusy(true);
     setError(null);
     try {
-      const generated = sizing
-        ? buildProjectDiagram({ project, sizing, catalog, settings, lang: options.lang })
-        : null;
+      const generated = sizing ? buildProjectDiagram({ project, sizing, catalog, settings, lang: options.lang }) : null;
       await downloadDocx(buildReportDocument({
         project, kind, sizing, finance, solar, presizing, catalog, settings,
         t: (key: string) => translate(key, options.lang),
-        assets: { logoUrl: effectiveLogoUrl, coverUrl, signatureUrl },
+        assets: { logoUrl: effectiveLogoUrl, coverUrl: effectiveCoverUrl, signatureUrl },
         options,
         version,
         diagram: generated ? { svg: generated.svg, width: generated.plan.width, height: generated.plan.height, bom: generated.plan.bom } : null,
@@ -117,91 +109,44 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('documents.exportFailed'));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
-  // On ne défile vers l'aperçu qu'après un vrai changement de document. Le
-  // repère est le document lui-même : un drapeau booléen serait consommé deux
-  // fois par le double montage de StrictMode, et l'écran s'ouvrirait défilé
-  // sous la liste des pièces — c'est-à-dire sans son action principale.
-  useEffect(() => {
-    if (first.current !== preview) paperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    first.current = preview;
-  }, [preview]);
-
-  const selectPreview = (kind: DocKind) => setPreview(kind);
-  const print = (kind: DocKind, options: ReportOptions = optionsFor(kind)) => guarded(kind, options, () => window.setTimeout(() => window.print(), 120));
-  const exportWord = (kind: DocKind, options: ReportOptions = optionsFor(kind)) => guarded(kind, options, () => { void word(kind, options); });
-
-  const confirmPending = (options: ReportOptions) => {
-    if (pending === null) return;
-    setComposition((current) => ({ ...current, [pending.kind]: options }));
-    const action = pending.action;
-    const kind = pending.kind;
-    setPending(null);
-    if (action === 'word') exportWord(kind, options);
-    else print(kind, options);
-  };
-
-  return <>
-    <div className="proj-list">{SHOWN.map((doc) => <div className="proj-row" key={doc.key}>
-      <button style={{ textAlign: 'left' }} onClick={() => selectPreview(doc.key)}>
-        <b>{t(doc.labelKey)}</b><small>{t(doc.noteKey)}</small>
-      </button>
-      <span className="when">{t('documents.pageCount')}</span>
-      <button className="btn" aria-pressed={preview === doc.key} onClick={() => selectPreview(doc.key)}>{t('documents.preview')}</button>
-      <button className="btn" onClick={() => setPending({ kind: doc.key, action: 'word' })}>{t('documents.configure')}</button>
-      <button
-        className="btn"
-        disabled={busy !== null}
-        aria-label={`${t('documents.exportWord')} ${t(doc.labelKey)}`}
-        title={`${t('documents.exportWord')} ${t(doc.labelKey)}`}
-        onClick={() => exportWord(doc.key)}
-      >{busy === doc.key ? t('documents.exporting') : t('documents.word')}</button>
-      <button
-        className="btn btn-icon"
-        aria-label={`${t('documents.print')} ${t(doc.labelKey)}`}
-        title={`${t('documents.print')} ${t(doc.labelKey)}`}
-        onClick={() => print(doc.key)}
-      >⎙</button>
-    </div>)}</div>
-
-    {error !== null && <div className="document-readiness is-blocked" role="status">
-      <b>{t('documents.exportFailed')}</b><span>{error}</span>
-    </div>}
-
-    <div className="paper-wrap" ref={paperRef}>
-      <div className="rowline no-print">
-        <h2 className="h-sec">{t('documents.previewBeforePrint')}</h2>
-        <span className="sep" />
-        <span className="label">{t('documents.pageCount')}</span>
-        <button className="btn" onClick={() => setPending({ kind: preview, action: 'print' })}>{t('documents.configure')}</button>
-        <button className="btn" onClick={() => print(preview)}>{t('documents.printPdf')}</button>
+  return (
+    <div className="docs-layout">
+      <div className="docs-preview" ref={previewRef}>
+        {error !== null && <div className="document-readiness is-blocked" role="status"><b>{t('documents.exportFailed')}</b><span>{error}</span></div>}
+        {(readiness.blockers.length > 0 || readiness.warnings.length > 0) && <div className={`document-readiness no-print ${readiness.blockers.length > 0 ? 'is-blocked' : ''}`} role="status">
+          <b>{readiness.blockers.length > 0 ? t('documents.readiness.blocked') : t('documents.readiness.warnings')}</b>
+          {readiness.blockers.concat(readiness.warnings).map((issue) => <span key={issue.code}>{t(issue.messageKey)}</span>)}
+        </div>}
+        <div className="paper-wrap docs-zoom" style={{ zoom, width: PAGE_WIDTH_PX }}>
+          <ReportA4
+            project={project}
+            kind={kind}
+            sizing={sizing}
+            finance={finance}
+            solar={solar}
+            presizing={presizing}
+            catalog={catalog}
+            options={options}
+            version={version}
+            visuals={{ logoUrl: effectiveLogoUrl, coverUrl: effectiveCoverUrl }}
+          />
+        </div>
       </div>
-      {(readiness.blockers.length > 0 || readiness.warnings.length > 0) && <div className={`document-readiness ${readiness.blockers.length > 0 ? 'is-blocked' : ''}`} role="status">
-        <b>{readiness.blockers.length > 0 ? t('documents.readiness.blocked') : t('documents.readiness.warnings')}</b>
-        {readiness.blockers.concat(readiness.warnings).map((issue) => <span key={issue.code}>{t(issue.messageKey)}</span>)}
-      </div>}
-      <ReportA4
+      <DocumentPanel
         project={project}
-        kind={preview}
-        sizing={sizing}
-        finance={finance}
-        solar={solar}
-        presizing={presizing}
-        catalog={catalog}
-        options={optionsFor(preview)}
-        version={version}
+        kind={kind}
+        kinds={SHOWN}
+        options={options}
+        busy={busy}
+        onKind={setKind}
+        onOptions={(next) => setComposition((current) => ({ ...current, [kind]: next }))}
+        onPrint={() => guarded(() => window.setTimeout(() => window.print(), 120))}
+        onWord={() => guarded(() => { void word(); })}
       />
     </div>
-
-    {pending !== null && <GenerateDialog
-      kind={pending.kind}
-      initial={optionsFor(pending.kind)}
-      confirmLabel={pending.action === 'word' ? t('generate.confirmWord') : t('generate.confirmPrint')}
-      onCancel={() => setPending(null)}
-      onConfirm={confirmPending}
-    />}
-  </>;
+  );
 }

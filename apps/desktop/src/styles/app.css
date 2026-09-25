@@ -3345,3 +3345,108 @@ table.tbl.cost-table .cost-in .cell-in:focus-visible { border-color: var(--accen
 .cost-total { font-family: var(--font-mono); font-weight: 700; }
 .out-foot { padding: var(--sp-3) var(--sp-4); margin-top: 0; }
 .out-foot-say { flex: 1; white-space: normal; }
+/* Entrées permanentes de la barre du haut (spec 012, FR-A1). */
+.topbar-link[aria-current='page'] { color: var(--accent-ink); background: var(--accent-soft); }
+
+/* Listes déroulantes : un seul style dans toute l'application (spec 012, FR-A2). Le chevron natif
+   varie d'un système à l'autre ; celui-ci est dessiné, et suit les thèmes clair et sombre. */
+select:not(.cell-in) {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 30px 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background-color: var(--surface);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: right 14px center, right 9px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+select:not(.cell-in):hover { border-color: var(--text-faint); }
+select:not(.cell-in):focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+select.cell-in {
+  appearance: none;
+  padding-right: 16px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-faint) 50%), linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
+  background-position: right 8px center, right 4px center;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+select:disabled { opacity: 0.6; cursor: default; }
+select option { background: var(--surface); color: var(--text); }
+/* Identification : un nom long se lit en entier ; une saisie incomplète se signale sous le champ. */
+.form-rows > .field-wide { grid-column: 1 / -1; }
+.form-rows input[aria-invalid='true'] { border-color: var(--danger); }
+.ro-note.field-hint.is-invalid { color: var(--danger); }
+
+/* Documents : aperçu à gauche, composition à droite (spec 012, FR-A4). */
+.docs-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--sp-4); align-items: start; }
+.docs-preview { min-width: 0; display: grid; gap: var(--sp-3); }
+.docs-panel { position: sticky; top: 0; display: grid; gap: var(--sp-3); padding: var(--sp-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); max-height: calc(100vh - 220px); overflow: auto; }
+.docs-kinds { display: flex; }
+.docs-kinds button { flex: 1; }
+.docs-panel > .label { margin: 0; }
+.docs-actions { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-2); }
+.docs-block { border-top: 1px solid var(--border); padding-top: var(--sp-2); }
+.docs-block > summary { cursor: pointer; font-weight: 600; font-size: var(--fs-sm); padding: 2px 0 var(--sp-2); }
+.docs-group { border: 0; margin: 0 0 var(--sp-2); padding: 0; display: grid; gap: 4px; }
+.docs-group legend { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 2px; }
+.docs-group label { display: flex; gap: var(--sp-2); align-items: center; font-size: var(--fs-sm); }
+.docs-group label.is-confidential span { color: var(--danger); }
+.docs-reset { justify-self: start; }
+.docs-field { display: grid; gap: 4px; margin-top: var(--sp-2); font-size: var(--fs-sm); }
+.docs-field input { height: 32px; padding: 0 var(--sp-2); border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); }
+.visual-choice { display: grid; gap: 6px; margin-bottom: var(--sp-3); }
+.visual-choice-head { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-sm); }
+.visual-choice .visual-slot-frame { display: grid; place-items: center; height: 84px; border: 1px dashed var(--border-strong); border-radius: var(--r-md); background: var(--surface-2); overflow: hidden; }
+.visual-choice .visual-slot-frame img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.visual-choice .visual-slot-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+@media (max-width: 1180px) { .docs-layout { grid-template-columns: minmax(0, 1fr); } .docs-panel { position: static; max-height: none; } }
+@media print { .docs-panel { display: none !important; } .docs-zoom { zoom: 1 !important; } .docs-layout { display: block; } }
+/* Composition de l'année : organisation en tête, calendrier et profil côte à côte (spec 012, FR-A5). */
+.composed-dialog { display: grid; gap: var(--sp-3); }
+.composed-org { display: grid; gap: var(--sp-2); }
+.composed-org .label { margin: 0; }
+.composed-columns { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--sp-4); align-items: start; }
+.composed-col { display: grid; gap: var(--sp-2); min-width: 0; }
+.composed-periods { display: grid; gap: var(--sp-2); }
+.composed-period-card { display: grid; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+.composed-period-head { display: flex; gap: var(--sp-2); align-items: center; }
+.composed-period-head .cell-in { flex: 1; font-weight: 600; font-family: var(--font-sans); text-align: left; }
+.composed-period-dates { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.monthday { display: inline-flex; gap: 4px; }
+.monthday .cell-in { width: auto; min-width: 58px; font-family: var(--font-sans); }
+.composed-period-assign { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-2); }
+.composed-period-assign label { display: grid; gap: 2px; font-size: var(--fs-xs); color: var(--text-muted); }
+.composed-period-assign .cell-in { font-family: var(--font-sans); text-align: left; }
+.composed-profile-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.composed-profile-tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: var(--fs-sm); }
+.composed-profile-tabs button[aria-selected='true'] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.composed-profile-tabs i { width: 9px; height: 9px; border-radius: 50%; }
+.composed-profile-editor { display: grid; gap: var(--sp-2); }
+.composed-profile-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-2); }
+.composed-profile-meta label { display: grid; gap: 2px; font-size: var(--fs-xs); color: var(--text-muted); }
+.composed-profile-meta .cell-in { font-family: var(--font-sans); text-align: left; }
+.composed-profile-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.composed-profile-editor .dayprofile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .composed-columns { grid-template-columns: minmax(0, 1fr); } }
+/* L'aperçu réduit garde la largeur d'une page entière : c'est l'ensemble qui est mis à l'échelle. */
+.docs-zoom { max-width: none; }
+/* Composition : fenêtre plus large, colonnes qui ne débordent jamais l'une sur l'autre. */
+.modal-xl:has(.composed-dialog) { width: min(1320px, 95vw); max-width: none; }
+.composed-col { overflow: hidden; }
+.composed-col .tbl-title { flex-wrap: wrap; row-gap: var(--sp-2); }
+.composed-col .year-strip, .composed-col .year-preview { max-width: 100%; overflow-x: auto; }
+@media print { .docs-zoom { width: auto !important; } }
+
+/* Aperçu : une page paysage (planche du schéma) est ramenée à la largeur d'une page portrait, pour que toutes les pages tiennent dans la même colonne. L'impression n'est pas concernée. */
+@media screen { .docs-zoom .a4-landscape { zoom: 0.7071; } }
+
+/* Écran étroit : la recherche garde son raccourci, le nom du projet garde sa place. */
+@media (max-width: 1200px) { .topbar-search-label { display: none; } }

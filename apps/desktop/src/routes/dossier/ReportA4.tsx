@@ -21,8 +21,10 @@ export type { DocKind };
  * même rapport avaient fini par diverger — l'écran annonçait des puissances que
  * le moteur n'avait jamais calculées.
  */
-export function ReportA4({ project, kind, sizing, finance, solar, presizing, catalog, options, version = null }: {
+export function ReportA4({ project, kind, sizing, finance, solar, presizing, catalog, options, version = null, visuals }: {
   project: ProjectViewModel;
+  /** Visuels effectifs (dossier ou société), résolus par l'appelant ; à défaut, ceux des réglages. */
+  visuals?: { readonly logoUrl: string; readonly coverUrl: string | null };
   version?: { readonly number: number; readonly issuedAtIso: string } | null;
   kind: DocKind;
   sizing: SizingOutputV1 | null;
@@ -47,7 +49,8 @@ export function ReportA4({ project, kind, sizing, finance, solar, presizing, cat
    * l'application tandis que le Word, lui, ne recevait rien : le même dossier
    * sortait signé à l'écran et anonyme dans le document.
    */
-  const effectiveLogoUrl = logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png';
+  const effectiveLogoUrl = visuals?.logoUrl ?? (project.details.documentLogo || logoUrl || settings.reports.logoUrl || '/kya-sol-design-logo.png');
+  const effectiveCoverUrl = visuals ? visuals.coverUrl : (project.details.projectImage || coverUrl);
 
   // Toutes les pièces reçoivent la planche complète : le synoptique condensé
   // tenait dans une colonne, mais n'y était plus lisible.
@@ -59,10 +62,10 @@ export function ReportA4({ project, kind, sizing, finance, solar, presizing, cat
 
   const document = useMemo(() => buildReportDocument({
     project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram,
-    assets: { logoUrl: effectiveLogoUrl, coverUrl, signatureUrl },
+    assets: { logoUrl: effectiveLogoUrl, coverUrl: effectiveCoverUrl, signatureUrl },
     options: resolved,
     version,
-  }), [project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram, effectiveLogoUrl, coverUrl, signatureUrl, resolved, version]);
+  }), [project, kind, sizing, finance, solar, presizing, catalog, settings, t, diagram, effectiveLogoUrl, effectiveCoverUrl, signatureUrl, resolved, version]);
 
   const brandContact = [settings.company.address, settings.company.phone, settings.company.email].filter(Boolean).join(' · ');
 

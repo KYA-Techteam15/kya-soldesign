@@ -17,7 +17,8 @@ export interface SizingSettings {
 
 export interface ApplicationSettingsV2 {
   readonly version: 2;
-  readonly company: { readonly name: string; readonly address: string; readonly phone: string; readonly email: string };
+  /** officer : chargé de projet proposé sur chaque nouveau dossier. */
+  readonly company: { readonly name: string; readonly address: string; readonly phone: string; readonly email: string; readonly officer: string };
   readonly reports: { readonly logoAssetId: string | null; readonly logoUrl: string; readonly signatureAssetId: string | null; readonly coverAssetId: string | null; readonly signatureText: string; readonly footerText: string; readonly bankDetails: string };
   readonly defaults: {
     readonly reliability: { readonly performanceRatioPercent: number; readonly maxLpspPercent: number; readonly maxLolpPercent: number };
@@ -35,7 +36,7 @@ export interface ExchangeRateRecord { readonly baseCurrencyCode: string; readonl
 
 export const defaultApplicationSettings: ApplicationSettingsV2 = {
   version: 2,
-  company: { name: 'KYA-SolDesign', address: '', phone: '', email: '' },
+  company: { name: 'KYA-SolDesign', address: '', phone: '', email: '', officer: '' },
   reports: { logoAssetId: null, logoUrl: '', signatureAssetId: null, coverAssetId: null, signatureText: '', footerText: '', bankDetails: '' },
   defaults: {
     reliability: { performanceRatioPercent: 80, maxLpspPercent: 5, maxLolpPercent: 5 },
@@ -82,7 +83,7 @@ export function migrateApplicationSettings(raw: unknown): { readonly settings: A
   if (isRecord(raw) && raw.version === 2) return { settings: validateApplicationSettings(raw), ignoredKeys: [] };
   if (!isRecord(raw)) throw new Error('SETTINGS_INVALID_JSON');
   const n = (key: string, fallback: number) => typeof raw[key] === 'number' && Number.isFinite(raw[key]) ? raw[key] as number : fallback;
-  const s: ApplicationSettingsV2 = { ...defaultApplicationSettings, company: { name: typeof raw.companyName === 'string' ? raw.companyName : 'KYA-SolDesign', address: typeof raw.companyAddress === 'string' ? raw.companyAddress : '', phone: typeof raw.companyPhone === 'string' ? raw.companyPhone : '', email: typeof raw.companyEmail === 'string' ? raw.companyEmail : '' }, reports: { logoAssetId: null, logoUrl: typeof raw.reportLogo === 'string' ? raw.reportLogo : '', signatureAssetId: null, coverAssetId: null, signatureText: '', footerText: typeof raw.reportFooter === 'string' ? raw.reportFooter : '', bankDetails: '' }, defaults: { reliability: { performanceRatioPercent: n('performanceRatioPercent', 80), maxLpspPercent: n('maxLpspPercent', 5), maxLolpPercent: n('maxLolpPercent', 5) }, conversion: { inverterEfficiencyPercent: n('inverterEfficiencyPercent', 95), batteryEfficiencyPercent: n('batteryEfficiencyPercent', 90) }, equipmentCosts: { currencyCode: typeof raw.currencyCode === 'string' ? raw.currencyCode : 'XOF', pvSpecificCost: n('pvSpecificCost', 300000), batterySpecificCost: n('batterySpecificCost', 150000), inverterSpecificCost: n('inverterSpecificCost', 100000), pvMarginPercent: n('pvMarginPercent', 15), batteryMarginPercent: n('batteryMarginPercent', 15), inverterMarginPercent: n('inverterMarginPercent', 15) }, commercial: { vatPercent: n('vatPercent', 0), offerValidityDays: n('offerValidityDays', 30), warrantyMonths: n('warrantyMonths', 12), deliveryDays: n('deliveryDays', 0), discountPercent: n('discountPercent', 0), downPaymentPercent: n('downPaymentPercent', 0) } }, updatedAtIso: '' };
+  const s: ApplicationSettingsV2 = { ...defaultApplicationSettings, company: { name: typeof raw.companyName === 'string' ? raw.companyName : 'KYA-SolDesign', address: typeof raw.companyAddress === 'string' ? raw.companyAddress : '', phone: typeof raw.companyPhone === 'string' ? raw.companyPhone : '', email: typeof raw.companyEmail === 'string' ? raw.companyEmail : '', officer: '' }, reports: { logoAssetId: null, logoUrl: typeof raw.reportLogo === 'string' ? raw.reportLogo : '', signatureAssetId: null, coverAssetId: null, signatureText: '', footerText: typeof raw.reportFooter === 'string' ? raw.reportFooter : '', bankDetails: '' }, defaults: { reliability: { performanceRatioPercent: n('performanceRatioPercent', 80), maxLpspPercent: n('maxLpspPercent', 5), maxLolpPercent: n('maxLolpPercent', 5) }, conversion: { inverterEfficiencyPercent: n('inverterEfficiencyPercent', 95), batteryEfficiencyPercent: n('batteryEfficiencyPercent', 90) }, equipmentCosts: { currencyCode: typeof raw.currencyCode === 'string' ? raw.currencyCode : 'XOF', pvSpecificCost: n('pvSpecificCost', 300000), batterySpecificCost: n('batterySpecificCost', 150000), inverterSpecificCost: n('inverterSpecificCost', 100000), pvMarginPercent: n('pvMarginPercent', 15), batteryMarginPercent: n('batteryMarginPercent', 15), inverterMarginPercent: n('inverterMarginPercent', 15) }, commercial: { vatPercent: n('vatPercent', 0), offerValidityDays: n('offerValidityDays', 30), warrantyMonths: n('warrantyMonths', 12), deliveryDays: n('deliveryDays', 0), discountPercent: n('discountPercent', 0), downPaymentPercent: n('downPaymentPercent', 0) } }, updatedAtIso: '' };
   return { settings: validateApplicationSettings(s), ignoredKeys: Object.keys(raw).filter((key) => key === 'batteryDodPercent' || key === 'batteryDod' || key === 'batteryVoltage' || key === 'batteryNominalVoltageV') };
 }
 

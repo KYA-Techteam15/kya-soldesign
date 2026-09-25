@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useT } from '../i18n';
 import { useUi } from '../store/ui';
 import { useProjects } from '../store/project';
@@ -15,6 +15,7 @@ interface Props {
 export function TopBar({ project, primary, secondary, back }: Props) {
   const t = useT();
   const nav = useNavigate();
+  const path = useLocation().pathname;
   const { theme, toggleTheme, lang, setLang } = useUi();
   const { undo, redo, canUndo, canRedo } = useProjects();
 
@@ -72,12 +73,16 @@ export function TopBar({ project, primary, secondary, back }: Props) {
           </button>
         </>
       )}
+      {/* Le catalogue et les réglages restent à un clic depuis tous les écrans, atelier compris. */}
+      <button className="btn btn-ghost topbar-link" aria-current={path.startsWith('/catalogue') ? 'page' : undefined} onClick={() => nav('/catalogue')}>{t('topbar.catalog')}</button>
+      <button className="btn btn-ghost topbar-link" aria-current={path.startsWith('/reglages') ? 'page' : undefined} onClick={() => nav('/reglages')}>{t('topbar.settings')}</button>
       <button
         className="btn btn-ghost"
         title={t('topbar.paletteDeCommandes')}
+        aria-label={t('app.search')}
         onClick={() => useUi.getState().setPaletteOpen(true)}
       >
-        {t('app.search')} <span className="kbd">Ctrl K</span>
+        <span className="topbar-search-label">{t('app.search')}</span> <span className="kbd">Ctrl K</span>
       </button>
       <button
         className="btn btn-ghost lang-toggle"

@@ -93,7 +93,7 @@ test('produces a coherent client file from creation to Word', async ({ page }) =
   await expect(paper).not.toContainText('residential');
 
   const download = page.waitForEvent('download');
-  await page.locator('.proj-row', { hasText: 'Rapport technique' }).getByRole('button', { name: /Word/u }).click();
+  await page.locator('.docs-panel').getByRole('button', { name: /Word/u }).click();
   const proceed = page.locator('.modal').getByRole('button', { name: 'Imprimer malgré les avertissements' });
   if (await proceed.isVisible({ timeout: 2_000 }).catch(() => false)) await proceed.click();
   expect((await download).suggestedFilename()).toMatch(/^centre-de-sante-bombouaka-rapport\.docx$/u);
@@ -110,7 +110,7 @@ test('blocks client documents as soon as the sizing is stale', async ({ page }) 
   await step(page, 7);
   await expect(page.locator('.sheet .kpis')).toContainText('résultat périmé');
   await page.getByRole('tab', { name: 'Imprimer les documents' }).click();
-  await page.locator('.proj-row', { hasText: 'Rapport technique' }).getByRole('button', { name: /Word/u }).click();
+  await page.locator('.docs-panel').getByRole('button', { name: /Word/u }).click();
   await expect(page.locator('.toast.error')).toContainText('Impression bloquée');
   await expect(page.locator('.document-readiness')).toContainText('périmé');
 });

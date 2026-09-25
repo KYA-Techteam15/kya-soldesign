@@ -4,6 +4,8 @@ import { validateAnnualCalendar } from '@ksd/engine';
 import type { ApplianceView, LoadCalendarView, LoadCompositionView } from '../../app/models/projectView';
 import { inventoryDirectProfile } from '../../app/models/loadSources';
 import { YearPreview } from './loads/ComposedSummary';
+import { MonthDayField } from './loads/MonthDayField';
+import { TypicalDayEditor } from './loads/TypicalDayEditor';
 import { Dialog } from '../../ui/Dialog';
 import { exportHourlyProfileWorkbook, inspectHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
 import { fill, tr, useT } from '../../i18n';
@@ -69,6 +71,11 @@ export function ComposedProfilesDialog({ open, initial, inventory = [], onCancel
     setImportMessage(result.warnings.length > 0 ? t('composed.profilImporteLesPointes') : t('composed.profilImporteEtValide'));
   };
 
+  const setPeriod = (periodId: string, patch: Partial<LoadCalendarView['periods'][number]>) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === periodId ? { ...item, ...patch } : item) } }));
+  const setAssignment = (periodId: string, dayGroupId: string, profileId: string) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, assignments: current.calendar.assignments.map((item) => item.periodId === periodId && item.dayGroupId === dayGroupId ? { ...item, profileId } : item) } }));
+  const removePeriod = (periodId: string) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.filter((item) => item.id !== periodId), assignments: current.calendar.assignments.filter((item) => item.periodId !== periodId) } }));
+  const datedPeriods = draft.organization !== 'workweek-weekend';
+
   return <Dialog
     title={t('composed.composerLesProfilsAnnuels')}
     lead={t('composed.calendrierCombinaisonsEtValeurs')}
@@ -86,56 +93,95 @@ export function ComposedProfilesDialog({ open, initial, inventory = [], onCancel
       <button className="btn btn-ok" disabled={issues.length > 0} onClick={() => onApply(structuredClone(draft))}>{t('loads.composedApply')}</button>
     </>}
   >
+    {/* Trois zones visibles ensemble (spec 012, FR-A5) : l'organisation en tête, puis le calendrier
+        à gauche et le profil choisi à droite, édité comme la journée type. */}
     <div className="composed-dialog">
-      <section className="composed-section">
-        <div className="tbl-title"><h2 className="h-sec">{t('loads.composedOrganization')}</h2><span className="label">{t('loads.composedOneMethod')}</span></div>
+      <div className="composed-org">
         <div className="seg" role="radiogroup" aria-label={t('composed.organisationDesProfils')}>
-          <button role="radio" aria-checked={draft.organization === 'workweek-weekend'} className={draft.organization === 'workweek-weekend' ? 'active' : ''} onClick={() => changeOrganization('workweek-weekend')}>{t('composed.ouvresWeekEnd')}</button>
-          <button role="radio" aria-checked={draft.organization === 'periods'} className={draft.organization === 'periods' ? 'active' : ''} onClick={() => changeOrganization('periods')}>{t('loads.composedPeriods')}</button>
-          <button role="radio" aria-checked={draft.organization === 'periods-by-day-type'} className={draft.organization === 'periods-by-day-type' ? 'active' : ''} onClick={() => changeOrganization('periods-by-day-type')}>{t('loads.composedPeriodDays')}</button>
+          <button role="radio" aria-checked={draft.organization === 'workweek-weekend'} onClick={() => changeOrganization('workweek-weekend')}>{t('composed.ouvresWeekEnd')}</button>
+          <button role="radio" aria-checked={draft.organization === 'periods'} onClick={() => changeOrganization('periods')}>{t('loads.composedPeriods')}</button>
+          <button role="radio" aria-checked={draft.organization === 'periods-by-day-type'} onClick={() => changeOrganization('periods-by-day-type')}>{t('loads.composedPeriodDays')}</button>
         </div>
-        <p className="hint">{t('loads.composedDirectHint')}</p>
-      </section>
+        <p className="label">{t('loads.composedDirectHint')}</p>
+      </div>
 
-      <section className="composed-section">
-        <div className="tbl-title"><h2 className="h-sec">{t('loads.composedCalendar')}</h2><span className="label">{t('loads.composedCalendarHint')}</span><button className="btn" onClick={() => updateDraft((current) => ({ ...current, calendar: addPeriod(current.calendar, current.profiles[0]?.id ?? '') }))}>{t('loads.calendarAddPeriod')}</button></div>
-        <div className="composed-calendar">
+      <div className="composed-columns">
+        <section className="composed-col" aria-labelledby="composed-calendar-title">
+          <div className="tbl-title">
+            <h2 className="h-sec" id="composed-calendar-title">{t('loads.composedCalendar')}</h2><span className="sep" />
+            {datedPeriods && <button className="btn" onClick={() => updateDraft((current) => ({ ...current, calendar: addPeriod(current.calendar, current.profiles[0]?.id ?? '') }))}>{t('loads.calendarAddPeriod')}</button>}
+          </div>
           <div className="composed-periods">
-            {draft.calendar.periods.map((period, index) => <div className="composed-period" key={period.id}>
-              <input aria-label={fill(t('composed.periodNameN'), { n: index + 1 })} value={period.name} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, name: event.target.value } : item) } }))} />
-              <input aria-label={`${t('calendar2.startOf')} ${period.name}`} placeholder="MM-JJ" value={period.startMonthDay} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, startMonthDay: event.target.value } : item) } }))} />
-              <span>→</span>
-              <input aria-label={`${t('calendar2.endOf')} ${period.name}`} placeholder="MM-JJ" value={period.endMonthDay} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, periods: current.calendar.periods.map((item) => item.id === period.id ? { ...item, endMonthDay: event.target.value } : item) } }))} />
-            </div>)}
+            {draft.calendar.periods.map((period, index) => (
+              <div className="composed-period-card" key={period.id}>
+                <div className="composed-period-head">
+                  <input className="cell-in" aria-label={fill(t('composed.periodNameN'), { n: index + 1 })} value={period.name} onChange={(event) => setPeriod(period.id, { name: event.target.value })} />
+                  {datedPeriods && draft.calendar.periods.length > 1 && <button type="button" className="btn btn-ghost" aria-label={`${t('loads.composedDelete')} · ${period.name}`} onClick={() => removePeriod(period.id)}>×</button>}
+                </div>
+                {datedPeriods && (
+                  <div className="composed-period-dates">
+                    <span className="label">{t('composed.from')}</span>
+                    <MonthDayField label={`${t('calendar2.startOf')} ${period.name}`} value={period.startMonthDay} onChange={(value) => setPeriod(period.id, { startMonthDay: value })} />
+                    <span className="label">{t('composed.to')}</span>
+                    <MonthDayField label={`${t('calendar2.endOf')} ${period.name}`} value={period.endMonthDay} onChange={(value) => setPeriod(period.id, { endMonthDay: value })} />
+                  </div>
+                )}
+                <div className="composed-period-assign">
+                  {draft.calendar.dayGroups.map((group) => {
+                    const assignment = draft.calendar.assignments.find((item) => item.periodId === period.id && item.dayGroupId === group.id);
+                    return (
+                      <label key={group.id}><span>{groupLabel(group.kind, t)}</span>
+                        <select className="cell-in" aria-label={`${period.name}, ${groupLabel(group.kind, t)}`} value={assignment?.profileId ?? ''} onChange={(event) => setAssignment(period.id, group.id, event.target.value)}>
+                          <option value="">{t('loads.composedChooseProfile')}</option>
+                          {draft.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+                        </select>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="composed-matrix">
-            <div className="composed-matrix-head"><span>{t('loads.calendarPeriod')}</span>{draft.calendar.dayGroups.map((group) => <span key={group.id}>{groupLabel(group.kind, t)}</span>)}</div>
-            {draft.calendar.periods.map((period) => <div className="composed-matrix-row" key={period.id}>
-              <b>{period.name}</b>
-              {draft.calendar.dayGroups.map((group) => {
-                const assignment = draft.calendar.assignments.find((item) => item.periodId === period.id && item.dayGroupId === group.id);
-                return <select key={group.id} aria-label={`${period.name}, ${groupLabel(group.kind, t)}`} value={assignment?.profileId ?? ''} onChange={(event) => updateDraft((current) => ({ ...current, calendar: { ...current.calendar, assignments: current.calendar.assignments.map((item) => item.periodId === period.id && item.dayGroupId === group.id ? { ...item, profileId: event.target.value } : item) } }))}>
-                  <option value="">{t('loads.composedChooseProfile')}</option>{draft.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-                </select>;
-              })}
-            </div>)}
-          </div>
-        </div>
-        <YearPreview composition={draft} />
-      </section>
+          <YearPreview composition={draft} />
+        </section>
 
-      <section className="composed-section">
-        <div className="tbl-title"><h2 className="h-sec">{t('loads.composedHourly')}</h2><span className="label">{t('loads.composedHourlyHint')}</span><button className="btn" onClick={() => addProfile(false)}>{t('loads.calendarNewProfile')}</button><button className="btn" disabled={selected === undefined || inventory.length === 0} title={inventory.length === 0 ? t('loads.fromInventoryEmpty') : t('loads.fromInventoryHelp')} onClick={() => updateSelected((profile) => ({ ...profile, hourly: inventoryDirectProfile(inventory, profile).hourly }))}>{t('loads.fromInventory')}</button><button className="btn" disabled={selected === undefined} onClick={() => addProfile(true)}>{t('loads.composedDuplicate')}</button><button className="btn" disabled={selected === undefined || draft.profiles.length <= 1} onClick={removeSelected}>{t('loads.composedDelete')}</button><button className="btn" disabled={selected === undefined} onClick={exportSelected}>{t('loads.composedExport')}</button><button className="btn" disabled={selected === undefined} onClick={() => importRef.current?.click()}>{t('loads.composedImport')}</button></div>
-        <div className="composed-profile-layout">
-          <div className="composed-profile-list" role="listbox" aria-label={t('composed.profilsDisponibles')}>
-            {draft.profiles.map((profile) => <button key={profile.id} className={profile.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedProfileId(profile.id)}>{profile.name}</button>)}
+        <section className="composed-col" aria-labelledby="composed-profile-title">
+          <div className="tbl-title">
+            <h2 className="h-sec" id="composed-profile-title">{t('loads.composedHourly')}</h2><span className="sep" />
+            <button className="btn" onClick={() => addProfile(false)}>{t('loads.calendarNewProfile')}</button>
           </div>
-          {selected && <div className="composed-profile-editor">
-            <div className="form-rows composed-profile-meta"><label><span>{t('loads.composedName')}</span><input value={selected.name} onChange={(event) => updateSelected((profile) => ({ ...profile, name: event.target.value }))} /></label><label><span>{t('loads.composedColor')}</span><input type="color" value={selected.color} onChange={(event) => updateSelected((profile) => ({ ...profile, color: event.target.value }))} /></label></div>
-            <div className="hourgrid composed-hourgrid">{selected.hourly.map((point) => <label key={point.hour}><span>{String(point.hour).padStart(2, '0')} h</span><input aria-label={fill(t('loads2.powerAtHour'), { hour: point.hour })} inputMode="decimal" value={point.realPower} onChange={(event) => { const value = Number(event.target.value.replace(',', '.')); if (!Number.isFinite(value) || value < 0) return; updateSelected((profile) => ({ ...profile, hourly: profile.hourly.map((item) => item.hour === point.hour ? { ...item, realPower: value, peakPower: Math.max(value, item.peakPower) } : item) })); }} /></label>)}</div>
-          </div>}
-        </div>
-      </section>
+          <div className="composed-profile-tabs" role="tablist" aria-label={t('composed.profilsDisponibles')}>
+            {draft.profiles.map((profile) => (
+              <button key={profile.id} role="tab" aria-selected={profile.id === selected?.id} onClick={() => setSelectedProfileId(profile.id)}>
+                <i style={{ background: profile.color }} aria-hidden="true" />{profile.name}
+              </button>
+            ))}
+          </div>
+          {selected && (
+            <div className="composed-profile-editor">
+              <div className="composed-profile-meta">
+                <label><span>{t('loads.composedName')}</span><input className="cell-in" value={selected.name} onChange={(event) => updateSelected((profile) => ({ ...profile, name: event.target.value }))} /></label>
+                <label><span>{t('loads.composedColor')}</span><input type="color" value={selected.color} onChange={(event) => updateSelected((profile) => ({ ...profile, color: event.target.value }))} /></label>
+              </div>
+              <div className="composed-profile-actions">
+                <button className="btn" disabled={inventory.length === 0} title={inventory.length === 0 ? t('loads.fromInventoryEmpty') : t('loads.fromInventoryHelp')} onClick={() => updateSelected((profile) => ({ ...profile, hourly: inventoryDirectProfile(inventory, profile).hourly }))}>{t('loads.fromInventory')}</button>
+                <button className="btn" onClick={() => addProfile(true)}>{t('loads.composedDuplicate')}</button>
+                <button className="btn" onClick={exportSelected}>{t('loads.composedExport')}</button>
+                <button className="btn" onClick={() => importRef.current?.click()}>{t('loads.composedImport')}</button>
+                <button className="btn btn-ghost" disabled={draft.profiles.length <= 1} onClick={removeSelected}>{t('loads.composedDelete')}</button>
+              </div>
+              <TypicalDayEditor
+                hourly={selected.hourly.map((point) => ({ hour: point.hour, realPower: point.realPower, peakPower: point.peakPower > point.realPower ? point.peakPower : null }))}
+                mutate={(change) => updateSelected((profile) => {
+                  const points = profile.hourly.map((point) => ({ hour: point.hour, realPower: point.realPower, peakPower: point.peakPower > point.realPower ? point.peakPower : null as number | null }));
+                  change(points);
+                  return { ...profile, hourly: points.map((point) => ({ hour: point.hour, realPower: point.realPower, peakPower: point.peakPower ?? point.realPower })) };
+                })}
+              />
+            </div>
+          )}
+        </section>
+      </div>
 
       {issues.length > 0 && <div className="composed-errors" role="alert"><b>{t('loads.composedErrors')}</b><ul>{issues.slice(0, 6).map((issue) => <li key={`${issue.code}:${issue.path}`}>{issue.message}</li>)}</ul></div>}
       {importMessage && <p className="hint" role="status">{importMessage}</p>}

@@ -74,7 +74,7 @@ export interface ProjectViewModel {
   lastCalculation: ProjectCalculation | null;
   sizingCalculation: ProjectCalculation | null;
   currency: string;
-  details: { clientName: string; clientAddress: string; clientTel: string; clientEmail: string; followerName: string; applicationType: ApplicationType; projectDate: string; projectNumber: string; projectLocation: string; projectImage: string };
+  details: { clientName: string; clientAddress: string; clientTel: string; clientEmail: string; followerName: string; applicationType: ApplicationType; projectDate: string; projectNumber: string; projectLocation: string; projectImage: string; documentLogo: string };
   site: { country: string; countryCode: string; localityId: string | null; region: string; latitude: number; longitude: number; tilt: number; azimuth: number; irradiation: number; monthlyIrradiation: (number | null)[]; weatherSourceId: string | null; timezoneIana: string | null; designMonth: number | null; designColdTemperatureC: number | null; irradiationBasis: { tilt: number; azimuth: number } | null; downloadedSource: { name: string; provider: string; versionOrDate: string; locator: string; retrievedAtIso: string; qualityFlags: string[]; weatherFileId?: string; sourceSha256?: string; timezoneOffsetMinutes?: number; albedo?: number; ambientTemperatureMinC?: number; ambientTemperatureMaxC?: number; hourlyIrradiance?: { timestampUtcIso: string; ghiWm2: number; dniWm2: number; dhiWm2: number }[] } | null };
   load: {
     granularity: Granularity; activeMode: 'simple' | 'composed'; composition: LoadCompositionView | null; calendar: LoadCalendarView; profiles: NamedProfile[]; activeProfileId: string; irMin: number;

@@ -24,7 +24,7 @@ for (const file of await files(root)) {
   const source = await readFile(file, 'utf8');
   for (const match of source.matchAll(/>([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 .…·–—-]*)</g)) {
     const value = match[1]?.trim();
-    if (value && !allowed.has(value) && !/^[\d\s/←→·.–—…]+$/.test(value)) failures.push(`${relative(root, file)}: ${value}`);
+    if (value && !allowed.has(value) && !/^[\d\s/←→·.–—…×]+$/.test(value)) failures.push(`${relative(root, file)}: ${value}`);
   }
 }
 

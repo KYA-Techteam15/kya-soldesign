@@ -31,8 +31,12 @@ export type SectionId =
   | 'billOfMaterial'
   | 'commissioning';
 
+/** Familles de sections, pour une liste qui se lit d'un coup d'œil. */
+export type SectionGroup = 'base' | 'technical' | 'commercial' | 'annex';
+
 export interface SectionDescriptor {
   readonly id: SectionId;
+  readonly group: SectionGroup;
   /** Clé de libellé, affichée dans le dialogue de génération. */
   readonly labelKey: string;
   /** Une section obligatoire ne peut pas être décochée. */
@@ -44,25 +48,25 @@ export interface SectionDescriptor {
 }
 
 export const SECTIONS: readonly SectionDescriptor[] = [
-  { id: 'cover', labelKey: 'compose.cover', required: true },
-  { id: 'identity', labelKey: 'compose.identity', required: true },
-  { id: 'headline', labelKey: 'compose.headline' },
-  { id: 'siteResource', labelKey: 'compose.siteResource' },
-  { id: 'loadNeeds', labelKey: 'compose.loadNeeds' },
-  { id: 'methodology', labelKey: 'compose.methodology' },
-  { id: 'presizing', labelKey: 'compose.presizing' },
-  { id: 'system', labelKey: 'compose.system' },
-  { id: 'performance', labelKey: 'compose.performance' },
-  { id: 'protections', labelKey: 'compose.protections' },
-  { id: 'pricing', labelKey: 'compose.pricing', monetary: true },
-  { id: 'internalCosts', labelKey: 'compose.internalCosts', monetary: true, confidential: true },
-  { id: 'economics', labelKey: 'compose.economics', monetary: true },
-  { id: 'conditions', labelKey: 'compose.conditions' },
-  { id: 'payment', labelKey: 'compose.payment', monetary: true },
-  { id: 'signature', labelKey: 'compose.signature' },
-  { id: 'diagram', labelKey: 'compose.diagram' },
-  { id: 'billOfMaterial', labelKey: 'compose.billOfMaterial' },
-  { id: 'commissioning', labelKey: 'compose.commissioning' },
+  { id: 'cover', group: 'base', labelKey: 'compose.cover', required: true },
+  { id: 'identity', group: 'base', labelKey: 'compose.identity', required: true },
+  { id: 'headline', group: 'base', labelKey: 'compose.headline' },
+  { id: 'siteResource', group: 'technical', labelKey: 'compose.siteResource' },
+  { id: 'loadNeeds', group: 'technical', labelKey: 'compose.loadNeeds' },
+  { id: 'methodology', group: 'technical', labelKey: 'compose.methodology' },
+  { id: 'presizing', group: 'technical', labelKey: 'compose.presizing' },
+  { id: 'system', group: 'technical', labelKey: 'compose.system' },
+  { id: 'performance', group: 'technical', labelKey: 'compose.performance' },
+  { id: 'protections', group: 'technical', labelKey: 'compose.protections' },
+  { id: 'pricing', group: 'commercial', labelKey: 'compose.pricing', monetary: true },
+  { id: 'internalCosts', group: 'commercial', labelKey: 'compose.internalCosts', monetary: true, confidential: true },
+  { id: 'economics', group: 'commercial', labelKey: 'compose.economics', monetary: true },
+  { id: 'conditions', group: 'commercial', labelKey: 'compose.conditions' },
+  { id: 'payment', group: 'commercial', labelKey: 'compose.payment', monetary: true },
+  { id: 'signature', group: 'commercial', labelKey: 'compose.signature' },
+  { id: 'diagram', group: 'annex', labelKey: 'compose.diagram' },
+  { id: 'billOfMaterial', group: 'annex', labelKey: 'compose.billOfMaterial' },
+  { id: 'commissioning', group: 'annex', labelKey: 'compose.commissioning' },
 ];
 
 const DESCRIPTORS = new Map(SECTIONS.map((section) => [section.id, section]));
