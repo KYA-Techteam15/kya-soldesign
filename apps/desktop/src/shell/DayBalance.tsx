@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { AioSizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import type { ProjectViewModel } from '../app/models/projectView';
 import { useCalculationState } from '../app/CalculationProvider';
@@ -28,17 +28,11 @@ function tickDecimals(step: number): number {
   return step >= 1 ? 0 : Math.min(3, Math.ceil(-Math.log10(step)));
 }
 
-export function DayBalance({ project, defaultOpen = false, pinned = false }: {
-  readonly project: ProjectViewModel;
-  readonly defaultOpen?: boolean;
-  readonly pinned?: boolean;
-}) {
+/** Profil du jour et irradiance, dans le panneau de droite : il suit chaque saisie, sur toutes les étapes. */
+export function DayBalance({ project }: { readonly project: ProjectViewModel }) {
   const t = useT();
   const sizingState = useCalculationState<AioSizingOutputV1>(project.id, 'sizing', project.updatedAt);
   const solarState = useCalculationState<SolarResourceAnalysisOutputV1>(project.id, 'solar-resource', project.updatedAt);
-  const [collapsed, setCollapsed] = useState(!defaultOpen);
-  useEffect(() => setCollapsed(!defaultOpen), [defaultOpen]);
-  const open = pinned || !collapsed;
 
   const model = useMemo(() => {
     const output = solarState.status === 'ready' ? solarState.envelope.output : null;
@@ -82,12 +76,10 @@ export function DayBalance({ project, defaultOpen = false, pinned = false }: {
   const irradiancePath = model.irradiance.map((value, hour) => `${xLine(hour)},${yIrradiance(value)}`).join(' ');
   const sizingReady = sizingState.status === 'ready';
 
-  return <div className={`dayb ${open ? '' : 'is-shut'}`}>
+  return <div className="dayb">
     <div className="dayb-head">
-      <span className="h-sec">{t('dayBalance.chargeAmpIrradiance')}</span><span className="sep" />
-      {!pinned && <button className="toggle" onClick={() => setCollapsed((value) => !value)} aria-expanded={open} title={open ? t('dayBalance.replierLeGraphe') : t('dayBalance.afficherLeGraphe')}>{open ? '▾' : '▸'}</button>}
+      <span className="h-sec">{t('dayBalance.chargeAmpIrradiance')}</span>
     </div>
-    {open && <>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="dayb-plot" role="img" aria-label={fill(t('dayBalance.chartLabel'), { kw: fmt(model.kw.top, 1), wm2: fmt(model.wm2.top, 0) })}>
         {model.kw.steps.map((value) => <line key={`grid-${value}`} x1={PAD_L} y1={yKw(value)} x2={W - PAD_R} y2={yKw(value)} className="dayb-grid" />)}
         {model.kw.steps.map((value) => <text key={`kw-${value}`} x={PAD_L - 4} y={yKw(value) + 3} className="dayb-tick t-left">{fmt(value, tickDecimals(model.kw.steps[1] ?? model.kw.top))}</text>)}
@@ -101,7 +93,6 @@ export function DayBalance({ project, defaultOpen = false, pinned = false }: {
         {[0, 6, 12, 18, 23].map((hour) => <text key={`hour-${hour}`} x={xLine(hour)} y={H - 6} className="dayb-tick t-hour">{hour}</text>)}
       </svg>
       <div className="dayb-units"><span className="u-left">kW</span><span className="dayb-key"><i className="k-load" /> {t('dayBalance.charge')}</span><span className="dayb-key"><i className="k-peak" /> {t('dayBalance.demarrage')}</span>{model.hasWeather && <span className="dayb-key"><i className="k-irr" /> {t('dayBalance.irradiance')}</span>}{model.hasWeather && <span className="u-right">W/m²</span>}</div>
-    </>}
     <div className="dayb-stats" aria-label={t('dayBalance.bilanEnergetiqueDeLa')}>
       <span><b>{model.hasLoad ? fmt(model.dailyEnergyKWh, 2) : '—'}</b><i>kWh/j</i></span>
       <span><b>{model.hasLoad ? fmt(model.peakLoadKw, 2) : '—'}</b><i>{t('loads.calledKw')}</i></span>

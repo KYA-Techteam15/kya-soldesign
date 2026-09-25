@@ -3,6 +3,7 @@ import type { FinanceOutputV1 } from '@ksd/engine';
 import { useProject } from './Stub';
 import { useProjects } from '../../store/project';
 import { DecimalField } from '../../ui/Field';
+import { DecimalInput } from '../../ui/DecimalInput';
 import { StepHead } from '../../ui/Flow';
 import { Dialog } from '../../ui/Dialog';
 import { useCalculationState } from '../../app/CalculationProvider';
@@ -84,21 +85,34 @@ export function SectionChiffrage() {
 
       <section>
         <div className="tbl-title"><h2 className="h-sec">{t('costing.mainEquipment')}</h2><span className="sep" /><span className="label">{t('costing.unitPrices')}</span></div>
-        <div className="costlist">
-          <div className="costhead"><span /><span>{t('loads.quantity')}</span><span>{t('costing.unitCost')}</span><span>{t('costing.margin')}</span><span className="ta-r">{t('costing.saleTotal')}</span></div>
-          {MAIN.map((line) => (
-            <MainCost
-              key={line.key}
-              role={t(line.label)}
-              money={money}
-              quantity={quantities[line.key]}
-              cost={effective[line.key]}
-              total={result?.lines.find((item) => item.key === lineKey[line.key])?.totalSale ?? null}
-              onPrice={set(`${line.key}UnitPrice`)}
-              onReset={() => set(`${line.key}UnitPrice`)(0)}
-              onMargin={(value) => setMargin(line.key, value)}
-            />
-          ))}
+        {/* Un tableau par nature de poste, mêmes colonnes : l'unité est dans l'en-tête, les champs
+            s'alignent et chaque ligne donne son total de vente. */}
+        <div className="tbl-wrap">
+          <table className="tbl cost-table">
+            <thead>
+              <tr>
+                <th>{t('costing.col.item')}</th>
+                <th className="num">{t('costing.col.qty')}</th>
+                <th className="num">{t('costing.unitCost')} <span className="unit">{money}</span></th>
+                <th className="num">{t('costing.margin')} <span className="unit">%</span></th>
+                <th className="num">{t('costing.saleTotal')} <span className="unit">{money}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {MAIN.map((line) => (
+                <MainCost
+                  key={line.key}
+                  role={t(line.label)}
+                  quantity={quantities[line.key]}
+                  cost={effective[line.key]}
+                  total={result?.lines.find((item) => item.key === lineKey[line.key])?.totalSale ?? null}
+                  onPrice={set(`${line.key}UnitPrice`)}
+                  onReset={() => set(`${line.key}UnitPrice`)(0)}
+                  onMargin={(value) => setMargin(line.key, value)}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -106,18 +120,34 @@ export function SectionChiffrage() {
         <div className="tbl-title">
           <h2 className="h-sec">{t('costing.other')}</h2><span className="sep" />
           <span className="label">{costing.definedCostForAccessories ? t('costing.asAmount') : t('costing.asPercent')}</span>
-          <button className="btn" disabled={mainCost <= 0} onClick={toggleAccessoryMode}>{t('costing.toggle')}</button>
+          <button className="btn" disabled={mainCost <= 0} onClick={toggleAccessoryMode}>
+            {costing.definedCostForAccessories ? t('costing.switchToPercent') : t('costing.switchToAmount').replace('{currency}', money)}
+          </button>
         </div>
-        <div className="acclist">
-          {ACCESSORIES.map((accessory) => (
-            <div className="accitem" key={accessory}>
-              <span className="accitem-lbl">{t(`costing.line.${accessory}`)}</span>
-              <div className="accitem-pair">
-                <div className="accrow-fld"><DecimalField label="" ariaLabel={t(`costing.line.${accessory}`)} unit={costing.definedCostForAccessories ? money : '%'} value={costing[`${accessory}Price`]} onCommit={set(`${accessory}Price`)} decimals={costing.definedCostForAccessories ? 0 : 1} min={0} /></div>
-                <div className="accrow-fld accrow-fld-m"><DecimalField label="" ariaLabel={`${t('costing.margin')} · ${t(`costing.line.${accessory}`)}`} unit="%" value={costing[`${accessory}Margin`]} onCommit={set(`${accessory}Margin`)} decimals={1} min={0} max={100} /></div>
-              </div>
-            </div>
-          ))}
+        <div className="tbl-wrap">
+          <table className="tbl cost-table">
+            <thead>
+              <tr>
+                <th>{t('costing.col.item')}</th>
+                <th className="num">{costing.definedCostForAccessories ? <>{t('costing.amount')} <span className="unit">{money}</span></> : t('costing.shareOfMain')}</th>
+                <th className="num">{t('costing.margin')} <span className="unit">%</span></th>
+                <th className="num">{t('costing.saleTotal')} <span className="unit">{money}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {ACCESSORIES.map((accessory) => {
+                const total = result?.lines.find((item) => item.key === accessory)?.totalSale;
+                return (
+                  <tr key={accessory}>
+                    <td className="cost-role">{t(`costing.line.${accessory}`)}</td>
+                    <td className="cost-in"><DecimalInput className="cell-in" aria-label={t(`costing.line.${accessory}`)} value={costing[`${accessory}Price`]} decimals={costing.definedCostForAccessories ? 0 : 1} min={0} onCommit={(value) => { if (value !== null) set(`${accessory}Price`)(value); }} /></td>
+                    <td className="cost-in"><DecimalInput className="cell-in" aria-label={`${t('costing.margin')} · ${t(`costing.line.${accessory}`)}`} value={costing[`${accessory}Margin`]} decimals={1} min={0} max={100} onCommit={(value) => { if (value !== null) set(`${accessory}Margin`)(value); }} /></td>
+                    <td className="num cost-total">{total === undefined ? '—' : fmt(total)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -194,22 +224,22 @@ export function SectionChiffrage() {
   );
 }
 
-function MainCost({ role, money, quantity, cost, total, onPrice, onReset, onMargin }: {
-  readonly role: string; readonly money: string; readonly quantity: number; readonly cost: MainLineCost; readonly total: number | null;
+function MainCost({ role, quantity, cost, total, onPrice, onReset, onMargin }: {
+  readonly role: string; readonly quantity: number; readonly cost: MainLineCost; readonly total: number | null;
   readonly onPrice: (value: number) => void; readonly onReset: () => void; readonly onMargin: (value: number) => void;
 }) {
   const t = useT();
   return (
-    <div className="costrow">
-      <span className="costrow-role">{role}</span>
-      <span className="costrow-qty"><b>{fmt(quantity)}</b><span className="unit">u</span></span>
-      <div className="costrow-fld">
-        <DecimalField label="" ariaLabel={`${t('costing.unitCost')} · ${role}`} unit={money} value={cost.unitPrice} onCommit={onPrice} min={0}
-          note={<small className="field-note">{cost.priceSource === 'auto' ? t('costing.priceAuto') : <>{t('costing.priceManual')} · <button type="button" className="linkish" onClick={onReset}>{t('costing.priceReset')}</button></>}</small>} />
-      </div>
-      <div className="costrow-fld"><DecimalField label="" ariaLabel={`${t('costing.margin')} · ${role}`} unit="%" value={Math.round(cost.marginRatio * 1000) / 10} onCommit={onMargin} decimals={1} min={0} max={100} /></div>
-      <span className="costrow-total"><b>{total === null ? '—' : fmt(total)}</b><span className="unit">{money}</span></span>
-    </div>
+    <tr>
+      <td className="cost-role">{role}</td>
+      <td className="num">{fmt(quantity)}</td>
+      <td className="cost-in">
+        <DecimalInput className="cell-in" aria-label={`${t('costing.unitCost')} · ${role}`} value={cost.unitPrice} decimals={0} min={0} onCommit={(value) => { if (value !== null) onPrice(value); }} />
+        <small className="cost-note">{cost.priceSource === 'auto' ? t('costing.priceAuto') : <>{t('costing.priceManual')} · <button type="button" className="linkish" onClick={onReset}>{t('costing.priceReset')}</button></>}</small>
+      </td>
+      <td className="cost-in"><DecimalInput className="cell-in" aria-label={`${t('costing.margin')} · ${role}`} value={Math.round(cost.marginRatio * 1000) / 10} decimals={1} min={0} max={100} onCommit={(value) => { if (value !== null) onMargin(value); }} /></td>
+      <td className="num cost-total">{total === null ? '—' : fmt(total)}</td>
+    </tr>
   );
 }
 

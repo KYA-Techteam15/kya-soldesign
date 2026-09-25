@@ -399,7 +399,6 @@
 }
 .pick-row.on {
   background: var(--accent-soft);
-  box-shadow: inset 2px 0 0 var(--accent);
 }
 .pick-id {
   display: flex;
@@ -1528,11 +1527,9 @@ table.tbl select.cell-in {
   padding: 7px var(--sp-4);
   text-align: left;
   font-size: var(--fs-md);
-  border-left: 2px solid transparent;
 }
 .palette-item.on {
   background: var(--accent-soft);
-  border-left-color: var(--accent);
 }
 .palette-item > span:first-child {
   flex: 1;
@@ -1626,17 +1623,24 @@ table.tbl select.cell-in {
 
 /* Le bouton de repli du verdict reprend celui du bandeau bas */
 .verdict .toggle {
-  width: 20px;
-  height: 18px;
-  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
   border-radius: var(--r-sm);
-  color: var(--text-muted);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   font-size: 12px;
+  font-weight: 600;
   line-height: 1;
   flex: none;
+  cursor: pointer;
 }
+.verdict .toggle span { font-size: 15px; }
 .verdict .toggle:hover {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
   color: var(--text);
 }
 
@@ -1690,8 +1694,7 @@ table.tbl select.cell-in {
   width: 100%;
   min-height: 32px;
   height: auto;
-  padding: 5px var(--sp-4) 5px 10px;
-  border-left: 3px solid transparent;
+  padding: 5px var(--sp-4) 5px 13px;
   font-size: var(--fs-md);
   color: var(--text-muted);
   text-align: left;
@@ -1716,7 +1719,6 @@ table.tbl select.cell-in {
 }
 .nav-item.on {
   background: var(--accent-soft);
-  border-left-color: var(--accent);
   color: var(--text);
   font-weight: 600;
 }
@@ -2002,7 +2004,6 @@ table.tbl select.cell-in {
   gap: var(--sp-5);
   padding: 8px var(--sp-4);
   border: 1px solid var(--border);
-  border-left: 1px solid var(--accent-fill);
   border-radius: var(--r-md);
   background: var(--surface-2);
 }
@@ -2314,20 +2315,6 @@ table.tbl select.cell-in {
    chiffrage doit alors se recomposer selon la largeur de la feuille, et non
    selon celle de la fenêtre entière. */
 @container (max-width: 760px) {
-  .costrow,
-  .costhead {
-    grid-template-columns: 76px 38px minmax(126px, 1fr) 86px;
-    gap: var(--sp-2);
-  }
-
-  .costrow-total,
-  .costhead > :last-child {
-    display: none;
-  }
-
-  .acclist {
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  }
 
   .out-foot {
     flex-wrap: wrap;
@@ -2372,68 +2359,18 @@ table.tbl select.cell-in {
    le même qu'à l'étape 4 — on saisit, puis on lit. */
 
 /* Une famille de matériel : rôle, quantité héritée, prix, marge, total. */
-.costlist {
-  display: grid;
-  gap: 6px;
-}
 /* Les cinq postes annexes tiennent en une bande de cartes plutôt qu'en cinq
    rangées pleine largeur : deux nombres n'ont pas besoin de 1 100 px. */
-.acclist {
-  display: grid;
-  /* Cinq colonnes tant que la largeur le permet, moins ensuite.
-
-     En `repeat(5, 1fr)` sec, les cinq postes tenaient coûte que coûte : à
-     1 180 px de fenêtre, chaque champ tombait à 20 px de large et n'affichait
-     plus un seul chiffre. `auto-fit` avec un plancher rend la main — on
-     préfère une seconde ligne à des cases illisibles (critère B5).
-
-     Le plancher vaut ce que réclament les deux champs côte à côte : la marge
-     et son caisson prennent 74 px — mesuré sur « 30,0 » — le coût en veut
-     autant pour sa valeur et son unité, plus la gouttière. */
-  grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
-  gap: var(--sp-2) var(--sp-3);
-}
-.accitem {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.accitem-lbl {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.accitem-pair {
-  display: grid;
-  /* Le coût prend la place restante, la marge prend ce que « 30,0 » plus son
-     caisson de pourcentage réclament — 74 px, mesurés, pas devinés. */
-  grid-template-columns: minmax(0, 1fr) 74px;
-  gap: 5px;
-}
 /* L'unité ne doit pas manger la valeur dans une case étroite. */
-.accitem-pair .uf-unit {
-  padding: 0 6px;
-  font-size: var(--fs-xs);
-}
 /* Dans une case étroite, la valeur se serre contre son unité plutôt que de
    se faire couper. */
-.accitem-pair input {
-  padding-left: 7px;
-  padding-right: 4px;
-}
 /* La marge se lit comme un complément du coût, pas comme un champ égal. */
-.accrow-fld-m .uf-unit {
-  color: var(--text-faint);
-}
 
 /* Pied du bloc résultat : la comparaison au groupe électrogène, sur une ligne. */
 .out-foot {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  margin-top: var(--sp-3);
   padding-top: var(--sp-3);
   border-top: 1px solid var(--grid-line);
 }
@@ -2480,122 +2417,23 @@ table.tbl select.cell-in {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.costrow {
-  display: grid;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: 5px var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface);
 }
 /* En-tête de colonne : nomme les champs une fois pour toute la liste. */
-.costhead {
-  display: grid;
-  gap: var(--sp-4);
-  padding: 0 var(--sp-3) 2px;
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-}
-.costrow {
-  grid-template-columns: 92px 58px minmax(0, 1fr) minmax(0, 1fr) 148px;
-}
-.costhead {
-  grid-template-columns: 92px 58px minmax(0, 1fr) minmax(0, 1fr) 148px;
-}
 
 /* Étroit : le prix garde la main, la marge se réduit à ce qu'elle affiche —
    trois caractères et un signe de pourcentage. Le total de vente cède aussi,
    il reste aligné à droite. */
-@media (max-width: 1340px) {
-  .costrow,
-  .costhead {
-    grid-template-columns: 84px 46px minmax(0, 1fr) minmax(0, 0.66fr) minmax(0, 118px);
-    gap: var(--sp-3);
-  }
-}
-.costhead .ta-r {
-  text-align: right;
-}
 
 /* Écran court : l'en-tête de colonnes du matériel disparaît. Les caissons
    FCFA et % sont accolés aux champs, et le rôle de chaque colonne se lit sans
    étiquette. Cette règle vit ici, après la déclaration de `.costhead` : à
    spécificité égale, c'est l'ordre du fichier qui tranche, et la placer plus
    haut la laissait sans effet. */
-@media (max-height: 860px) {
-  .costhead {
-    display: none;
-  }
-}
-.costrow-role {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
 /* La quantité vient du dimensionnement : elle se constate, elle ne se saisit
    pas. D'où l'absence de cadre de champ. */
-.costrow-qty,
-.costrow-total {
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  min-width: 0;
-}
-.costrow-qty > b {
-  font-weight: 600;
-  color: var(--text-muted);
-}
-.costrow-total {
-  justify-content: flex-end;
-}
-.costrow-total > b {
-  font-weight: 600;
-}
-.costrow-qty .unit,
-.costrow-total .unit {
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-}
 /* Les champs héritent du gabarit de `.form-rows` sans en reprendre la grille :
    ici c'est la rangée qui commande les colonnes. */
-.costrow-fld,
-.accrow-fld {
-  min-width: 0;
-}
-.costrow-fld label,
-.accrow-fld label {
-  display: block;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
 /* Le libellé vide ne doit pas réserver de place. */
-.costrow-fld label > span:first-child:empty,
-.accrow-fld label > span:first-child:empty {
-  display: none;
-}
-.costrow-fld input,
-.accrow-fld input {
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  text-align: left;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  min-width: 0;
-}
-.costrow-fld input:focus-visible,
-.accrow-fld input:focus-visible {
-  border-color: var(--accent);
-}
 
 /* ------------------------------------------- Chiffrage · écrans peu hauts
 
@@ -2614,15 +2452,6 @@ table.tbl select.cell-in {
   .targets {
     padding-top: 6px;
     padding-bottom: 6px;
-  }
-  .costlist {
-    gap: 4px;
-  }
-  .acclist {
-    row-gap: 4px;
-  }
-  .accitem {
-    gap: 2px;
   }
   .out-foot {
     margin-top: 6px;
@@ -2644,10 +2473,6 @@ table.tbl select.cell-in {
    d'état, soit une centaine de pixels. Un 1280×720 ne laisse que 608 px à la
    feuille — c'est ce cas qu'il faut couvrir. */
 @media (max-height: 860px) {
-  .costrow {
-    padding-top: 3px;
-    padding-bottom: 3px;
-  }
   /* Les notes ayant disparu, une valeur ne tient plus que sur deux lignes :
      les quatre montants reviennent sur un seul rang. */
   /* « Prix de revient » ne tient pas en un mot : à quatre colonnes serrées, le
@@ -3103,9 +2928,9 @@ table.tbl select.cell-in {
 .generate-warning {
   margin: 0;
   padding: var(--sp-2) var(--sp-3);
-  border-left: 3px solid var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
   background: var(--danger-soft);
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  border-radius: var(--r-sm);
   font-size: var(--fs-sm);
   line-height: 1.45;
 }
@@ -3335,8 +3160,6 @@ table.tbl.t-cables { table-layout: auto; }
 .hp-bars span { background: var(--ok); border-radius: 2px 2px 0 0; }
 
 /* Bilan du jour sur l'étape Besoins : largeur d'un panneau, pas de toute la page. */
-.loads-balance { max-width: 520px; }
-.loads-balance .dayb { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
 
 /* ============================================================== Sources de consommation (spec 011) */
 
@@ -3375,11 +3198,14 @@ table.tbl.t-cables { table-layout: auto; }
 .dp-mean.is-hover { fill: var(--ok-strong); }
 .dp-peak { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 0.6; stroke-dasharray: 2 2; }
 .dayprofile-hint { margin: 0; }
-table.tbl.t-dayprofile { table-layout: fixed; }
-.t-dayprofile th, .t-dayprofile td { padding: 2px; text-align: center; }
-.t-dayprofile th:first-child { width: 150px; text-align: left; white-space: nowrap; }
-.t-dayprofile th.is-hover { color: var(--accent); }
-.t-dayprofile .cell-in { width: 100%; min-width: 0; text-align: center; font-size: var(--fs-xs); }
+.dayprofile-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+@media (max-width: 1100px) { .dayprofile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+table.tbl.t-dayprofile { table-layout: fixed; width: 100%; }
+.t-dayprofile th, .t-dayprofile td { padding: 3px 4px; text-align: center; }
+.t-dayprofile thead th { font-size: var(--fs-xs); white-space: nowrap; }
+.t-dayprofile th:first-child { width: 48px; text-align: left; font-family: var(--font-mono); }
+.t-dayprofile tr.is-hover th { color: var(--accent); }
+.t-dayprofile .cell-in { width: 100%; min-width: 0; height: 30px; text-align: right; font-size: var(--fs-md); }
 .t-dayprofile .cell-in::placeholder { color: var(--text-faint); }
 
 /* Année importée et carte de chaleur. */
@@ -3418,7 +3244,6 @@ table.tbl.t-dayprofile { table-layout: fixed; }
 .composed-period input { min-width: 0; width: 100%; }
 /* Journée type : les 24 valeurs se lisent en entier, quitte à défiler. */
 .dayprofile-plot { height: auto; }
-table.tbl.t-dayprofile { min-width: 1150px; }
 .t-dayprofile .cell-in { padding: 2px 0; font-family: var(--font-mono); text-overflow: clip; }
 
 /* ============================================================== Optimisation et Mes références (spec 011) */
@@ -3507,3 +3332,16 @@ table.tbl.t-dayprofile { min-width: 1150px; }
 .upcoming-chip:nth-last-child(-n+2) .upcoming-preview { left: auto; right: 0; }
 .upcoming-chip:hover .upcoming-preview, .upcoming-chip:focus-visible .upcoming-preview { opacity: 1; visibility: visible; }
 @media (max-width: 900px) { .home-system-main { grid-template-columns: minmax(0, 1fr); } }
+/* Évaluation financière : deux tableaux de même facture, l'unité dans l'en-tête, des champs alignés
+   et le total de vente de chaque ligne. */
+table.tbl.cost-table { table-layout: fixed; width: 100%; }
+.cost-table th:first-child { width: 26%; }
+table.tbl.cost-table thead th { font-family: inherit; white-space: normal; vertical-align: bottom; line-height: 1.25; }
+table.tbl.cost-table td { vertical-align: middle; padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+.cost-role { font-weight: 600; }
+table.tbl.cost-table .cost-in .cell-in { width: 100%; height: 32px; padding: 0 var(--sp-2); text-align: right; font-family: var(--font-mono); font-size: var(--fs-md); border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface); }
+table.tbl.cost-table .cost-in .cell-in:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+.cost-note { display: block; margin-top: 4px; color: var(--text-muted); font-size: var(--fs-xs); text-align: right; }
+.cost-total { font-family: var(--font-mono); font-weight: 700; }
+.out-foot { padding: var(--sp-3) var(--sp-4); margin-top: 0; }
+.out-foot-say { flex: 1; white-space: normal; }

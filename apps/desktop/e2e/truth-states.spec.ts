@@ -12,7 +12,7 @@ test('keeps Page 1 active and future calculated surfaces explicitly unavailable'
   await expect(page.locator('.t-appliances tbody td.derived').first()).toHaveText('100');
   await expect(page.locator('.t-appliances tbody td.derived').nth(1)).toHaveText('111');
   await expect(page.locator('.t-appliances tbody td.derived').nth(2)).toHaveText('444');
-  await expect(page.locator('.loads-balance')).toContainText('Ajoutez des appareils à l’étape Besoins et chargez une série météo à l’étape Site.');
+  await expect(page.locator('.pane-right .dayb')).toContainText('Ajoutez des appareils à l’étape Besoins et chargez une série météo à l’étape Site.');
 
   await page.locator('.nav-item').nth(3).click();
   await expect(page.getByRole('button', { name: 'Lancer le prédimensionnement' })).toBeEnabled();

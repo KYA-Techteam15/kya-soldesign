@@ -200,7 +200,6 @@
 }
 [data-vibe='radiant'] .kpi-head {
   background: var(--surface);
-  border-left: 1px solid var(--accent);
 }
 [data-vibe='radiant'] .alert {
   background:

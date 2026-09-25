@@ -12,7 +12,6 @@ import { exportHourlyProfileWorkbook } from '../../app/services/loadWorkbooks';
 import { saveFile } from '../../app/platform/files';
 import { buildAnnualLoadPresentationResult } from '../../app/models/annualLoadPresentation';
 import { fill, useT } from '../../i18n';
-import { DayBalance } from '../../shell/DayBalance';
 import { AppliancesTable } from './loads/AppliancesTable';
 import { TypicalDayEditor } from './loads/TypicalDayEditor';
 import { AnnualImportPanel } from './loads/AnnualImportPanel';
@@ -191,8 +190,6 @@ export function SectionBesoins() {
           <MeterForm meter={profile.meter} calculatedShare={gamma} mutate={(change) => mutateProfile((target) => { if (target.meter) change(target.meter); })} />
         )}
 
-        {/* Le bilan du jour se lit ici, sous la saisie : le panneau de droite reste replié tant qu'il n'y a pas de prédimensionnement. */}
-        <section className="loads-balance"><DayBalance project={project} defaultOpen pinned /></section>
         <AnnualLoadChart result={annual} />
       </>}
 

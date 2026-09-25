@@ -11,6 +11,7 @@ const H = 150;
 const PAD_L = 36;
 const PAD_B = 18;
 const PAD_T = 8;
+const BLOCK_STARTS = [0, 6, 12, 18] as const;
 
 /**
  * Journée type en kW : un histogramme qu'on règle à la souris et un tableau Moyenne / Pointe.
@@ -94,32 +95,35 @@ export function TypicalDayEditor({ hourly, mutate }: {
         ))}
       </svg>
       <p className="label dayprofile-hint">{t('loads.typicalDayHint')}</p>
-      <div className="tbl-wrap" onPaste={paste}>
-        <table className="tbl t-dayprofile">
-          <thead>
-            <tr><th>{t('loads.hourShort')}</th>{HOURS.map((hour) => <th key={hour} className={hover === hour ? 'is-hover' : undefined}>{String(hour).padStart(2, '0')}</th>)}</tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row">{t('loads.averagePower')}<span className="unit">kW</span></th>
-              {HOURS.map((hour) => (
-                <td key={hour}>
-                  <DraftNumberInput className="cell-in" aria-label={fill(t('loads2.powerAtHour'), { hour })} value={means[hour]!} format={(value) => fmt(value, 2)}
-                    onCommit={(value) => { if (value !== null) setMean(hour, value); }} />
-                </td>
+      {/* Quatre blocs de six heures : des champs assez larges pour lire la valeur entière, sans
+          défilement horizontal. Le collage depuis un tableur vaut pour les quatre blocs. */}
+      <div className="dayprofile-grid" onPaste={paste}>
+        {BLOCK_STARTS.map((start) => (
+          <table key={start} className="tbl t-dayprofile">
+            <thead>
+              <tr>
+                <th>{t('loads.hourShort')}</th>
+                <th>{t('loads.meanShort')} <span className="unit">kW</span></th>
+                <th>{t('loads.peakShort')} <span className="unit">kW</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {HOURS.slice(start, start + 6).map((hour) => (
+                <tr key={hour} className={hover === hour ? 'is-hover' : undefined}>
+                  <th scope="row">{String(hour).padStart(2, '0')}</th>
+                  <td>
+                    <DraftNumberInput className="cell-in" aria-label={fill(t('loads2.powerAtHour'), { hour })} value={means[hour]!} format={(value) => fmt(value, 2)}
+                      onCommit={(value) => { if (value !== null) setMean(hour, value); }} />
+                  </td>
+                  <td>
+                    <DraftNumberInput className="cell-in" nullable placeholder="=" aria-label={fill(t('loads2.peakAtHour'), { hour })} value={hourly[hour]?.peakPower ?? null} format={(value) => fmt(value, 2)}
+                      onCommit={(value) => setPeak(hour, value)} />
+                  </td>
+                </tr>
               ))}
-            </tr>
-            <tr>
-              <th scope="row">{t('loads.peakPower')}<span className="unit">kW</span></th>
-              {HOURS.map((hour) => (
-                <td key={hour}>
-                  <DraftNumberInput className="cell-in" nullable placeholder="=" aria-label={fill(t('loads2.peakAtHour'), { hour })} value={hourly[hour]?.peakPower ?? null} format={(value) => fmt(value, 2)}
-                    onCommit={(value) => setPeak(hour, value)} />
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        ))}
       </div>
       <p className="label">
         {fill(t('loads.typicalDayTotals'), { kwh: fmt(totalKwh, 2), kw: fmt(peakKw, 2), hour: String(Math.max(0, peakHour)).padStart(2, '0') })}

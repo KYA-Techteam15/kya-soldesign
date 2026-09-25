@@ -83,8 +83,8 @@ test('Page 1 resolves real weather and calculates every needs mode through AIO',
   await expect(page.locator('.hpop').getByRole('button', { name: '11:00–12:00' })).toHaveAttribute('aria-pressed', 'false');
   await page.locator('.hpop').getByRole('button', { name: 'Confirmer' }).click();
   await expect(page.getByRole('img', { name: /Profil de charge horaire/ })).toBeVisible();
-  await expect(page.locator('.loads-balance')).toContainText('1,45');
-  await expect(page.locator('.loads-balance')).toContainText('1,88');
+  await expect(page.locator('.pane-right .dayb')).toContainText('1,45');
+  await expect(page.locator('.pane-right .dayb')).toContainText('1,88');
 
   // Changer de source conserve les appareils ; la journée type a ses propres valeurs.
   await page.getByRole('tab', { name: 'Journée type' }).click();

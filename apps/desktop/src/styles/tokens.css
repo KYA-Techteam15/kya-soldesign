@@ -668,13 +668,6 @@ tfoot td:first-child {
 }
 /* Replié, le bloc se réduit à son titre et à ses quatre valeurs clés :
    l'essentiel reste lisible pour le coût d'une ligne. */
-.dayb.is-shut .dayb-head {
-  margin-bottom: 0;
-}
-.dayb.is-shut .dayb-stats {
-  margin-top: 6px;
-  padding-top: 6px;
-}
 .dayb .toggle {
   width: 20px;
   height: 18px;

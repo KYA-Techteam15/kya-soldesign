@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { latestVersion, nextVersionNumber } from '../../app/models/projectLifecycle';
+import { isLoadEmpty } from '../../app/models/loadSources';
 import type { ProjectViewModel } from '../../app/models/projectView';
 import { dateLong } from '../../domain/format';
 import { useEffect, useRef } from 'react';
@@ -88,9 +89,10 @@ export function WorkshopLayout() {
     if (id) open(id);
   }, [id, open]);
 
-  /* Sans prédimensionnement, le panneau n'a rien à dire : il reste replié.
-     Un choix explicite de l'utilisateur l'emporte et reste mémorisé. */
-  const verdictCollapsed = verdictPreference === null ? project?.lastCalculation == null : verdictPreference === 'collapsed';
+  /* Le panneau s'ouvre dès qu'il a quelque chose à montrer : le profil du jour (charge ou météo)
+     ou un prédimensionnement. Un choix explicite de l'utilisateur l'emporte et reste mémorisé. */
+  const hasSomethingToShow = project !== null && (project.lastCalculation !== null || project.site.downloadedSource !== null || !isLoadEmpty(project));
+  const verdictCollapsed = verdictPreference === null ? !hasSomethingToShow : verdictPreference === 'collapsed';
 
   if (!project) {
     return (
