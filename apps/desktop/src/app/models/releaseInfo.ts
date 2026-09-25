@@ -14,6 +14,14 @@ export const applicationReleaseInfo: ApplicationReleaseInfo = {
   builtAtIso: env.VITE_BUILD_TIME ?? null,
   changelogEntries: [
     {
+      version: '1.2.0',
+      dateIso: '2026-09-25',
+      message: {
+        fr: 'Mise en production : éditions de licence et temps restant, rapport en vraies pages A4 avec sommaire, schéma unifilaire refait, mises à jour par canal, menu Fichier / Aide, avis et statistiques anonymes avec votre accord.',
+        en: 'Production release: licence editions and remaining time, report on true A4 pages with contents, redesigned single-line diagram, update channels, File / Help menu, feedback and anonymous statistics with your consent.',
+      },
+    },
+    {
       version: '1.1.0',
       dateIso: '2026-09-24',
       message: {

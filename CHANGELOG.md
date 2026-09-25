@@ -1,5 +1,60 @@
 # Journal des modifications
 
+## 1.2.0 — 2026-09-25
+
+Mise en production (spécification `specs/012-mise-en-production`, `PROD-001`).
+
+### Licences
+
+- **Éditions** Commerciale (mois, trimestre, année), Académique (année) et Étudiant (jour,
+  mois). Chacune ouvre ses fonctions : optimisation, export Word, prix et proforma, émission du
+  dossier, matériel ajouté au catalogue, nombre de projets ; filigrane imposé en Académique et
+  Étudiant.
+- **Temps restant** suivi en continu : pastille « Commerciale · 342 j » dans la barre d'état,
+  alertes à J-30, J-7 et J-1, délai de grâce puis **lecture seule** (projets consultables et
+  imprimables). Protections contre le recul de l'horloge et l'absence prolongée de vérification.
+- **Réglages → Licence** : activer une clé, rafraîchir, libérer le poste, fonctions ouvertes.
+- La plateforme d'administration est **simulée** dans cette version (clés de démonstration,
+  licence commerciale de démonstration au premier lancement).
+
+### Rapport
+
+- **Vraies pages A4** : le contenu est réparti feuille par feuille, les tableaux longs se
+  poursuivent avec leur en-tête, un titre ne reste jamais seul en bas de page ; l'impression
+  sort exactement les feuilles de l'aperçu.
+- **Correctif** : l'impression depuis l'onglet Documents sortait une page blanche.
+- Sommaire paginé, synthèse en une ligne, pied « réf · version · page x / y ».
+- Mentions internes retirées (couples évalués, empreinte du fichier météo) ; textes et nombres
+  dans leurs polices ; plus de barres verticales orange.
+
+### Schéma unifilaire
+
+- Planche paysage lue de gauche à droite, vrai unifilaire (nombre de conducteurs sur les
+  câbles), nature réelle des protections, parafoudres en dérivation vers la borne de terre.
+- Format choisi automatiquement (A4 à A2) pour rester lisible, aucun chevauchement de texte.
+
+### Interface
+
+- Catalogue et Réglages accessibles de partout ; listes déroulantes au même style.
+- Identification : nom en pleine largeur, date, chargé de projet par défaut.
+- Documents : composition à côté de l'aperçu, logo et page de garde propres au dossier.
+- Composition de l'année en trois zones.
+
+### Distribution
+
+- **Mises à jour** : canal stable ou bêta, vérification quotidienne, boîte « Nouvelle version »
+  avec ses notes, installation sans question.
+- **Menu** Fichier / Aide : nouveau projet (Ctrl+N), ouvrir (Ctrl+O), exporter (Ctrl+S),
+  projets récents, journaux, « Copier les infos de diagnostic ».
+- Installateur aux couleurs KYA ; à la désinstallation, les données sont conservées sauf si
+  l'on coche leur suppression.
+
+### Avis et usage
+
+- Statistiques d'usage **anonymes**, seulement avec votre accord (demandé une fois, modifiable).
+- « Donner un avis » et « Signaler un problème » : les messages partent vers l'équipe, les
+  réponses s'affichent dans **Réglages → Avis et assistance**.
+
 ## 1.1.0 — 2026-09-24
 
 Refonte de l'expérience de bout en bout (spécification `specs/011-ux-refonte`, `UX-001`).

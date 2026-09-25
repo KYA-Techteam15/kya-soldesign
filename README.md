@@ -5,8 +5,12 @@ Logiciel de bureau de dimensionnement d'installations solaires photovoltaïques,
 jusqu'au dossier client : prédimensionnement, dimensionnement avec le matériel du
 catalogue, protections et câbles, chiffrage, schéma unifilaire et documents Word.
 
-La version 1.1 couvre le système autonome à onduleur tout-en-un (AIO). Les autres
+La version 1.2 couvre le système autonome à onduleur tout-en-un (AIO). Les autres
 architectures sont annoncées dans l'application et suivies dans `ROADMAP.md`.
+
+Le logiciel s'utilise sous **licence** : Commerciale, Académique ou Étudiant, pour une durée
+donnée. L'édition active, les fonctions qu'elle ouvre et le temps restant se lisent dans la
+barre d'état et dans **Réglages → Licence**.
 
 Au premier lancement, l'accueil propose de renseigner la société, d'ouvrir le
 **projet exemple** (un centre de santé à Bombouaka, calculé à l'ouverture) ou de
@@ -23,8 +27,11 @@ de villes.
 
 - Projets : enregistrés sur le poste (SQLite), copie de sauvegarde à chaque démarrage.
 - Sauvegarde complète et restauration : **Réglages → Données**.
-- Journaux, signalement d'un problème, licence, confidentialité : **Réglages → À propos**.
-- Un fichier `.ksd` s'ouvre par double clic.
+- Mises à jour, journaux, infos de diagnostic, textes légaux : **Réglages → À propos**
+  (et menu **Aide**).
+- Avis, signalement d'un problème, réponses de l'équipe, statistiques anonymes :
+  **Réglages → Avis et assistance**.
+- Un fichier `.ksd` s'ouvre par double clic ou par **Fichier → Ouvrir un projet** (Ctrl+O).
 
 ## Pour les développeurs
 

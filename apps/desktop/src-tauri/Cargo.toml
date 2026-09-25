@@ -1,6 +1,6 @@
 [package]
 name = "kya-soldesign"
-version = "1.1.0"
+version = "1.2.0"
 description = "KYA-SolDesign — dimensionnement d'installations solaires photovoltaïques"
 authors = ["KYA-Energy Group"]
 license = "LicenseRef-Proprietary"

@@ -41,5 +41,5 @@
 - [x] T051 « Donner un avis » / « Signaler un problème » vers l'API (diagnostic joint au choix), réponses dans Réglages → Avis et assistance, signalement direct depuis l'écran de plantage (FR-F3)
 
 ## Fermeture
-- [ ] T060 CHANGELOG, README, ROADMAP `PROD-001`, version 1.2.0, `pnpm verify`, installateur
+- [x] T060 CHANGELOG, README, ROADMAP `PROD-001`, version 1.2.0, `pnpm verify` (vert), installateur
 - [ ] T061 **Bloquant avant vente réelle** : brancher `HttpAdminApi` sur la plateforme, remplacer `LICENSE_PUBLIC_KEY` par la clé publique de la plateforme, retirer `SimulatedAdminApi`, `DEMO_SIGNING_KEY`, `DEMO_KEYS` et la licence de démonstration automatique (la clé privée de démonstration est publique : tant qu'elle signe, n'importe qui peut forger une licence)
