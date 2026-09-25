@@ -201,18 +201,31 @@ function renderBlock(
         }),
       ];
 
-    // Un filet vertical teal marque la section, comme le fait la maquette
-    // imprimée : le lecteur retrouve le même repère d'un support à l'autre.
+    // Titre de section souligné d'un filet, comme la maquette imprimée : plus de barre verticale.
     case 'heading':
       return [
         new Paragraph({
           spacing: { before: 260, after: 100 },
+          keepNext: true,
           border: {
-            left: { style: BorderStyle.SINGLE, size: 18, color: TEAL, space: 8 },
             bottom: { style: BorderStyle.SINGLE, size: 4, color: RULE, space: 4 },
           },
           children: [text(block.text, { bold: true, size: 11, color: TEAL_DARK })],
         }),
+      ];
+
+    // Sommaire : Word pagine lui-même, les titres suffisent à s'orienter.
+    case 'toc':
+      return [
+        new Paragraph({
+          spacing: { before: 200, after: 80 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: RULE, space: 4 } },
+          children: [text(block.title, { bold: true, size: 11, color: TEAL_DARK })],
+        }),
+        ...block.entries.map((entry, index) => new Paragraph({
+          spacing: { after: 40 },
+          children: [text(`${index + 1}.  `, { size: 9, color: MUTED }), text(entry, { size: 9 })],
+        })),
       ];
 
     case 'meta':
@@ -596,9 +609,9 @@ function sectionOf(
           new Paragraph({
             border: { top: { style: BorderStyle.SINGLE, size: 6, color: ORANGE, space: 6 } },
             children: [
-              text(document.footer, { size: 7, color: MUTED }),
+              text(`${document.footer} · ${document.reference}`, { size: 7, color: MUTED }),
               new TextRun({
-                children: ['\t', PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES],
+                children: ['\t', `${document.pageLabel} `, PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES],
                 size: 14,
                 color: MUTED,
                 font: FONT,

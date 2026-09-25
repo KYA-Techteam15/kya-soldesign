@@ -26,9 +26,10 @@
 - [x] T025 Tests (matrice édition × fonctions, expiration, horloge), E2E
 
 ## Lot C — Rapport
-- [ ] T030 Pagination A4 de l'aperçu (FR-C1)
-- [ ] T031 Mentions internes retirées, synthèse, sommaire (FR-C2, FR-C3)
-- [ ] T032 Planche paysage, typographie, pied de page (FR-C4, FR-C5)
+- [x] T030 Pagination A4 de l'aperçu, mesurée ; l'impression sort les mêmes feuilles (`@page` à marge nulle) (FR-C1)
+- [x] T031 Mentions internes retirées (couples évalués, empreinte SHA-256), synthèse, sommaire paginé (FR-C2, FR-C3)
+- [x] T032 Planche paysage réductible sous son titre, colonnes texte / nombres, pied « réf · vN · page x/y », filets orange verticaux retirés (FR-C4, FR-C5)
+- [x] T033 Correctif : l'impression de l'onglet Documents sortait une page blanche depuis la refonte du lot A ; test E2E en média `print`
 
 ## Lot E — Distribution
 - [ ] T040 Mises à jour configurées (FR-E1)

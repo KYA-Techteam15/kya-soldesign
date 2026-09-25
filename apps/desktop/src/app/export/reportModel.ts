@@ -61,7 +61,9 @@ export type Block =
   | { readonly kind: 'paragraph'; readonly label: string; readonly text: string }
   | { readonly kind: 'checklist'; readonly items: readonly string[] }
   | { readonly kind: 'image'; readonly svg: string; readonly widthPx: number; readonly heightPx: number; readonly caption: string }
-  | { readonly kind: 'signature'; readonly left: string; readonly right: string; readonly imageUrl: string | null };
+  | { readonly kind: 'signature'; readonly left: string; readonly right: string; readonly imageUrl: string | null }
+  /** Sommaire : les titres de section du corps ; l'aperçu y ajoute les numéros de page. */
+  | { readonly kind: 'toc'; readonly title: string; readonly entries: readonly string[] };
 
 export interface DocSection {
   readonly orientation: 'portrait' | 'landscape';
@@ -75,9 +77,16 @@ export interface ReportDocument {
   readonly issuedOn: string;
   readonly company: { readonly name: string; readonly contact: string };
   readonly footer: string;
+  /** « n° KSD-001 · v2 » en pied de chaque page : la feuille isolée dit encore de quel dossier elle vient. */
+  readonly reference: string;
+  /** « Page » dans la langue du document. */
+  readonly pageLabel: string;
   readonly watermark: string;
   readonly sections: readonly DocSection[];
 }
+
+/** En deçà, un sommaire ne ferait que répéter ce que la page montre déjà. */
+const TOC_MIN_HEADINGS = 5;
 
 const TITLE_KEYS: Record<DocKind, [string, string]> = {
   rapport: ['report.title.rapport', 'report.subtitle.rapport'],
@@ -128,6 +137,7 @@ const reference = (equipment: Equipment | undefined) => equipment ? equipment.mo
 
 const item = (list: readonly Equipment[], id: string | null) => list.find((equipment) => equipment.id === id);
 const name = (equipment: Equipment | undefined) => (equipment ? `${equipment.manufacturer} · ${equipment.model}` : '—');
+const capitalize = (value: string): string => value.charAt(0).toLocaleUpperCase() + value.slice(1);
 const dash = (value: string | number | undefined | null): string =>
   value === undefined || value === null || value === '' ? '—' : String(value);
 
@@ -177,10 +187,13 @@ export function buildReportDocument(input: ReportModelInput): ReportDocument {
   const plateIds: readonly SectionId[] = ['diagram', 'billOfMaterial'];
   const landscape = true;
   const coverBlocks = built.get('cover') ?? [];
-  const bodyBlocks = retained
-    .filter((id) => id !== 'cover' && !(landscape && plateIds.includes(id)))
-    .flatMap((id) => built.get(id) ?? []);
+  const bodyIds = retained.filter((id) => id !== 'cover' && !(landscape && plateIds.includes(id)));
   const plateBlocks = landscape ? plateIds.flatMap((id) => built.get(id) ?? []) : [];
+  // Sommaire, juste après l'identification, dès que le document compte assez de sections.
+  const headings = [...bodyIds.flatMap((id) => built.get(id) ?? []), ...plateBlocks]
+    .flatMap((block) => (block.kind === 'heading' ? [block.text] : []));
+  const toc: readonly Block[] = headings.length >= TOC_MIN_HEADINGS ? [{ kind: 'toc', title: t('report.contents'), entries: headings }] : [];
+  const bodyBlocks = bodyIds.flatMap((id) => [...(built.get(id) ?? []), ...(id === 'identity' ? toc : [])]);
 
   const sections: DocSection[] = [];
   if (coverBlocks.length > 0) sections.push({ orientation: 'portrait', blocks: coverBlocks });
@@ -196,6 +209,8 @@ export function buildReportDocument(input: ReportModelInput): ReportDocument {
     issuedOn: `${t('report.editedOn')} ${dateLong(issuedAt(input), options.lang)}`,
     company: { name: settings.company.name || 'KYA-SolDesign', contact },
     footer: settings.reports.footerText.trim() || `${settings.company.name || 'KYA-SolDesign'} · ${title}`,
+    reference: input.version ? referenceLabel(input) : `${referenceLabel(input)} · ${t('report.workingDraft')}`,
+    pageLabel: t('report.page'),
     watermark: options.watermark.trim(),
     sections,
   };
@@ -275,7 +290,17 @@ function coverBlock(input: ReportModelInput): Block {
 
 function identityBlocks(input: ReportModelInput): readonly Block[] {
   const site = siteLabel(input);
-  const { project, kind, t } = input;
+  const { project, kind, t, sizing, finance } = input;
+  // Synthèse d'une ligne : ce que le lecteur pressé retient, avant tout détail.
+  const synthesis: readonly Block[] = sizing === null ? [] : [{
+    kind: 'kpis',
+    items: [
+      { label: t('report.summaryPv'), value: fmt(sizing.pv.obtainedPowerKwc, 2), unit: 'kWc' },
+      { label: t('report.summaryStorage'), value: fmt(sizing.battery.usefulEnergyKwh, 2), unit: 'kWh' },
+      { label: t('report.summaryInverter'), value: fmt(sizing.inverter.obtainedPowerKw, 2), unit: 'kW' },
+      { label: 'SRI', value: finance ? fmt(finance.simulation.sri, 2) : '—', unit: '' },
+    ],
+  }];
   const details = project.details;
   const [titleKey, subtitleKey] = TITLE_KEYS[kind];
   return [
@@ -301,6 +326,7 @@ function identityBlocks(input: ReportModelInput): readonly Block[] {
         },
       ],
     },
+    ...synthesis,
   ];
 }
 
@@ -375,7 +401,8 @@ function siteResourceBlocks(input: ReportModelInput): readonly Block[] {
     blocks.push({
       kind: 'paragraph',
       label: `${t('report.weatherSource')} :`,
-      text: `${source.name} · ${source.provider} · ${source.versionOrDate}${source.sourceSha256 ? ` · SHA-256 ${source.sourceSha256.slice(0, 16)}` : ''}`,
+      // L'empreinte du fichier sert la traçabilité interne ; le client lit la source et sa version.
+      text: `${source.name} · ${source.provider} · ${source.versionOrDate}`,
     });
   }
   return blocks;
@@ -422,9 +449,10 @@ function methodologyBlocks({ project, t, options }: ReportModelInput): readonly 
         [t('report.inverterEfficiency'), `${fmt(a.inverterYield, 1)} %`],
         [t('report.batteryEfficiency'), `${fmt(a.batteryYield, 1)} %`],
         [t('report.studyDuration'), `${fmt(a.projectLifetime, 0)} ${t('report.years')}`],
-        [t('report.discountRate'), `${fmt(a.actualizationRate, 1)} %`],
+        // Ces libellés servent aussi en milieu de phrase : la majuscule se pose ici, en tête de ligne.
+        [capitalize(t('report.discountRate')), `${fmt(a.actualizationRate, 1)} %`],
         [t('report.gridReference'), `${fmt(a.lcoeGrid, 1)} ${currencyLabel(project.currency, options?.lang ?? 'fr')}/kWh`],
-        [t('report.emissionFactor'), `${fmt(a.emissionFactor, 2)} kgCO₂/kWh`],
+        [capitalize(t('report.emissionFactor')), `${fmt(a.emissionFactor, 2)} kgCO₂/kWh`],
       ],
     },
   ];
@@ -433,9 +461,10 @@ function methodologyBlocks({ project, t, options }: ReportModelInput): readonly 
 /**
  * Prédimensionnement.
  *
- * Le moteur évalue 121 couples (α_A, α_N) et n'en retenait la trace nulle
- * part : c'est pourtant l'argument de la méthode — le système retenu est le
- * moins coûteux parmi ceux qui atteignent la fiabilité visée.
+ * L'argument de la méthode : le système retenu est le moins coûteux parmi ceux
+ * qui atteignent la fiabilité visée. Le nombre de couples (α_A, α_N) évalués
+ * est un détail de calcul : il reste dans l'application, pas dans le document
+ * remis au client (spec 012, FR-C2).
  */
 function presizingBlocks({ presizing, t }: ReportModelInput): readonly Block[] {
   if (presizing === null || presizing === undefined) {
@@ -451,7 +480,6 @@ function presizingBlocks({ presizing, t }: ReportModelInput): readonly Block[] {
     {
       kind: 'kpis',
       items: [
-        { label: t('report.evaluatedPairs'), value: `${presizing.evaluatedPairs} / ${presizing.totalPairs}`, unit: '' },
         { label: t('report.sriTarget'), value: fmt(presizing.sriMin, 3), unit: '' },
         { label: 'SRI', value: fmt(selected.sri, 3), unit: '' },
         { label: 'SVI', value: fmt(selected.svi, 2), unit: '' },

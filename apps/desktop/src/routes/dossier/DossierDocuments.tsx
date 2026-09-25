@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Equipment } from '@ksd/catalog';
 import type { FinanceOutputV1, PresizingOutputV1, SizingOutputV1, SolarResourceAnalysisOutputV1 } from '@ksd/engine';
 import type { ProjectViewModel } from '../../app/models/projectView';
@@ -72,14 +72,18 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
    * de pièce, elle serait à refaire à chaque tirage.
    */
   const [composition, setComposition] = useState<Partial<Record<DocKind, ReportOptions>>>({});
-  const chosen = composition[kind] ?? defaultReportOptions(kind, lang);
   /* Ce que la licence impose l'emporte sur la composition : prix retirés sans `documents.pricing`,
-     filigrane de l'édition (académique, étudiant) dans la langue du document. */
-  const options: ReportOptions = {
-    ...chosen,
-    withPrices: pricing && chosen.withPrices,
-    watermark: forcedWatermark === null ? chosen.watermark : translate(`license.watermark.${forcedWatermark}`, chosen.lang),
-  };
+     filigrane de l'édition (académique, étudiant) dans la langue du document. L'objet reste le même
+     d'un rendu à l'autre : l'aperçu ne se remet en page que si la composition change vraiment. */
+  const chosenForKind = composition[kind];
+  const options = useMemo<ReportOptions>(() => {
+    const chosen = chosenForKind ?? defaultReportOptions(kind, lang);
+    return {
+      ...chosen,
+      withPrices: pricing && chosen.withPrices,
+      watermark: forcedWatermark === null ? chosen.watermark : translate(`license.watermark.${forcedWatermark}`, chosen.lang),
+    };
+  }, [chosenForKind, kind, lang, pricing, forcedWatermark]);
   const readinessFor = (target: DocKind, chosen: ReportOptions): DocumentReadiness =>
     assessDocumentReadiness({ project, kind: target, facts, withPrices: chosen.withPrices, companyName: settings.company.name });
   const readiness = readinessFor(kind, options);

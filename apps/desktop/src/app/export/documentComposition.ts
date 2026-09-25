@@ -89,12 +89,14 @@ export const DEFAULT_COMPOSITION: Readonly<Record<DocKind, readonly SectionId[]>
   // Le bandeau « Système retenu » répétait mot pour mot la couverture, deux
   // pages plus loin. Il est retiré : la couverture l'annonce, le tableau du
   // système le détaille, rien ne justifiait un troisième passage.
+  // Les protections suivent le système qu'elles protègent : placées après la signature, elles
+  // finissaient seules sur une page, hors du corps technique.
   rapport: [
     'cover', 'identity',
     'siteResource', 'loadNeeds', 'methodology', 'presizing',
-    'system', 'performance',
+    'system', 'performance', 'protections',
     'pricing', 'economics', 'conditions', 'signature',
-    'diagram', 'protections',
+    'diagram',
   ],
   offre: [
     'cover', 'identity',

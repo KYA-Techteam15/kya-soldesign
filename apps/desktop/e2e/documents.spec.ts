@@ -31,6 +31,19 @@ test('le rapport et la proforma ne portent pas le même contenu', async ({ page 
   await expect(report).not.toContainText('Protections et câbles');
 });
 
+test('l’impression sort les feuilles de l’aperçu, et elles seules', async ({ page }) => {
+  await openDocuments(page);
+  const sheets = await page.locator('.a4-stack > article').count();
+  const footer = page.locator('.a4-stack > article').last().locator('.a4-foot');
+  await expect(footer).toContainText(`Page ${sheets} / ${sheets}`);
+  await expect(footer).toContainText('version de travail');
+
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.a4-stack > article').first()).toBeVisible();
+  await expect(page.locator('.docs-panel')).toBeHidden();
+  await expect(page.locator('.topbar')).toBeHidden();
+});
+
 test('ne propose que les pièces prêtes à être remises', async ({ page }) => {
   await openDocuments(page);
   // L'offre interne et le dossier d'exécution restent construits et testés, mais ne sont pas proposés.

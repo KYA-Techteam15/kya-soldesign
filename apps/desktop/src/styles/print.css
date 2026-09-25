@@ -123,7 +123,7 @@
   align-items: center;
   padding: 14px 16px;
   background: var(--band);
-  border-left: 3px solid var(--orange);
+  border-top: 0.6mm solid var(--orange);
   margin-bottom: 16px;
 }
 .a4-headline h2 {
@@ -193,15 +193,21 @@ table.a4-tbl {
   text-align: left;
   padding-left: 0;
 }
+/* Le texte (référence, protection, désignation) se lit à gauche, en police de texte ; seuls les
+   nombres prennent la chasse fixe et s'alignent à droite. */
 .a4-tbl td {
-  text-align: right;
+  text-align: left;
   padding: 4px 5px;
   border-top: 1px solid var(--rule);
+  font-family: var(--font-sans);
+}
+.a4-tbl th:not(.num) {
+  text-align: left;
+}
+.a4-tbl td.num {
+  text-align: right;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-}
-.a4-tbl td:first-child {
-  font-family: var(--font-sans);
 }
 .a4-tbl td.ref {
   font-size: 8pt;
@@ -380,6 +386,94 @@ table.a4-tbl {
 .a4-spacer {
   flex: 1;
 }
+
+/* --- Feuilles paginées ---
+   Le contenu coule dans `.a4-flow`, entre l'en-tête et le pied ; chaque bloc est isolé
+   (`flow-root`) pour que sa hauteur mesurée soit celle qu'il occupe sur la feuille. */
+/* Marge (et non remplissage) sous l'en-tête : la feuille vide de mesure la retranche d'elle-même. */
+.a4-flow {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 3mm;
+}
+.a4-block {
+  display: flow-root;
+}
+/* Sur une feuille paginée, le contenu est une colonne : seuls les blocs réductibles (la planche)
+   cèdent de la hauteur, les autres gardent la leur. */
+.a4-sheet .a4-flow {
+  display: flex;
+  flex-direction: column;
+}
+.a4-sheet .a4-block {
+  flex: none;
+}
+.a4-sheet .a4-block[data-kind='image'] {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.a4-sheet .a4-block[data-kind='image'] .a4-diagram {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.a4-sheet .a4-block[data-kind='image'] .a4-diagram svg {
+  height: 100%;
+}
+/* Un tableau qui suit un texte ou des chiffres s'en détache ; après un titre, le titre suffit. */
+.a4-block:not([data-kind='heading']) + .a4-block[data-kind='table'] > .a4-tbl {
+  margin-top: 8px;
+}
+.a4-sheet {
+  height: 297mm;
+  min-height: 0;
+  overflow: hidden;
+}
+.a4-landscape.a4-sheet {
+  height: 210mm;
+}
+.a4-measure-stage {
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* --- Sommaire --- */
+.a4-toc ol {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: toc;
+  display: grid;
+  gap: 5px;
+}
+.a4-toc li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 9.5pt;
+  counter-increment: toc;
+}
+.a4-toc li span::before {
+  content: counter(toc) '.';
+  display: inline-block;
+  min-width: 18px;
+  color: var(--ink-3);
+}
+.a4-toc li i {
+  border-bottom: 1px dotted var(--rule-2);
+  transform: translateY(-3px);
+}
+.a4-toc li b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 .a4-foot {
   margin-top: 16px;
   padding-top: 7px;
@@ -427,8 +521,15 @@ table.a4-tbl {
   /* Sur l'onglet Documents, la feuille A4 est le document : tout ce qui
      l'entoure dans l'étape est de la commande d'interface. Les autres
      onglets — synthèse, synoptique — s'impriment tels quels. */
-  .sheet.prints-paper > *:not(.paper-wrap) {
+  /* Depuis la refonte de l'écran, l'aperçu vit dans `.docs-layout > .docs-preview` : ce chemin reste
+     imprimable, tout le reste (panneau, avis de préparation) disparaît. Sans cela, rien ne sortait. */
+  .sheet.prints-paper > *:not(.paper-wrap):not(.docs-layout),
+  .docs-preview > *:not(.paper-wrap) {
     display: none !important;
+  }
+  .docs-layout,
+  .docs-preview {
+    display: block !important;
   }
   .paper-wrap {
     display: block !important;
@@ -467,12 +568,23 @@ table.a4-tbl {
     display: block;
     padding: 0;
   }
+  /* La feuille est la page : même boîte qu'à l'écran, marges de `@page` à zéro. La répartition
+     mesurée dans l'aperçu vaut donc telle quelle sur le papier. */
   .a4 {
-    width: auto;
-    min-height: auto;
-    padding: 0;
     box-shadow: none;
     break-after: page;
+  }
+  .a4-sheet,
+  .a4-cover {
+    height: calc(297mm - 1px);
+    min-height: 0;
+    overflow: hidden;
+  }
+  .a4-landscape.a4-sheet {
+    height: calc(210mm - 1px);
+  }
+  .a4-measure-stage {
+    display: none !important;
   }
   /* Le papier reprend ses proportions de document : l'ombre et le cadrage
      centré de l'aperçu n'ont plus lieu d'être une fois sur la feuille. */
@@ -481,12 +593,10 @@ table.a4-tbl {
     margin: 0 !important;
     border: none !important;
   }
-  /* La marge du papier est celle de `@page` : chaque feuille occupe la
-     largeur utile, sans rien qui déborde à droite. */
-  .a4-stack,
+  .a4-stack {
+    width: auto !important;
+  }
   .a4 {
-    width: 100% !important;
-    max-width: 100% !important;
     box-sizing: border-box !important;
   }
   /* Les aplats de charte — bandeau d'énoncé, filet bicolore, sceau — sont la
@@ -501,7 +611,7 @@ table.a4-tbl {
   }
   @page {
     size: A4;
-    margin: 15mm 15mm 13mm;
+    margin: 0;
   }
 }
 
@@ -537,11 +647,19 @@ table.a4-tbl {
 .a4-landscape .a4-diagram svg {
   max-height: 148mm;
 }
+/* Gabarit de mesure de la planche : mêmes règles de taille que le SVG. */
+.a4-diagram-box {
+  width: 100%;
+  max-height: 205mm;
+}
+.a4-landscape .a4-diagram-box {
+  max-height: 148mm;
+}
 
 @media print {
   @page landscape {
     size: A4 landscape;
-    margin: 14mm;
+    margin: 0;
   }
   .a4-landscape {
     page: landscape;
@@ -622,7 +740,7 @@ table.a4-tbl {
   text-align: left;
   margin-top: 9mm;
   background: var(--band);
-  border-left: 1.4mm solid var(--orange);
+  border-top: 0.8mm solid var(--orange);
   padding: 5mm 6mm;
   display: flex;
   justify-content: space-between;
