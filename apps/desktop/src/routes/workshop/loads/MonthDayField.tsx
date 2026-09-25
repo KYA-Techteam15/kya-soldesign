@@ -25,10 +25,10 @@ export function MonthDayField({ value, onChange, label }: { readonly value: stri
   };
   return (
     <span className="monthday" role="group" aria-label={label}>
-      <select className="cell-in" aria-label={`${label} · ${t('loads.dayShort')}`} value={day} onChange={(event) => emit(month, Number(event.target.value))}>
+      <select aria-label={`${label} · ${t('loads.dayShort')}`} value={day} onChange={(event) => emit(month, Number(event.target.value))}>
         {Array.from({ length: DAYS_IN_MONTH[month - 1]! }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
       </select>
-      <select className="cell-in" aria-label={`${label} · ${t('loads.monthShort')}`} value={month} onChange={(event) => emit(Number(event.target.value), day)}>
+      <select aria-label={`${label} · ${t('loads.monthShort')}`} value={month} onChange={(event) => emit(Number(event.target.value), day)}>
         {monthNames(lang).map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
       </select>
     </span>

@@ -115,7 +115,7 @@ export function ComposedProfilesDialog({ open, initial, inventory = [], onCancel
             {draft.calendar.periods.map((period, index) => (
               <div className="composed-period-card" key={period.id}>
                 <div className="composed-period-head">
-                  <input className="cell-in" aria-label={fill(t('composed.periodNameN'), { n: index + 1 })} value={period.name} onChange={(event) => setPeriod(period.id, { name: event.target.value })} />
+                  <input className="period-name" aria-label={fill(t('composed.periodNameN'), { n: index + 1 })} value={period.name} onChange={(event) => setPeriod(period.id, { name: event.target.value })} />
                   {datedPeriods && draft.calendar.periods.length > 1 && <button type="button" className="btn btn-ghost" aria-label={`${t('loads.composedDelete')} · ${period.name}`} onClick={() => removePeriod(period.id)}>×</button>}
                 </div>
                 {datedPeriods && (
@@ -131,7 +131,7 @@ export function ComposedProfilesDialog({ open, initial, inventory = [], onCancel
                     const assignment = draft.calendar.assignments.find((item) => item.periodId === period.id && item.dayGroupId === group.id);
                     return (
                       <label key={group.id}><span>{groupLabel(group.kind, t)}</span>
-                        <select className="cell-in" aria-label={`${period.name}, ${groupLabel(group.kind, t)}`} value={assignment?.profileId ?? ''} onChange={(event) => setAssignment(period.id, group.id, event.target.value)}>
+                        <select aria-label={`${period.name}, ${groupLabel(group.kind, t)}`} value={assignment?.profileId ?? ''} onChange={(event) => setAssignment(period.id, group.id, event.target.value)}>
                           <option value="">{t('loads.composedChooseProfile')}</option>
                           {draft.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
                         </select>
@@ -160,7 +160,7 @@ export function ComposedProfilesDialog({ open, initial, inventory = [], onCancel
           {selected && (
             <div className="composed-profile-editor">
               <div className="composed-profile-meta">
-                <label><span>{t('loads.composedName')}</span><input className="cell-in" value={selected.name} onChange={(event) => updateSelected((profile) => ({ ...profile, name: event.target.value }))} /></label>
+                <label><span>{t('loads.composedName')}</span><input value={selected.name} onChange={(event) => updateSelected((profile) => ({ ...profile, name: event.target.value }))} /></label>
                 <label><span>{t('loads.composedColor')}</span><input type="color" value={selected.color} onChange={(event) => updateSelected((profile) => ({ ...profile, color: event.target.value }))} /></label>
               </div>
               <div className="composed-profile-actions">

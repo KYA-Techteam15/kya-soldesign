@@ -88,7 +88,7 @@ export function LicenseSection() {
       <div className="kpi">
         <span>{t('license.key')}<small className="label asset-help">{t('license.keyHelp')}</small></span>
         <span className="asset-actions">
-          <input className="cell-in settings-input license-key" value={key} placeholder="KYA-XXX-XX-XXXX" aria-label={t('license.key')} onChange={(event) => setKey(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void submit(); }} />
+          <input className="settings-input license-key" value={key} placeholder="KYA-XXX-XX-XXXX" aria-label={t('license.key')} onChange={(event) => setKey(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void submit(); }} />
           <button type="button" className="btn btn-primary" disabled={busy || key.trim() === ''} onClick={() => { void submit(); }}>{t('license.activate')}</button>
         </span>
       </div>

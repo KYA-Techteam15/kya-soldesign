@@ -122,7 +122,7 @@ export function OptimizationDialog({ project, equipment, requirements, coldTempe
                 <input type="radio" name={`src-${family}`} checked={sources[family] === 'fixed'} onChange={() => setSources((current) => ({ ...current, [family]: 'fixed' }))} />
                 {t('optimization.scopeFixed')}
                 {sources[family] === 'fixed' && (
-                  <select className="cell-in" aria-label={`${t(`optimization.family.${family}`)} · ${t('optimization.scopeFixed')}`} value={fixed[family]} onChange={(event) => setFixed((current) => ({ ...current, [family]: event.target.value }))}>
+                  <select aria-label={`${t(`optimization.family.${family}`)} · ${t('optimization.scopeFixed')}`} value={fixed[family]} onChange={(event) => setFixed((current) => ({ ...current, [family]: event.target.value }))}>
                     {(favorites[family].length > 0 ? [...favorites[family].map((id) => catalog[family].find((item) => item.id === id)!), ...catalog[family].filter((item) => !favorites[family].includes(item.id))] : catalog[family]).map((item) => <option key={item.id} value={item.id}>{favorites[family].includes(item.id) ? '★ ' : ''}{item.manufacturer} {item.model}</option>)}
                   </select>
                 )}

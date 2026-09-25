@@ -3254,7 +3254,7 @@ table.tbl.t-dayprofile { table-layout: fixed; width: 100%; }
 .opt-source { display: grid; grid-template-columns: 90px repeat(3, auto); align-items: center; gap: var(--sp-3); justify-content: start; }
 .opt-source label { display: inline-flex; align-items: center; gap: 6px; }
 .opt-source label.is-disabled { color: var(--text-faint); }
-.opt-source select.cell-in { max-width: 320px; }
+.opt-source select { max-width: 320px; }
 .opt-objective-choice { display: flex; align-items: baseline; gap: 6px; }
 .opt-limits summary { cursor: pointer; color: var(--text-muted); }
 .opt-block progress { width: 100%; height: 8px; accent-color: var(--ok); }
@@ -3382,6 +3382,10 @@ select:disabled { opacity: 0.6; cursor: default; }
 select option { background: var(--surface); color: var(--text); }
 /* Identification : un nom long se lit en entier ; une saisie incomplète se signale sous le champ. */
 .form-rows > .field-wide { grid-column: 1 / -1; }
+/* Une cellule ne s'élargit pas à la plus longue option de sa liste : elle déborderait sur sa voisine
+   (« Recommandation à confirmer · Août » recouvrait l'irradiation moyenne). La liste s'abrège. */
+.form-rows > * { min-width: 0; }
+.form-rows select { width: 100%; min-width: 0; text-overflow: ellipsis; }
 .form-rows input[aria-invalid='true'] { border-color: var(--danger); }
 .ro-note.field-hint.is-invalid { color: var(--danger); }
 
@@ -3418,13 +3422,13 @@ select option { background: var(--surface); color: var(--text); }
 .composed-periods { display: grid; gap: var(--sp-2); }
 .composed-period-card { display: grid; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
 .composed-period-head { display: flex; gap: var(--sp-2); align-items: center; }
-.composed-period-head .cell-in { flex: 1; font-weight: 600; font-family: var(--font-sans); text-align: left; }
+.composed-period-head .period-name { flex: 1; min-width: 0; font-weight: 600; }
 .composed-period-dates { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .monthday { display: inline-flex; gap: 4px; }
-.monthday .cell-in { width: auto; min-width: 58px; font-family: var(--font-sans); }
+.monthday select { width: auto; min-width: 72px; }
 .composed-period-assign { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-2); }
 .composed-period-assign label { display: grid; gap: 2px; font-size: var(--fs-xs); color: var(--text-muted); }
-.composed-period-assign .cell-in { font-family: var(--font-sans); text-align: left; }
+.composed-period-assign select { width: 100%; }
 .composed-profile-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .composed-profile-tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: var(--fs-sm); }
 .composed-profile-tabs button[aria-selected='true'] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
@@ -3432,7 +3436,7 @@ select option { background: var(--surface); color: var(--text); }
 .composed-profile-editor { display: grid; gap: var(--sp-2); }
 .composed-profile-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-2); }
 .composed-profile-meta label { display: grid; gap: 2px; font-size: var(--fs-xs); color: var(--text-muted); }
-.composed-profile-meta .cell-in { font-family: var(--font-sans); text-align: left; }
+.composed-profile-meta input:not([type=color]) { width: 100%; }
 .composed-profile-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .composed-profile-editor .dayprofile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .composed-columns { grid-template-columns: minmax(0, 1fr); } }
@@ -3486,3 +3490,26 @@ select option { background: var(--surface); color: var(--text); }
 .feedback-reply small { display: block; margin-bottom: 2px; }
 .update-notes { white-space: pre-wrap; font: inherit; margin: 0; max-height: 50vh; overflow: auto; }
 .usage-consent a { color: var(--ok-strong); text-underline-offset: 2px; }
+
+/* Champs de saisie hors tableaux (Réglages, dialogues, panneaux) : même allure que les listes
+   déroulantes. Les cellules éditables des tableaux (`.cell-in`) gardent leur style discret. */
+:where(input:not([type='checkbox'], [type='radio'], [type='color'], [type='range'], [type='file'], [type='hidden'], .cell-in), textarea:not(.cell-in)) {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+}
+:where(textarea:not(.cell-in)) { padding: 8px 10px; line-height: 1.45; }
+:where(input:not([type='checkbox'], [type='radio'], [type='color'], [type='range'], [type='file'], [type='hidden'], .cell-in), textarea:not(.cell-in)):hover:not(:disabled, [readonly]) { border-color: var(--text-faint); }
+:where(input:not([type='checkbox'], [type='radio'], [type='color'], [type='range'], [type='file'], [type='hidden'], .cell-in), textarea:not(.cell-in)):disabled { background: var(--surface-2); color: var(--text-muted); }
+input:not([type='checkbox'], [type='radio'], [type='color'], [type='range'], [type='file'], .cell-in):focus-visible,
+textarea:not(.cell-in):focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+:where(input:not(.cell-in), textarea:not(.cell-in))::placeholder { color: var(--text-faint); }
