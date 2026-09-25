@@ -21,6 +21,8 @@ jobs:
       # est construite sans signature ni mises à jour automatiques.
       TAURI_UPDATER_ENDPOINT: ${{ vars.TAURI_UPDATER_ENDPOINT }}
       TAURI_UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+      # Flux du canal beta, lu à la compilation de l'hôte ; absent, seul le canal stable est proposé.
+      KSD_UPDATER_BETA_ENDPOINT: ${{ vars.TAURI_UPDATER_BETA_ENDPOINT }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       VITE_OPEN_METEO_API_KEY: ${{ secrets.OPEN_METEO_API_KEY }}

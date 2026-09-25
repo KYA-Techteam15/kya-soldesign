@@ -75,6 +75,8 @@
         "languages": ["French", "English"],
         "displayLanguageSelector": true,
         "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/header.bmp",
+        "sidebarImage": "installer/sidebar.bmp",
         "startMenuFolder": "KYA-SolDesign"
       }
     }

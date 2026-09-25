@@ -1,4 +1,5 @@
 import { diagnosticReport, logger } from './logger.js';
+import { diagnosticContext } from './diagnostics.js';
 import { isTauri, SUPPORT_EMAIL } from './runtime.js';
 
 export type ReportOutcome = 'mail-opened' | 'copied' | 'failed';
@@ -8,8 +9,8 @@ export type ReportOutcome = 'mail-opened' | 'copied' | 'failed';
  * diagnostic (sans données projet). Sans adresse configurée, le rapport est
  * copié pour être transmis par le canal habituel.
  */
-export async function reportProblem(): Promise<ReportOutcome> {
-  const report = diagnosticReport();
+export async function reportProblem(context: { readonly projectCount?: number; readonly lang?: string } = {}): Promise<ReportOutcome> {
+  const report = diagnosticReport(diagnosticContext(context));
   if (SUPPORT_EMAIL !== null) {
     const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('KYA-SolDesign — signalement')}&body=${encodeURIComponent(report.slice(0, 1800))}`;
     try {

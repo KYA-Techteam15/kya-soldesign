@@ -7,6 +7,8 @@ import { WorkshopLayout } from './routes/workshop/WorkshopLayout';
 import { Toasts } from './shell/Toasts';
 import { ConfirmDialog } from './shell/ConfirmDialog';
 import { CommandPalette } from './shell/CommandPalette';
+import { NativeMenu } from './shell/NativeMenu';
+import { UpdateNotice } from './shell/UpdateNotice';
 import { useProjects } from './store/project';
 import { useOpenedProjectFiles } from './app/useOpenedProjectFiles';
 import { readNavigationSession, writeNavigationSession, writeProjectResumeTarget } from './app/navigationSession';
@@ -105,6 +107,8 @@ export function App() {
       <Toasts />
       <ConfirmDialog />
       <CommandPalette />
+      <NativeMenu />
+      <UpdateNotice />
     </>
   );
 }

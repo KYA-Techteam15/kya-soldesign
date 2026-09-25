@@ -29,9 +29,32 @@ Clés de mise à jour : `pnpm --filter @ksd/desktop exec tauri signer generate`.
 privée ne quitte jamais le coffre de secrets ; perdue, elle empêche toute mise à
 jour des postes déjà installés.
 
-## 4. Décisions encore ouvertes
+### Canaux de mise à jour (spec 012, FR-E1)
 
-- fournisseur de licence et d'activation (le port `LicensePort` est prêt) ;
+- **stable** : `TAURI_UPDATER_ENDPOINT`, par exemple
+  `https://github.com/KYA-Techteam15/kya-soldesign/releases/latest/download/latest.json`.
+  « latest » ignore les préversions : une bêta ne part jamais vers le canal stable.
+- **beta** : variable `TAURI_UPDATER_BETA_ENDPOINT`, compilée dans l'hôte. Elle doit désigner un
+  `latest.json` que chaque bêta remplace (publication d'étiquette fixe, ou stockage de fichiers).
+  Sans elle, Réglages → À propos ne propose pas le choix du canal.
+
+L'installation se fait en mode `passive` : barre de progression, sans question, puis relance.
+Au démarrage, l'application vérifie au plus une fois par jour et annonce une version disponible
+dans une boîte avec ses notes (le corps de la publication).
+
+## 4. Installateur
+
+- Images : `apps/desktop/src-tauri/installer/{header,sidebar}.bmp`, générées par
+  `pwsh tools/release/installer-art.ps1` à partir du logo.
+- Désinstallation : la case « Supprimer les données de l'application » (décochée par défaut)
+  efface `%APPDATA%` et `%LOCALAPPDATA%` de l'application — projets, sauvegardes, journaux,
+  licence. Décochée, tout est conservé pour une réinstallation. Une mise à jour ne supprime rien.
+
+## 5. Décisions encore ouvertes
+
+- API de licences de la plateforme d'administration : l'application utilise `SimulatedAdminApi`
+  et une clé de démonstration publique ; à remplacer avant toute vente (spec 012, T061) ;
+- hébergement du flux beta ;
 - type de certificat (OV, EV ou Azure Trusted Signing) ;
 - hébergement du flux de mises à jour ;
 - contrat de géocodage commercial.

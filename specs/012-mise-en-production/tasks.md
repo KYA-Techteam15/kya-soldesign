@@ -32,9 +32,9 @@
 - [x] T033 Correctif : l'impression de l'onglet Documents sortait une page blanche depuis la refonte du lot A ; test E2E en média `print`
 
 ## Lot E — Distribution
-- [ ] T040 Mises à jour configurées (FR-E1)
-- [ ] T041 Installateur aux couleurs KYA (FR-E2)
-- [ ] T042 Menu natif, diagnostic (FR-E3)
+- [x] T040 Mises à jour : canaux stable/beta (commandes hôte `check_update`/`install_update`), boîte « Nouvelle version » avec notes, vérification quotidienne, mode `passive` (FR-E1) — clés et flux beta : action du propriétaire (RELEASING.md)
+- [x] T041 Installateur aux couleurs KYA (images générées), suppression des données au choix à la désinstallation (case native NSIS) (FR-E2)
+- [x] T042 Menu natif Fichier / Aide (Ctrl+N, Ctrl+O, Ctrl+S, projets récents, journaux), « Copier les infos de diagnostic » (FR-E3)
 
 ## Lot F — Usage et avis
 - [ ] T050 Consentement, file d'événements, API simulée (FR-F1, FR-F2)

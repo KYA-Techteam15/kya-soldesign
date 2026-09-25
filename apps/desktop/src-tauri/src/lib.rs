@@ -12,6 +12,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
+#[cfg(feature = "updater")]
+mod updates;
+
 /// Nom de la base, identique à `PROJECT_DATABASE` côté interface.
 const DATABASE_FILE: &str = "kya-sol-design.db";
 /// Nombre de copies de sauvegarde conservées au démarrage.
@@ -110,10 +113,23 @@ pub fn run() {
         .plugin(tauri_plugin_process::init());
 
     #[cfg(feature = "updater")]
-    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(updates::PendingUpdate::default())
+        .invoke_handler(tauri::generate_handler![
+            startup_project_file,
+            read_project_file,
+            updates::update_channels,
+            updates::check_update,
+            updates::install_update
+        ]);
+
+    // Sans le module de mise à jour, les commandes n'existent pas : l'interface affiche
+    // « mises à jour non configurées », jamais une fausse absence de mise à jour.
+    #[cfg(not(feature = "updater"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![startup_project_file, read_project_file]);
 
     builder
-        .invoke_handler(tauri::generate_handler![startup_project_file, read_project_file])
         .setup(|app| {
             log::info!("KYA-SolDesign {} démarre", app.package_info().version);
             backup_database(app.handle());

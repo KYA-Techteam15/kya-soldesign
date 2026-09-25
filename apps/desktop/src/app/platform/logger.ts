@@ -49,12 +49,13 @@ export function installGlobalErrorHandlers(onError: (message: string) => void): 
 }
 
 /** Rapport joint à un signalement : version, environnement et derniers événements, sans données projet. */
-export function diagnosticReport(): string {
+export function diagnosticReport(context: readonly string[] = []): string {
   const lines = [
     `KYA-SolDesign ${applicationReleaseInfo.version} (${applicationReleaseInfo.channel})`,
     `Build: ${applicationReleaseInfo.builtAtIso ?? '—'}`,
     `User agent: ${typeof navigator === 'undefined' ? '—' : navigator.userAgent}`,
     `Date: ${new Date().toISOString()}`,
+    ...context,
     '',
     ...buffer.slice(-50).map((entry) => `${entry.at} [${entry.level}] ${entry.message}${entry.detail ? ` — ${entry.detail}` : ''}`),
   ];

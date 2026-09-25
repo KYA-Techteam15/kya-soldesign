@@ -1,11 +1,13 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { applicationReleaseInfo } from '../../app/models/releaseInfo';
 import { useProjectSession } from '../../app/ProjectSessionProvider';
 import { planRestore, serializeBackup } from '../../app/services/projectBackup';
 import { saveFile } from '../../app/platform/files';
 import { fileTransfer } from '../../app/platform/fileTransfer';
 import { openLogFolder, reportProblem } from '../../app/platform/support';
-import { checkForUpdate, type UpdateCheck } from '../../app/platform/updates';
+import { readUpdateChannel, updateChannels, writeUpdateChannel, type UpdateChannel } from '../../app/platform/updates';
+import { copyDiagnostics } from '../../app/platform/diagnostics';
+import { useUpdates } from '../../shell/UpdateNotice';
 import { isTauri } from '../../app/platform/runtime';
 import { Dialog } from '../../ui/Dialog';
 import { dateLong } from '../../domain/format';
@@ -15,8 +17,8 @@ import { useUi } from '../../store/ui';
 type LegalDocument = 'license' | 'privacy' | 'notices';
 const LEGAL_FILE: Record<LegalDocument, string> = { license: 'LICENSE.txt', privacy: 'PRIVACY.txt', notices: 'THIRD_PARTY_NOTICES.txt' };
 
-function Group({ title, children }: { readonly title: string; readonly children: ReactNode }) {
-  return <section className="kpis settings-group"><div className="kpi kpi-head"><span className="h-sec">{title}</span></div>{children}</section>;
+function Group({ title, id, children }: { readonly title: string; readonly id?: string; readonly children: ReactNode }) {
+  return <section className="kpis settings-group" id={id}><div className="kpi kpi-head"><span className="h-sec">{title}</span></div>{children}</section>;
 }
 
 /** Sauvegarde et restauration de tous les projets, en un fichier. */
@@ -62,8 +64,13 @@ export function AboutSection() {
   const t = useT();
   const lang = useUi((state) => state.lang);
   const notify = useUi((state) => state.notify);
+  const projectCount = useProjectSession().canonicalProjects.length;
   const [legal, setLegal] = useState<{ readonly kind: LegalDocument; readonly text: string } | null>(null);
-  const [update, setUpdate] = useState<UpdateCheck | 'checking' | null>(null);
+  const update = useUpdates((state) => state.result);
+  const runUpdateCheck = useUpdates((state) => state.run);
+  const [channels, setChannels] = useState<readonly UpdateChannel[]>([]);
+  const [channel, setChannel] = useState<UpdateChannel>(readUpdateChannel);
+  useEffect(() => { void updateChannels().then(setChannels); }, []);
   const info = applicationReleaseInfo;
 
   const openLegal = async (kind: LegalDocument) => {
@@ -73,11 +80,15 @@ export function AboutSection() {
     } catch { setLegal({ kind, text: t('about.legalMissing') }); }
   };
   const report = async () => {
-    const outcome = await reportProblem();
+    const outcome = await reportProblem({ projectCount, lang });
     if (outcome === 'copied') notify({ kind: 'info', title: t('support.reportCopied') });
     if (outcome === 'failed') notify({ kind: 'error', title: t('support.reportFailed') });
   };
-  const check = async () => { setUpdate('checking'); setUpdate(await checkForUpdate()); };
+  const copyDiagnosticInfo = async () => {
+    const copied = await copyDiagnostics({ projectCount, lang });
+    notify(copied ? { kind: 'success', title: t('support.diagnosticsCopied') } : { kind: 'error', title: t('support.reportFailed') });
+  };
+  const chooseChannel = (next: UpdateChannel) => { writeUpdateChannel(next); setChannel(next); };
   const updateLabel = update === null ? null : update === 'checking' ? t('about.updateChecking')
     : update.status === 'unconfigured' ? t('about.updateUnconfigured')
       : update.status === 'up-to-date' ? t('about.updateUpToDate')
@@ -85,16 +96,21 @@ export function AboutSection() {
           : fill(t('about.updateAvailable'), { version: update.version });
 
   return (
-    <Group title={t('settings.about')}>
+    <Group title={t('settings.about')} id="apropos">
       <div className="kpi"><span>{t('settings.release')}</span><span className="label">{info.version} · {t(`about.channel.${info.channel}`)}{info.builtAtIso ? ` · ${t('about.builtOn')} ${dateLong(info.builtAtIso, lang)}` : ''}</span></div>
       <div className="kpi"><span>{t('about.updates')}{updateLabel && <small className="label asset-help">{updateLabel}</small>}</span><span className="asset-actions">
+        {channels.length > 1 && <select aria-label={t('about.updateChannel')} value={channel} onChange={(event) => chooseChannel(event.target.value as UpdateChannel)}>
+          <option value="stable">{t('about.updateChannel.stable')}</option>
+          <option value="beta">{t('about.updateChannel.beta')}</option>
+        </select>}
         {update !== null && update !== 'checking' && update.status === 'available'
           ? <button type="button" className="btn btn-primary" onClick={() => { void update.install(); }}>{t('about.updateInstall')}</button>
-          : <button type="button" className="btn" disabled={update === 'checking'} onClick={() => { void check(); }}>{t('about.updateCheck')}</button>}
+          : <button type="button" className="btn" disabled={update === 'checking'} onClick={() => { void runUpdateCheck(false); }}>{t('about.updateCheck')}</button>}
       </span></div>
       <details className="kpi"><summary>{t('settings.changelog')}</summary>{info.changelogEntries.map((entry) => <div key={entry.version}><b>{entry.version}</b> · {dateLong(entry.dateIso, lang)}<br /><span className="label">{entry.message[lang]}</span></div>)}</details>
       <div className="kpi"><span>{t('about.support')}<small className="label asset-help">{t('about.supportHelp')}</small></span><span className="asset-actions">
         <button type="button" className="btn" onClick={() => { void report(); }}>{t('support.report')}</button>
+        <button type="button" className="btn" onClick={() => { void copyDiagnosticInfo(); }}>{t('support.copyDiagnostics')}</button>
         {isTauri() && <button type="button" className="btn" onClick={() => { void openLogFolder(); }}>{t('support.openLogs')}</button>}
       </span></div>
       <div className="kpi"><span>{t('about.legal')}</span><span className="asset-actions">

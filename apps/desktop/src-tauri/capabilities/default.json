@@ -5,6 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
     "log:default",
     "window-state:default",
     "process:allow-restart",
