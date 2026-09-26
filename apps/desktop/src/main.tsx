@@ -13,7 +13,8 @@ import { translate } from './i18n';
 import { useUi } from './store/ui';
 import { browserStore, useLicense } from './app/licensing/licenseStore';
 import { evaluateLicense, LicenseService } from './app/licensing/licenseService';
-import { LICENSE_PUBLIC_KEY, SimulatedAdminApi } from './app/licensing/adminApi';
+import { HttpAdminApi } from './app/licensing/httpAdminApi';
+import { LICENSE_PUBLIC_KEY, platformUrl } from './app/licensing/platform';
 import { startUsage } from './app/feedback/usage';
 import { SimulatedUsageApi } from './app/feedback/usageApi';
 import './styles/tokens.css';
@@ -53,15 +54,14 @@ async function start(): Promise<void> {
 }
 
 /**
- * Licence évaluée avant le premier rendu. Tant que la plateforme d'administration n'expose pas son
- * API, `SimulatedAdminApi` la joue et délivre au premier lancement une licence commerciale de
- * démonstration. L'état se recalcule chaque heure (jours restants) et se rafraîchit en ligne une
- * fois par jour.
+ * Licence évaluée avant le premier rendu, auprès de la plateforme KYA-EnergyMarket (T061). Sans
+ * licence, le logiciel s'ouvre en lecture seule et propose l'essai ou l'achat. L'état se recalcule
+ * chaque heure (jours restants) et se rafraîchit en ligne une fois par jour.
  */
 async function startLicensing(): Promise<void> {
   const license = useLicense.getState();
   try {
-    await license.start(new LicenseService(new SimulatedAdminApi(), LICENSE_PUBLIC_KEY, browserStore(), () => Date.now(), 'KYA-COM-12M-DEMO'));
+    await license.start(new LicenseService(new HttpAdminApi(platformUrl), LICENSE_PUBLIC_KEY, browserStore(), () => Date.now()));
   } catch (error) {
     // Licence illisible (stockage, cryptographie indisponible) : lecture seule, jamais tout ouvert.
     logger.error('license.start.failed', error);

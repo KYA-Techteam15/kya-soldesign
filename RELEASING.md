@@ -81,8 +81,11 @@ dans une boîte avec ses notes (le corps de la publication).
 
 ## 5. Décisions encore ouvertes
 
-- API de licences de la plateforme d'administration : l'application utilise `SimulatedAdminApi`
-  et une clé de démonstration publique ; à remplacer avant toute vente (spec 012, T061) ;
+- Plateforme des licences (T061 fait) : `HttpAdminApi` contre KYA-EnergyMarket. La construction
+  vise `dev` par défaut ; à la mise en production de la plateforme (sa spécification 011), fixer
+  l'adresse de production dans `apps/desktop/src/app/licensing/platform.ts`, l'autoriser dans
+  `src-tauri/capabilities/default.json`, et construire les versions publiées avec
+  `VITE_PLATFORM_ENV=production`. Ne publier aucune version vendue avant ;
 - type de certificat (OV, EV ou Azure Trusted Signing) ;
 - hébergement du flux de mises à jour ;
 - contrat de géocodage commercial.

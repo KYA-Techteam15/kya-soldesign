@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FEATURES } from '../../app/licensing/features';
-import { DEMO_KEYS } from '../../app/licensing/adminApi';
+import { editionLabel, planLabel } from '../../app/licensing/labels';
+import { platformPage } from '../../app/licensing/platform';
+import { openExternal } from '../../app/platform/support';
 import { useLicense } from '../../app/licensing/licenseStore';
 import type { LicenseStatus } from '../../app/licensing/licenseService';
 import { track } from '../../app/feedback/usage';
@@ -9,7 +11,7 @@ import { dateLong } from '../../domain/format';
 import { fill, useT } from '../../i18n';
 import { useUi } from '../../store/ui';
 
-const STATUS_TONE: Record<LicenseStatus, string> = { active: 'ok', grace: 'warn', none: 'bad', expired: 'bad', offline: 'bad', clock: 'bad', invalid: 'bad' };
+const STATUS_TONE: Record<LicenseStatus, string> = { active: 'ok', grace: 'warn', none: 'bad', expired: 'bad', offline: 'bad', clock: 'bad', invalid: 'bad', outdated: 'bad' };
 
 /**
  * Licence du poste (spec 012, FR-D5) : édition, formule, temps restant, fonctions ouvertes ;
@@ -54,7 +56,7 @@ export function LicenseSection() {
         <span className={`badge ${STATUS_TONE[view?.status ?? 'none']}`}>{t(`license.status.${view?.status ?? 'none'}`)}</span>
       </div>
       {payload && <>
-        <div className="kpi"><span>{t('license.edition')}</span><b>{t(`license.edition.${payload.edition}`)} · {t(`license.plan.${payload.plan}`)}</b></div>
+        <div className="kpi"><span>{t('license.edition')}</span><b>{editionLabel(t, payload.edition)} · {planLabel(t, payload.plan)}</b></div>
         <div className="kpi"><span>{t('license.holder')}</span><span className="label">{payload.customer}</span></div>
         <div className="kpi">
           <span>{t('license.period')}</span>
@@ -99,17 +101,13 @@ export function LicenseSection() {
           <button type="button" className="btn" disabled={busy || payload === null} onClick={confirmRelease}>{t('license.release')}</button>
         </span>
       </div>
-      <details className="kpi license-demo">
-        <summary>{t('license.demoTitle')}</summary>
-        <p className="label">{t('license.demoHelp')}</p>
-        <div className="license-demo-keys">
-          {Object.entries(DEMO_KEYS).map(([demoKey, demo]) => (
-            <button key={demoKey} type="button" className="btn btn-ghost" onClick={() => setKey(demoKey)}>
-              <code>{demoKey}</code> <span className="label">{t(`license.edition.${demo.edition}`)} · {t(`license.plan.${demo.plan}`)}</span>
-            </button>
-          ))}
-        </div>
-      </details>
+      <div className="kpi">
+        <span>{t('license.get')}<small className="label asset-help">{t('license.getHelp')}</small></span>
+        <span className="asset-actions">
+          <button type="button" className="btn" disabled={platformPage('essai', lang) === null} onClick={() => { void openExternal(platformPage('essai', lang)); }}>{t('license.trial')}</button>
+          <button type="button" className="btn" disabled={platformPage('tarifs', lang) === null} onClick={() => { void openExternal(platformPage('tarifs', lang)); }}>{t('license.buy')}</button>
+        </span>
+      </div>
     </section>
   );
 }

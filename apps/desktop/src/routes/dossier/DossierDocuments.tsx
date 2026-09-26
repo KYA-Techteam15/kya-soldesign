@@ -9,6 +9,7 @@ import type { CalculationFacts } from '../../domain/completion';
 import { useUi } from '../../store/ui';
 import { useSettings } from '../../store/settings';
 import { translate, useT } from '../../i18n';
+import { watermarkLabel } from '../../app/licensing/labels';
 import { useReportAssetUrl } from '../../app/adapters/reportAssetRepository';
 import { buildReportDocument } from '../../app/export/reportModel';
 import { downloadDocx } from '../../app/export/docxWriter';
@@ -82,7 +83,7 @@ export function DossierDocuments({ project, sizing, finance, solar, presizing, c
     return {
       ...chosen,
       withPrices: pricing && chosen.withPrices,
-      watermark: forcedWatermark === null ? chosen.watermark : translate(`license.watermark.${forcedWatermark}`, chosen.lang),
+      watermark: forcedWatermark === null ? chosen.watermark : watermarkLabel((key) => translate(key, chosen.lang), forcedWatermark),
     };
   }, [chosenForKind, kind, lang, pricing, forcedWatermark]);
   const readinessFor = (target: DocKind, chosen: ReportOptions): DocumentReadiness =>

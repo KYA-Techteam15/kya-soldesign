@@ -15,3 +15,17 @@ export async function openLogFolder(): Promise<boolean> {
     return true;
   } catch (error) { logger.warn('support.logFolder', error); return false; }
 }
+
+/** Ouvre une page web (plateforme KYA-EnergyMarket) dans le navigateur du poste. */
+export async function openExternal(url: string | null): Promise<boolean> {
+  if (!url) return false;
+  try {
+    if (isTauri()) {
+      const { openUrl } = await import('@tauri-apps/plugin-opener');
+      await openUrl(url);
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
+    return true;
+  } catch (error) { logger.warn('support.openExternal', error); return false; }
+}

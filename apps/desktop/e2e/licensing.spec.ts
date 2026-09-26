@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
+import { useFakePlatform } from './support/licence';
 
-/** Spec 012, lot D : éditions, fonctions ouvertes, limite de projets, lecture seule. */
+/**
+ * Spec 012, lot D et T061 : licence délivrée par la plateforme (ici une fausse plateforme, clé de
+ * test), éditions, fonctions ouvertes, limite de projets, lecture seule.
+ */
+test.beforeEach(async ({ page }) => {
+  await useFakePlatform(page);
+});
 
 async function activate(page: Page, key: string) {
   await page.getByRole('button', { name: 'Réglages', exact: true }).click();
@@ -16,7 +23,7 @@ async function newProject(page: Page, name: string) {
   await page.getByLabel('Nom du projet').fill(name);
 }
 
-test('a first launch gets the commercial demo licence, shown in the status bar', async ({ page }) => {
+test('the licence activated on this computer shows in the status bar', async ({ page }) => {
   await page.goto('/accueil');
   await expect(page.locator('.statusbar .license-badge')).toHaveText('Commerciale · 365 j');
   await page.locator('.statusbar .license-badge').click();
@@ -26,7 +33,7 @@ test('a first launch gets the commercial demo licence, shown in the status bar',
 
 test('the student edition closes its features and caps the number of projects', async ({ page }) => {
   await page.goto('/accueil');
-  await activate(page, 'KYA-ETU-1M-DEMO');
+  await activate(page, 'KYA-ETU-1M-TEST');
   await expect(page.locator('.statusbar .license-badge')).toHaveText('Étudiant · 30 j');
   await expect(page.locator('#licence .license-features li.is-closed')).toHaveCount(5);
 
@@ -55,8 +62,33 @@ test('releasing the computer leaves projects readable but not editable', async (
   await expect(page.getByLabel('Nom du projet')).toBeDisabled();
 
   // Une nouvelle activation rend la main.
-  await activate(page, 'KYA-COM-12M-DEMO');
+  await activate(page, 'KYA-COM-12M-TEST');
   await page.goto(project);
   await expect(page.getByLabel('Nom du projet')).toHaveValue('Projet Lomé');
   await expect(page.locator('fieldset.ro-lock')).toHaveCount(0);
+});
+
+test.describe('without any licence (T061)', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('the software opens read-only and points to the trial and purchase', async ({ page }) => {
+    await page.goto('/accueil');
+    await expect(page.locator('.statusbar .license-badge')).toHaveText('Aucune licence');
+    await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+    await expect(page.locator('#licence')).toContainText('essai gratuit ou achat');
+    await expect(page.getByRole('button', { name: 'Essai gratuit' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Acheter une licence' })).toBeVisible();
+    await expect(page.locator('#licence')).not.toContainText('Clés de démonstration');
+    // Une clé reçue de la plateforme ouvre le travail.
+    await activate(page, 'KYA-COM-12M-TEST');
+    await expect(page.locator('.statusbar .license-badge')).toHaveText('Commerciale · 365 j');
+  });
+
+  test('an unknown key is refused by the platform', async ({ page }) => {
+    await page.goto('/accueil');
+    await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Clé de licence' }).fill('KYA-COM-12M-FAUX');
+    await page.getByRole('button', { name: 'Activer', exact: true }).click();
+    await expect(page.getByText('Cette clé est inconnue de la plateforme.')).toBeVisible();
+  });
 });

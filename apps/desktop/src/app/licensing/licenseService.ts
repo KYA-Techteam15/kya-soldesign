@@ -1,6 +1,6 @@
 import type { AdminApi } from './adminApi.js';
 import type { FeatureId, LicenseLimits } from './features.js';
-import { importVerifyKey, verifyLicense, type LicensePayload } from './token.js';
+import { importVerifyKey, isKnownEdition, verifyLicense, type LicensePayload } from './token.js';
 
 /**
  * État de la licence du poste (spec 012, FR-D2 → FR-D6).
@@ -8,12 +8,13 @@ import { importVerifyKey, verifyLicense, type LicensePayload } from './token.js'
  * - `active` : dans la période payée ; `grace` : échue, délai de grâce en cours ;
  * - `expired` : au-delà de la grâce ; `offline` : trop longtemps sans vérification en ligne ;
  * - `clock` : l'horloge du poste a reculé sous la dernière date vue ;
- * - `none` : aucune licence active sur ce poste ; `invalid` : jeton refusé.
+ * - `none` : aucune licence active sur ce poste ; `invalid` : jeton refusé ;
+ * - `outdated` : jeton valide d'une édition que cette version ne connaît pas (mise à jour à faire).
  *
  * Sauf `active` et `grace`, le logiciel passe en lecture seule (P-7) : les projets restent
  * ouverts, consultables et exportables, rien ne se calcule ni ne s'émet.
  */
-export type LicenseStatus = 'none' | 'active' | 'grace' | 'expired' | 'offline' | 'clock' | 'invalid';
+export type LicenseStatus = 'none' | 'active' | 'grace' | 'expired' | 'offline' | 'clock' | 'invalid' | 'outdated';
 
 export interface LicenseView {
   readonly status: LicenseStatus;
@@ -47,6 +48,9 @@ export function evaluateLicense(payload: LicensePayload | null, nowMs: number, l
   };
   // Ordre des motifs : le plus utile à l'utilisateur d'abord (une licence échue se renouvelle,
   // inutile de lui demander d'abord de se reconnecter).
+  // Édition inconnue de cette version : la licence est reconnue, mais le logiciel ne sait pas quels
+  // droits lui donner ; lecture seule jusqu'à la mise à jour.
+  if (!isKnownEdition(payload.edition)) return { ...base, status: 'outdated', readOnly: true };
   if (lastSeenMs !== null && nowMs < lastSeenMs - CLOCK_TOLERANCE) return { ...base, status: 'clock', readOnly: true };
   if (nowMs > graceEnd) return { ...base, status: 'expired', readOnly: true };
   if (lastVerifiedMs !== null && nowMs - lastVerifiedMs > payload.offlineDays * DAY) return { ...base, status: 'offline', readOnly: true };
@@ -76,8 +80,6 @@ export class LicenseService {
     publicKey: JsonWebKey,
     private readonly store: KeyValueStore,
     private readonly clock: () => number = () => Date.now(),
-    /** Simulation seulement : licence de démonstration délivrée au premier lancement. */
-    private readonly autoDemoKey: string | null = null,
   ) {
     this.verifyKey = importVerifyKey(publicKey);
   }
@@ -93,9 +95,6 @@ export class LicenseService {
 
   /** Lit la licence enregistrée et calcule son état ; mémorise la date vue (contre le recul d'horloge). */
   async load(): Promise<LicenseView> {
-    if (!this.store.getItem(KEYS.token) && this.autoDemoKey && !this.store.getItem(KEYS.released)) {
-      await this.activate(this.autoDemoKey);
-    }
     return this.evaluate();
   }
 

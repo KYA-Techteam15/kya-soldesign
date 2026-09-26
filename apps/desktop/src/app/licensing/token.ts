@@ -7,16 +7,22 @@ import { isFeatureId, type FeatureId, type LicenseLimits } from './features.js';
  */
 export type EditionId = 'commercial' | 'academic' | 'student';
 
+/** Profils d'édition que cette version connaît ; un autre profil ouvre la licence en lecture seule. */
+export const KNOWN_EDITIONS: readonly EditionId[] = ['commercial', 'academic', 'student'];
+
+export const isKnownEdition = (value: string): value is EditionId => (KNOWN_EDITIONS as readonly string[]).includes(value);
+
 export interface LicensePayload {
   readonly licenseId: string;
   readonly customer: string;
-  readonly edition: EditionId;
+  /** Profil d'édition ; inconnu de cette version : lecture seule (voir `isKnownEdition`). */
+  readonly edition: string;
   /** Formule souscrite : « 1m », « 3m », « 12m », « 1d »… */
   readonly plan: string;
   readonly features: readonly FeatureId[];
   readonly limits: LicenseLimits;
   /** Filigrane imposé sur les documents (code traduit au rendu), `null` pour aucun. */
-  readonly watermark: 'academic' | 'student' | null;
+  readonly watermark: string | null;
   readonly deviceId: string;
   readonly issuedAt: string;
   readonly startsAt: string;
@@ -55,7 +61,11 @@ export async function signLicense(payload: LicensePayload, key: CryptoKey): Prom
   return `${body}.${toBase64Url(signature)}`;
 }
 
-/** Vérifie la signature puis la forme : un jeton altéré ou incomplet est refusé. */
+/**
+ * Vérifie la signature puis la forme : un jeton altéré ou incomplet est refusé. Le logiciel accepte
+ * ce qu'il ne connaît pas (spec 012, T061 ; plateforme spec 005b) : une fonction inconnue est
+ * ignorée, un profil d'édition inconnu est gardé et traité en lecture seule par `evaluateLicense`.
+ */
 export async function verifyLicense(token: string, key: CryptoKey): Promise<LicensePayload | null> {
   const [body, signature] = token.split('.');
   if (!body || !signature) return null;
@@ -63,10 +73,10 @@ export async function verifyLicense(token: string, key: CryptoKey): Promise<Lice
   try { valid = await crypto.subtle.verify(ALGORITHM, key, fromBase64Url(signature), encoder.encode(body)); } catch { return null; }
   if (!valid) return null;
   try {
-    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body))) as LicensePayload;
-    if (!['commercial', 'academic', 'student'].includes(payload.edition) || !Array.isArray(payload.features) || !payload.features.every(isFeatureId)) return null;
+    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body))) as LicensePayload & { features: unknown };
+    if (typeof payload.edition !== 'string' || typeof payload.plan !== 'string' || !Array.isArray(payload.features)) return null;
     if (Number.isNaN(Date.parse(payload.expiresAt)) || Number.isNaN(Date.parse(payload.startsAt))) return null;
-    return payload;
+    return { ...payload, features: (payload.features as unknown[]).filter(isFeatureId) };
   } catch {
     return null;
   }

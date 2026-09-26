@@ -1,5 +1,20 @@
 # Journal des modifications
 
+## Non publié
+
+### Licences (spec 012, T061)
+
+- Les licences viennent de la **plateforme KYA-EnergyMarket** (`/api/software/v1`) : activation,
+  rafraîchissement et libération du poste. Le logiciel n'embarque plus que les **clés publiques**
+  de la plateforme : la simulation, ses clés de démonstration et sa clé de signature sont retirées.
+- **Premier lancement sans licence** : le logiciel s'ouvre en lecture seule et propose l'essai
+  gratuit ou l'achat sur KYA-EnergyMarket (Réglages → Licence).
+- Le logiciel **accepte ce qu'il ne connaît pas** : une fonction ajoutée par la plateforme est
+  ignorée, une durée nouvelle s'affiche en jours (« 14 jours »), une édition inconnue ouvre la
+  licence en lecture seule avec « Mise à jour nécessaire ».
+- La construction choisit la plateforme (`VITE_PLATFORM_ENV` : `dev` tant que la production
+  n'est pas ouverte, puis `production`).
+
 ## 1.2.1 — 2026-09-25
 
 - **Mises à jour** : KYA-SolDesign cherche une nouvelle version à chaque démarrage, et non plus une
