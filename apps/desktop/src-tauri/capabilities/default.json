@@ -23,7 +23,8 @@
         { "url": "https://customer-geocoding-api.open-meteo.com/*" },
         { "url": "https://api.open-meteo.com/*" },
         { "url": "https://customer-api.open-meteo.com/*" },
-        { "url": "https://api.bigdatacloud.net/*" }
+        { "url": "https://api.bigdatacloud.net/*" },
+        { "url": "https://kya-energy-market-dev.13.140.178.49.sslip.io/api/software/v1/*" }
       ]
     },
     {

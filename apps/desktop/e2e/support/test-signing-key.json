@@ -1,0 +1,8 @@
+{
+  "_note": "Clé de TEST des parcours Playwright uniquement : le logiciel livré ne la connaît pas (il embarque les clés publiques de la plateforme).",
+  "kty": "EC",
+  "crv": "P-256",
+  "x": "1gVg4o0y2IfQXbtBii22R11a7fNjL3-J1per26_kepQ",
+  "y": "B5fddPafCGRwSxAocSUk-azd1A8r8xes_eTUHN3f88Y",
+  "d": "uL-6zdCGRjUXETbb7U85l33DhzrSTYJ2iDQzZWRwopI"
+}

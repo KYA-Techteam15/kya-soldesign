@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { editionLabel } from '../app/licensing/labels';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLicense } from '../app/licensing/licenseStore';
 import type { LicenseView } from '../app/licensing/licenseService';
@@ -55,7 +56,7 @@ export function LicenseBadge() {
   const label = payload === null
     ? t(`license.status.${view.status}`)
     : view.status === 'active'
-      ? `${t(`license.edition.${payload.edition}`)} · ${fill(t('license.daysShort'), { count: view.remainingDays ?? 0 })}`
-      : `${t(`license.edition.${payload.edition}`)} · ${t(`license.status.${view.status}`)}`;
+      ? `${editionLabel(t, payload.edition)} · ${fill(t('license.daysShort'), { count: view.remainingDays ?? 0 })}`
+      : `${editionLabel(t, payload.edition)} · ${t(`license.status.${view.status}`)}`;
   return <Link to="/reglages#licence" className={`license-badge tone-${licenseTone(view)}`} title={t('license.badgeHelp')}>{label}</Link>;
 }
